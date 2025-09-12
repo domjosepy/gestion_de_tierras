@@ -1,0 +1,32 @@
+<!-- === sidebar.html (estructura base del sidebar) === -->
+<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+  <!-- Sidebar - Brand -->
+  <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{% url 'home' %}" title="Inicio">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-map-marked-alt"></i>
+    </div>
+    <h4 class="sidebar-brand-text mx-2">SRT</h4>
+  </a>
+
+  <!-- Divider -->
+  <hr class="sidebar-divider my-0">
+
+  {% if user.is_authenticated %}
+    {% with 'includes/sidebar/'|add:user.rol_efectivo.nombre|lower|add:'_sidebar.html' as sidebar_template %}
+      {% include sidebar_template %}
+    {% endwith %}
+  {% else %}
+    {% include 'includes/sidebar/base_sidebar.html' %}
+    
+  {% endif %}
+
+
+  <!-- Sidebar Toggler (Sidebar) -->
+  <div class="text-center d-none d-md-inline mt-auto mb-3">
+    <button class="btn btn-sm bg-white border rounded-circle shadow-sm" id="sidebarToggle" data-bs-toggle="tooltip" 
+            data-bs-placement="right">
+      <i class="fas fa-angle-double-left"></i>
+    </button>
+  </div>
+</ul>

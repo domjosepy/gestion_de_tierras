@@ -1,0 +1,64 @@
+<div class="modal fade" id="crearRolModal" tabindex="-1" aria-labelledby="crearRolModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="crearRolModalLabel">Crear Nuevo Rol</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'crear_rol' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre del Rol</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="color" class="form-label">Color</label>
+                                <select class="form-select" id="color" name="color" required>
+                                    <option value="primary">Azul (primary)</option>
+                                    <option value="secondary">Gris (secondary)</option>
+                                    <option value="success">Verde (success)</option>
+                                    <option value="danger">Rojo (danger)</option>
+                                    <option value="warning">Amarillo (warning)</option>
+                                    <option value="info">Celeste (info)</option>
+                                    <option value="dark">Negro (dark)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label class="form-label">Permisos</label>
+                                <div class="border p-3" style="max-height: 200px; overflow-y: auto;">
+                                    {% for permiso in permisos %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="permiso_{{ permiso.id }}" 
+                                               name="permisos" value="{{ permiso.id }}">
+                                        <label class="form-check-label" for="permiso_{{ permiso.id }}">
+                                            {{ permiso.name }} <small class="text-muted">({{ permiso.content_type.app_label }}.{{ permiso.codename }})</small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-gray" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Rol</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Crear Usuario</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Username -->
+                <div class="mb-3">
+                    <label class="form-label">Nombre de usuario</label>
+                    {% render_field form.username class="form-control" required=True %}
+                </div>
+                
+                <!-- Email -->
+                <div class="mb-3">
+                    <label class="form-label">Correo electrónico</label>
+                    {% render_field form.email class="form-control" type="email" required=True %}
+                </div>
+                
+                <!-- Rol -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label class="form-label mb-0">Rol</label>
+                        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#crearRolModal">
+                            <i class="fas fa-plus me-1"></i> Crear Rol
+                        </button>
+                    </div>
+                    {% render_field form.rol class="form-select" %}
+                </div>
+                
+                <!-- Estado -->
+                <div class="mb-3">
+                    <label class="form-label">Estado</label>
+                    {% render_field form.estado class="form-select" %}
+                </div>
+                
+                <!-- Password 1 -->
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    {% render_field form.password1 class="form-control" required=True %}
+                </div>
+                
+                <!-- Password 2 -->
+                <div class="mb-3">
+                    <label class="form-label">Confirmar contraseña</label>
+                    {% render_field form.password2 class="form-control" required=True %}
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'administrador_dashboard' %}" class="btn btn-xs btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-xs btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modals -->
+{% include 'includes/administrador/modal/roles/crear_rol_modal.html' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validación SOLO al guardar usuario, no al crear rol
+    const userForm = document.querySelector('form.needs-validation');
+    if (userForm) {
+        userForm.addEventListener('submit', function(e) {
+            if (!userForm.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+                userForm.classList.add('was-validated');
+                ToastManager.create('Por favor completa todos los campos obligatorios.', 'error');
+            } else {
+                userForm.classList.remove('was-validated');
+            }
+        });
+    }
+
+   
+
+    // --- AJAX para crear rol desde el modal y actualizar el select de roles ---
+    const crearRolForm = document.getElementById('crearRolForm');
+    if (crearRolForm) {
+        crearRolForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = crearRolForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Creando...';
+
+            const formData = new FormData(crearRolForm);
+            fetch(crearRolForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('crearRolModal'));
+                    modal.hide();
+                    // Limpiar el formulario
+                    crearRolForm.reset();
+                    // Mostrar toast
+                    ToastManager.create(data.message, "success");
+                    // Agregar el nuevo rol al select de roles
+                    const rolSelect = document.querySelector('select[name="rol"]');
+                    if (rolSelect) {
+                        const option = document.createElement('option');
+                        option.value = data.rol_id;
+                        option.textContent = data.rol_nombre;
+                        option.selected = true;
+                        rolSelect.appendChild(option);
+                        // Disparar evento change por si hay lógica asociada
+                        rolSelect.dispatchEvent(new Event('change'));
+                    }
+                } else {
+                    // Mostrar errores en el modal
+                    const errorDiv = document.getElementById('crearRolError');
+                    if (errorDiv) {
+                        errorDiv.textContent = data.message || 'Error al crear el rol.';
+                        errorDiv.classList.remove('d-none');
+                    }
+                }
+            })
+            .catch(error => {
+                const errorDiv = document.getElementById('crearRolError');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Error al crear el rol: ' + error.message;
+                    errorDiv.classList.remove('d-none');
+                }
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> Crear Rol';
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Aprobación Pendiente{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+  <div class="row justify-content-center min-vh-80 align-items-center">
+    <div class="col-lg-6">
+      <div class="text-center px-4">
+        <div class="error-text display-1 text-primary mb-4" style="font-weight: 800; letter-spacing: 0.5rem;">401</div>
+        <h1 class="h3 mb-3 text-gray-800">Cuenta en espera de aprobación</h1>
+        <p class="lead text-gray-600 mb-4">
+          Tu cuenta está pendiente de asignación de rol por un administrador.
+          Por favor, espera a que un administrador active tu cuenta.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{% url 'sistema:logout' %}" class="btn btn-secondary">
+            <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+          </a>
+          <a href="mailto:soporte@sistema.com" class="btn btn-primary">
+            <i class="fas fa-envelope me-1"></i> Contactar Soporte
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .error-text {
+    font-size: 8rem;
+    line-height: 1;
+    position: relative;
+  }
+  
+  .error-text::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: rgba(78, 115, 223, 0.1);
+    z-index: -1;
+    text-shadow: none;
+  }
+  
+  @media (max-width: 768px) {
+    .error-text {
+      font-size: 5rem;
+    }
+  }
+</style>
+{% endblock %}

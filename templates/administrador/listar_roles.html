@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Roles{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Gestión de Roles</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearRolModal">
+            <i class="fas fa-plus me-1"></i> Crear Nuevo Rol
+        </button>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="rolesTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Color</th>
+                            <th>Permisos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rol in roles %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-{{ rol.color }}">{{ rol.nombre }}</span>
+                            </td>
+                            <td>{{ rol.descripcion|truncatechars:50 }}</td>
+                            <td>{{ rol.color }}</td>
+                            <td>
+                                {% for permiso in rol.permisos.all|slice:":3" %}
+                                    <span class="badge bg-secondary">{{ permiso.name }}</span>
+                                {% endfor %}
+                                {% if rol.permisos.count > 3 %}...{% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editarRolModal"
+                                        data-rolid="{{ rol.id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#eliminarRolModal"
+                                        data-rolid="{{ rol.id }}"
+                                        data-rolnombre="{{ rol.nombre }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No hay roles registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+{% include 'includes/administrador/modal/roles/crear_rol_modal.html' %}
+{% include 'includes/administrador/modal/roles/editar_rol_modal.html' %}
+{% include 'includes/administrador/modal/roles/eliminar_rol_modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTable
+    new simpleDatatables.DataTable('#rolesTable', {
+        perPage: 10,
+        labels: {
+            placeholder: "Buscar...",
+            perPage: "Registros por página",
+            noRows: "No se encontraron roles",
+            info: "Mostrando {start} a {end} de {rows} roles"
+        }
+    });
+
+    // Configurar modales de edición/eliminación
+    document.querySelectorAll('[data-bs-target="#editarRolModal"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const rolId = this.getAttribute('data-rolid');
+            // Aquí podrías cargar los datos del rol via AJAX si prefieres
+            document.getElementById('editarRolForm').action = `/roles/editar/${rolId}/`;
+        });
+    });
+
+    document.querySelectorAll('[data-bs-target="#eliminarRolModal"]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const rolId = this.getAttribute('data-rolid');
+            const rolNombre = this.getAttribute('data-rolnombre');
+            document.getElementById('eliminarRolForm').action = `/roles/eliminar/${rolId}/`;
+            document.getElementById('rolNombreEliminar').textContent = rolNombre;
+        });
+    });
+});
+</script>
+{% endblock %}

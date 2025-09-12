@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}PANEL DE INICIO{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow mb-4">
+        <div class="card-header py-3">
+          <h6 class="m-0 font-weight-bold text-primary">¡Bienvenido al Sistema de Regulación de Tierras!</h6>
+        </div>
+        <div class="card-body">
+          {% if user.is_authenticated %}
+            <div class="alert alert-success">
+              <h4 class="alert-heading">Hola {{ user.username }}!</h4>
+              <p>Has iniciado sesión correctamente en el sistema.</p>
+              <hr>
+              <div class="d-flex flex-column flex-md-row gap-2">
+                <a href="{% url 'password_change' %}" class="btn btn-warning">
+                  <i class="fas fa-key me-1"></i> Cambiar Contraseña
+                </a>
+                <form action="{% url 'logout' %}" method="post" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% else %}
+            <div class="alert alert-warning">
+              <h4 class="alert-heading">No has iniciado sesión</h4>
+              <p>Para acceder al sistema, por favor inicia sesión.</p>
+              <hr>
+              <div class="d-flex flex-column flex-md-row gap-2">
+                <a href="{% url 'login' %}" class="btn btn-primary">
+                  <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
+                </a>
+                <a href="{% url 'password_reset' %}" class="btn btn-secondary">
+                  <i class="fas fa-unlock-alt me-1"></i> Recuperar Contraseña
+                </a>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

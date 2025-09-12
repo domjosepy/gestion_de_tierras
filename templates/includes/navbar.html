@@ -1,0 +1,34 @@
+<nav class="navbar navbar-expand navbar-dark bg-gradient-primary topbar mb-4 static-top shadow">
+    <!-- Sidebar Toggle (Topbar) - Mobile -->
+    <button id="toggleSidebar"
+            class="btn btn-link d-lg-none rounded-circle me-3"
+            title="Menú">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Brand/Title -->
+    <div class="navbar-brand d-flex align-items-center">
+        <h4 class="m-0 text-white">REGULACIÓN DE TIERRAS</h4>
+    </div>
+
+    <!-- Topbar Navbar -->
+    <ul class="navbar-nav ms-auto">
+        {% include 'includes/navbar/base_navbar.html' %}
+
+        {% if user.is_authenticated %}
+            {% with 'includes/navbar/'|add:user.rol_efectivo.nombre|lower|add:'_links.html' as navbar_links %}
+                {% include navbar_links %}
+            {% endwith %}
+        {% else %}
+            {% include 'includes/navbar/base_navbar.html' %}
+        {% endif %}
+
+        <li class="nav-item d-none d-sm-block">
+            <div class="topbar-divider h-100 border-start border-white opacity-50 ms-2 me-3"></div>
+        </li>
+
+        {% include 'includes/navbar/user_dropdown.html' %}
+    </ul>
+</nav>
+<!-- End of Topbar --> 
+ 

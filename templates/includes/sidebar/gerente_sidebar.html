@@ -1,0 +1,65 @@
+<!-- Dashboard -->
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'gerente_dashboard' %}">
+        <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+        <span>Dashboard</span>
+    </a>
+</li>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small text-muted px-3">
+    Gestión Territorial
+</div>
+
+<!-- Colonias -->
+<li class="nav-item">
+    <a class="nav-link d-flex justify-content-between align-items-center collapsed" href="#" 
+       data-bs-toggle="collapse" data-bs-target="#collapseColonies" aria-expanded="false">
+        <span><i class="fas fa-map-marked-alt me-2 text-info"></i>Colonias</span>
+        <i class="fas fa-chevron-down small"></i>
+    </a>
+    <div id="collapseColonies" class="collapse" data-bs-parent="#accordionSidebar">
+        <div class="bg-light py-2 ps-4 collapse-inner rounded">
+            <a class="collapse-item" href="#">Listar Colonias</a>
+            <a class="collapse-item" href="#">Nueva Colonia</a>
+        </div>
+    </div>
+</li>
+
+<!-- Distritos -->
+<li class="nav-item">
+    <a class="nav-link" href="#">
+        <i class="fas fa-map me-2 text-success"></i>
+        <span>Distritos</span>
+    </a>
+</li>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small text-muted px-3">
+    Operaciones
+</div>
+
+<!-- Relevamientos -->
+<li class="nav-item">
+    <a class="nav-link d-flex justify-content-between align-items-center collapsed" href="#" 
+       data-bs-toggle="collapse" data-bs-target="#collapseSurveys" aria-expanded="false">
+        <span><i class="fas fa-clipboard-list me-2 text-warning"></i>Relevamientos</span>
+        <i class="fas fa-chevron-down small"></i>
+    </a>
+    <div id="collapseSurveys" class="collapse" data-bs-parent="#accordionSidebar">
+        <div class="bg-light py-2 ps-4 collapse-inner rounded">
+            <a class="collapse-item" href="#">Solicitudes</a>
+            <a class="collapse-item" href="#">Nueva Solicitud</a>
+        </div>
+    </div>
+</li>
+
+<!-- Análisis -->
+<li class="nav-item">
+    <a class="nav-link" href="#">
+        <i class="fas fa-chart-bar me-2 text-danger"></i>
+        <span>Solicitudes Análisis</span>
+    </a>
+</li>

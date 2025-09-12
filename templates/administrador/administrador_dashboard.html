@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel de Administración{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Panel de Administración</h1>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="row">
+        <!-- Usuarios Totales -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Usuarios Totales</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_usuarios }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pendientes de Rol -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                Pendientes de Rol</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_pendientes.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Usuarios Activos -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Usuarios Activos</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_activos.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Última Actividad -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                Última Actividad</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ ultima_actividad|date:"d/m/Y" }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-history fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!-- Pestañas simplificadas y tabla reutilizable -->
+    <div class="card shadow mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="todos-tab" data-bs-toggle="tab" data-bs-target="#todos" type="button" role="tab" aria-controls="todos" aria-selected="true">
+                        <i class="fas fa-users me-1"></i> Todos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab" aria-controls="pendientes" aria-selected="false">
+                        <i class="fas fa-user-clock me-1"></i> Pendientes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="activos-tab" data-bs-toggle="tab" data-bs-target="#activos" type="button" role="tab" aria-controls="activos" aria-selected="false">
+                        <i class="fas fa-user-check me-1"></i> Activos
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inactivos-tab" data-bs-toggle="tab" data-bs-target="#inactivos" type="button" role="tab" aria-controls="inactivos" aria-selected="false">
+                        <i class="fas fa-user-times me-1"></i> Inactivos
+                    </button>
+                </li>
+            </ul>
+
+            <!-- 🔹 Botones exportación -->
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-usuarios" title="Exportar CSV">
+                    <i class="fas fa-file-csv"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-usuarios" title="Exportar Excel">
+                    <i class="fas fa-file-excel"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-usuarios" title="Imprimir">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+
+            
+           
+        </div>
+        <div class="card-body">
+            <div class="tab-content" id="usersTabsContent">
+                <div class="tab-pane fade show active" id="todos" role="tabpanel" aria-labelledby="todos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_todos columnas=columnas mostrar_acciones=True tabla_id="todos" %}
+                </div>
+                <div class="tab-pane fade" id="pendientes" role="tabpanel" aria-labelledby="pendientes-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_pendientes columnas=columnas mostrar_acciones=True tabla_id="pendientes" %}
+                </div>
+                <div class="tab-pane fade" id="activos" role="tabpanel" aria-labelledby="activos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_activos columnas=columnas mostrar_acciones=True tabla_id="activos" %}
+                </div>
+                <div class="tab-pane fade" id="inactivos" role="tabpanel" aria-labelledby="inactivos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_inactivos columnas=columnas mostrar_acciones=True tabla_id="inactivos" %}
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    {% include "includes/administrador/graficos/graficos_dashboard.html" %}
+</div>
+
+<!-- Modal para Asignar/Editar Rol -->
+{% include 'includes/administrador/modal/roles/asignar_rol_modal.html' %}
+
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- Guardar mensaje para mostrar después de recarga ---
+    function saveToastForReload(message, type = 'info') {
+        console.log('Guardando toast:', message, type);
+        try {
+            sessionStorage.setItem('toastMessage', message);
+            sessionStorage.setItem('toastType', type);
+            console.log('Toast guardado:', message, type); // Para debugging
+        } catch (e) {
+            console.error('Error guardando toast en sessionStorage:', e);
+        }
+        console.log('Toast guardado, valor en sessionStorage:', sessionStorage.getItem('toastMessage'));
+    }
+
+    // --- Cargar table.js ---
+    setTimeout(() => {
+        if (typeof initTables === 'function') {
+            initTables();
+        } else {
+            console.warn('initTables no está disponible');
+            const script = document.createElement('script');
+            script.src = "{% static 'js/table.js' %}";
+            script.onload = function() {
+                if (typeof initTables === 'function') {
+                    initTables();
+                }
+            };
+            document.head.appendChild(script);
+        }
+    }, 100);
+
+    // --- Manejo del modal Asignar Rol ---
+    const asignarRolModal = document.getElementById('asignarRolModal');
+    if (asignarRolModal) {
+        asignarRolModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+            
+            const userId = button.getAttribute('data-userid');
+            const username = button.getAttribute('data-username');
+            const userEmail = button.getAttribute('data-useremail');
+            const rolId = button.getAttribute('data-rolid');
+
+            document.getElementById('usernameDisplay').textContent = username;
+            document.getElementById('userEmailDisplay').textContent = userEmail || 'No tiene email';
+            document.getElementById('userIdInput').value = userId;
+
+            const rolSelect = document.getElementById('rolSelect');
+            if (rolSelect) {
+                rolSelect.value = rolId || "";
+            }
+        });
+
+        asignarRolModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('rolSelect').value = "";
+        });
+    }
+
+    // --- Delegación de eventos para cambio de estado ---
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-cambiar-estado') || 
+            e.target.closest('.btn-cambiar-estado')) {
+            e.preventDefault();
+            
+            const link = e.target.classList.contains('btn-cambiar-estado') ? 
+                         e.target : e.target.closest('.btn-cambiar-estado');
+            
+            const userId = link.getAttribute('data-userid');
+            const currentState = link.getAttribute('data-currentstate');
+            const nuevoEstado = currentState === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
+            
+            fetch("{% url 'cambiar_estado_usuario' %}", {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ user_id: userId, estado: nuevoEstado })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    saveToastForReload(data.message, 'success');
+                    // 🔥 DELAY ANTES DE RECARGAR
+                    setTimeout(() => location.reload(), 100);
+                } else {
+                    if (window.ToastManager) {
+                        ToastManager.create(data.message || 'Error al cambiar estado', 'error', { delay: 4000 });
+                    } else {
+                        alert(data.message || 'Error al cambiar estado');
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                if (window.ToastManager) {
+                    ToastManager.create('Error de red: ' + err.message, 'error', { delay: 4000 });
+                } else {
+                    alert('Error de red: ' + err.message);
+                }
+            });
+        }
+    });
+
+    // --- AJAX para asignar rol ---
+    const formAsignarRol = document.getElementById("formAsignarRol");
+    if (formAsignarRol) {
+        formAsignarRol.addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const userId = document.getElementById("userIdInput").value;
+            const rolId = document.getElementById("rolSelect").value;
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("{% url 'asignar_rol' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ user_id: userId, rol_id: rolId })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                return response.json();
+            })
+            .then((data) => {
+                if (data.success) {
+                    saveToastForReload(data.message, "success");
+                    
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("asignarRolModal"));
+                    if (modal) modal.hide();
+                    
+                    // 🔥 DELAY ANTES DE RECARGAR
+                    setTimeout(() => location.reload(), 100);
+                } else {
+                    if (window.ToastManager) {
+                        ToastManager.create(data.message, "error", { delay: 4000 });
+                    } else {
+                        alert(data.message);
+                    }
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                if (window.ToastManager) {
+                    ToastManager.create("Error de red: " + error.message, "error", { delay: 4000 });
+                } else {
+                    alert("Error de red: " + error.message);
+                }
+            });
+        });
+    }
+
+    // --- Resto de tu código (dropdowns, exportaciones, etc.) ---
+    function initDropdowns() {
+        const activeTabPane = document.querySelector("#usersTabsContent .tab-pane.active");
+        if (activeTabPane) {
+            activeTabPane.querySelectorAll('.dropdown-toggle').forEach(el => {
+                if (!bootstrap.Dropdown.getInstance(el)) {
+                    new bootstrap.Dropdown(el);
+                }
+            });
+        }
+    }
+
+    initDropdowns();
+    document.querySelectorAll('#usersTabs button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', initDropdowns);
+    });
+
+    // --- Exportaciones ---
+    function getActiveTable() {
+        const activeTab = document.querySelector("#usersTabsContent .tab-pane.active");
+        return activeTab ? activeTab.querySelector("table") : null;
+    }
+
+    document.getElementById("exportCsvBtn-usuarios").addEventListener("click", function() {
+        const tabla = getActiveTable();
+        if (!tabla) return;
+        let csv = [];
+        for (let row of tabla.rows) {
+            let cols = [];
+            for (let cell of row.cells) {
+                cols.push('"' + cell.innerText.replace(/"/g, '""') + '"');
+            }
+            csv.push(cols.join(","));
+        }
+        const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "usuarios.csv";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("exportExcelBtn-usuarios").addEventListener("click", function() {
+        const tabla = getActiveTable();
+        if (!tabla) return;
+        let wb = XLSX.utils.table_to_book(tabla, { sheet: "Usuarios" });
+        XLSX.writeFile(wb, "usuarios.xlsx");
+    });
+
+    document.getElementById("exportPrintBtn-usuarios").addEventListener("click", function() {
+        const tabla = getActiveTable();
+        if (!tabla) return;
+        let win = window.open("", "", "height=700,width=900");
+        win.document.write("<html><head><title>Imprimir Usuarios</title>");
+        win.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
+        win.document.write("</head><body>");
+        win.document.write(tabla.outerHTML);
+        win.document.write("</body></html>");
+        win.document.close();
+        win.print();
+    });
+
+    document.addEventListener("shown.bs.tab", function(e) {
+        if (typeof initTables === 'function') {
+            setTimeout(initTables, 50);
+        }
+    });
+
+});
+</script>
+{% endblock %}

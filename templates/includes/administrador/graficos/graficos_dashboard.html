@@ -1,0 +1,66 @@
+<!-- Gráficos para el dashboard de usuarios (usa Chart.js) -->
+<div class="row mb-4">
+  <div class="col-md-6 mb-3">
+    <div class="card h-100">
+      <div class="card-header bg-primary text-white">Evolución de usuarios en el tiempo</div>
+      <div class="card-body">
+        <canvas id="usuariosEvolucionChart" height="100" style="max-height:180px;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 mb-3">
+    <div class="card h-100">
+      <div class="card-header bg-info text-white">Distribución de roles</div>
+      <div class="card-body">
+        <canvas id="usuariosRolesChart" height="100" style="max-height:180px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Scripts para inicializar los gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Datos desde el backend (rellenar dinámicamente)
+  const evolucionLabels = {{ evolucion_fechas|safe }};
+  const evolucionData = {{ evolucion_cantidades|safe }};
+  const rolesLabels = {{ roles_labels|safe }};
+  const rolesData = {{ roles_cantidades|safe }};
+
+  // Gráfico de evolución
+  new Chart(document.getElementById('usuariosEvolucionChart'), {
+    type: 'line',
+    data: {
+      labels: evolucionLabels,
+      datasets: [{
+        label: 'Usuarios',
+        data: evolucionData,
+        borderColor: '#007bff',
+        backgroundColor: 'rgba(0,123,255,0.1)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Gráfico de roles
+  new Chart(document.getElementById('usuariosRolesChart'), {
+    type: 'doughnut',
+    data: {
+      labels: rolesLabels,
+      datasets: [{
+        data: rolesData,
+        backgroundColor: ['#0dcaf0','#198754','#ffc107','#dc3545','#6c757d','#6610f2']
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+});
+</script>

@@ -1,0 +1,21 @@
+<div class="modal fade" id="eliminarRolModal" tabindex="-1" aria-labelledby="eliminarRolModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="eliminarRolModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="eliminarRolForm" action="">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>¿Estás seguro que deseas eliminar el rol <strong id="rolNombreEliminar"></strong>?</p>
+                    <p class="text-danger">Esta acción no se puede deshacer y afectará a los usuarios con este rol.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Rol</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

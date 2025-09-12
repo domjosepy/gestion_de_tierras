@@ -1,0 +1,73 @@
+{% load usuario_extras %}
+
+<table class="table table-hover align-middle" id="tablaUsuarios-{{ tabla_id }}">
+  <thead>
+    <tr>
+      {% for col in columnas %}
+        <th>{{ col.nombre }}</th>
+      {% endfor %}
+      {% if mostrar_acciones %}
+        <th>Acciones</th>
+      {% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for usuario in usuarios %}
+      <tr data-userid="{{ usuario.id }}">
+        {% for col in columnas %}
+          <td>
+            {% if col.campo == 'estado' %}
+              <span class="badge bg-{% if usuario.estado == 'ACTIVO' %}success{% elif usuario.estado == 'INACTIVO' %}danger{% else %}warning{% endif %}">
+                {{ usuario.estado|default:'PENDIENTE' }}
+              </span>
+            {% elif col.campo == 'rol' or col.campo == 'rol_nombre' %}
+              <span class="badge bg-{% if usuario.rol %}info{% else %}secondary{% endif %}">
+                {{ usuario.rol.nombre|default:'Sin rol' }}
+              </span>
+            {% else %}
+              {{ usuario|getattribute:col.campo }}
+            {% endif %}
+          </td>
+        {% endfor %}
+        {% if mostrar_acciones %}
+        <td>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-light border dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <a class="dropdown-item btn-asignar-rol"
+                   href="#"
+                   data-bs-toggle="modal"
+                   data-bs-target="#asignarRolModal"
+                   data-userid="{{ usuario.id }}"
+                   data-username="{{ usuario.get_full_name|default:usuario.username }}"
+                   data-useremail="{{ usuario.email }}"
+                   data-rolid="{{ usuario.rol.id|default:'' }}">
+                   <i class="fas fa-user-tag me-2"></i>Asignar rol
+                </a>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <a class="dropdown-item btn-cambiar-estado {% if usuario.estado == 'ACTIVO' %}text-danger{% else %}text-success{% endif %}"
+                   href="#"
+                   data-userid="{{ usuario.id }}"
+                   data-currentstate="{{ usuario.estado }}">
+                  <i class="fas {% if usuario.estado == 'ACTIVO' %}fa-user-slash{% else %}fa-user-check{% endif %} me-2"></i>
+                  {% if usuario.estado == 'ACTIVO' %}Desactivar{% else %}Activar{% endif %}
+                </a>
+              </li>
+            </ul>
+          </div>
+        </td>
+        {% endif %}
+      </tr>
+    {% empty %}
+      <tr><td colspan="100%" class="text-center text-muted">No hay usuarios para mostrar.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
