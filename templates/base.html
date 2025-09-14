@@ -94,32 +94,91 @@
 
     <!-- Inicialización de Toasts (simplificado con BS5) -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.toast').forEach(el => {
-                new bootstrap.Toast(el, { autohide: true, delay: 5000 }).show();
-            });
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.toast').forEach(el => {
+            new bootstrap.Toast(el, { autohide: true, delay: 5000 }).show();
         });
-        function restoreSessionToast() {
-            try {
-                const message = sessionStorage.getItem('toastMessage');
-                const type = sessionStorage.getItem('toastType') || 'info';
-                if (!message) return;
-
-                setTimeout(() => {
-                    if (window.ToastManager) {
-                        const valid = ['primary','secondary','success','danger','warning','info','light','dark'];
-                        const safeType = valid.includes(type) ? type : 'info';
-                        ToastManager.create(message, safeType, { delay: 4000 });
-                        sessionStorage.removeItem('toastMessage');
-                        sessionStorage.removeItem('toastType');
-                    }
-                }, 100);
-            } catch (e) {
-                console.error('[ToastRestore] Error restaurando toast', e);
+    });
+    
+    function restoreSessionToast() {
+        console.log('🔍 restoreSessionToast() ejecutándose...');
+        try {
+            const message = sessionStorage.getItem('toastMessage');
+            const type = sessionStorage.getItem('toastType') || 'info';
+            
+            console.log('📦 Mensaje en sessionStorage:', message);
+            console.log('🎨 Tipo en sessionStorage:', type);
+            
+            if (!message) {
+                console.log('ℹ️ No hay mensajes para restaurar');
+                return;
             }
-        }
-        window.addEventListener('load', restoreSessionToast);
 
-    </script>
+            const showToast = () => {
+                console.log('🔄 Intentando mostrar toast...');
+                
+                if (window.ToastManager && typeof window.ToastManager.create === 'function') {
+                    console.log('✅ ToastManager disponible');
+                    const valid = ['primary','secondary','success','danger','warning','info','light','dark'];
+                    const safeType = valid.includes(type) ? type : 'info';
+                    window.ToastManager.create(message, safeType, { delay: 4000 });
+                    sessionStorage.removeItem('toastMessage');
+                    sessionStorage.removeItem('toastType');
+                    console.log('🎉 Toast mostrado correctamente');
+                } else {
+                    console.warn('⚠️ ToastManager no disponible, usando fallback');
+                    // Fallback con Bootstrap nativo
+                    const toastContainer = document.querySelector('.toast-container') || document.body;
+                    const toastEl = document.createElement('div');
+                    toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
+                    toastEl.innerHTML = `
+                        <div class="d-flex">
+                            <div class="toast-body">${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                                    data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>`;
+                    toastContainer.appendChild(toastEl);
+                    
+                    new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+                    sessionStorage.removeItem('toastMessage');
+                    sessionStorage.removeItem('toastType');
+                }
+            };
+
+            // Intentar múltiples veces por si ToastManager se carga después
+            let attempts = 0;
+            const tryShowToast = () => {
+                attempts++;
+                if (window.ToastManager && typeof window.ToastManager.create === 'function') {
+                    showToast();
+                } else if (attempts < 5) {
+                    setTimeout(tryShowToast, 100);
+                } else {
+                    console.warn('❌ ToastManager no disponible después de 5 intentos');
+                    // Fallback final
+                    alert(message);
+                    sessionStorage.removeItem('toastMessage');
+                    sessionStorage.removeItem('toastType');
+                }
+            };
+
+            tryShowToast();
+            
+        } catch (e) {
+            console.error('[ToastRestore] Error restaurando toast', e);
+        }
+    }
+    
+    window.addEventListener('load', restoreSessionToast);
+
+    console.log('🔄 Verificando ToastManager...');
+    console.log('ToastManager disponible:', typeof window.ToastManager);
+    console.log('ToastManager.create disponible:', window.ToastManager && typeof window.ToastManager.create);
+    
+    // Verificar después de un delay
+    setTimeout(() => {
+        console.log('🔄 Verificación delay - ToastManager:', typeof window.ToastManager);
+    }, 1000);
+</script>
 </body>
 </html>

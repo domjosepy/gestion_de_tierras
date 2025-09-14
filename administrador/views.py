@@ -274,14 +274,16 @@ def cambiar_estado_usuario(request):
         user = User.objects.get(id=user_id)
         
         if user.is_superuser and estado != 'ACTIVO':
-            return JsonResponse({'success': False, 'message': 'No se puede desactivar un superusuario.'}, status=400)
+            return JsonResponse({'warning': False, 'message': 'No se puede desactivar un superusuario.'}, status=400)
         
         if estado == 'ACTIVO':
             user.estado = 'ACTIVO'
             user.is_active = True
+            
         else:
             user.estado = 'INACTIVO'
             user.is_active = False
+            
         
         user.save()
         return JsonResponse({'success': True, 'message': f'Estado actualizado a {user.estado} para {user.username}'})

@@ -66,24 +66,24 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Última Actividad -->
+        <!-- Usuarios Inactivos -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-info shadow h-100 py-2">
+            <div class="card border-start-danger shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col me-2">
-                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
-                                Última Actividad</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ ultima_actividad|date:"d/m/Y" }}</div>
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                Usuarios Inactivos</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_inactivos.count }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-history fa-2x text-gray-300"></i>
+                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
      <!-- Pestañas simplificadas y tabla reutilizable -->
@@ -167,11 +167,17 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             sessionStorage.setItem('toastMessage', message);
             sessionStorage.setItem('toastType', type);
-            console.log('Toast guardado:', message, type); // Para debugging
+            console.log('Toast guardado en sessionStorage:', message, type);
+            
+            // Verificación inmediata
+            const savedMessage = sessionStorage.getItem('toastMessage');
+            const savedType = sessionStorage.getItem('toastType');
+            console.log('Verificación - Mensaje guardado:', savedMessage);
+            console.log('Verificación - Tipo guardado:', savedType);
+            
         } catch (e) {
             console.error('Error guardando toast en sessionStorage:', e);
         }
-        console.log('Toast guardado, valor en sessionStorage:', sessionStorage.getItem('toastMessage'));
     }
 
     // --- Cargar table.js ---

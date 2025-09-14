@@ -620,3 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// Hacer ToastManager disponible globalmente
+window.ToastManager = ToastManager;
