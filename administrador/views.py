@@ -293,6 +293,54 @@ def cambiar_estado_usuario(request):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
+
+# ==============================================
+# EDICIÓN DE PERFIL
+# ==============================================
+@login_required
+def edit_profile(request):
+    from .forms import CustomUserChangeForm
+
+    form = CustomUserChangeForm(request.POST or None, instance=request.user)
+
+    if request.method == 'POST':
+        if form.is_valid():
+            form.save()
+            rol_slug = request.user.rol_nombre.lower().replace(" ", "-")
+            nombre_url = f"{rol_slug}_dashboard"
+            messages.success(request, "Perfil actualizado correctamente.")
+            try:
+                return redirect(nombre_url)
+            except:
+                return redirect('home')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error en {form.fields[field].label}: {error}")
+
+    return render(request, "registration/edit_profile.html", {"form": form})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @login_required
 def test_toast(request):
     messages.success(request, "¡Toast de prueba funciona correctamente! 🎉")

@@ -1,22 +1,52 @@
 {% extends "base.html" %}
-{% load static %}
 {% load widget_tweaks %}
 {% block title %}Editar Perfil{% endblock %}
 
 {% block content %}
 <div class="container-fluid fade-in">
     <div class="row justify-content-center">
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow-lg mb-4">
                 <div class="card-header py-3 bg-primary d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 fw-bold text-white">Editar Perfil</h6>
-                    <button class="btn btn-sm btn-light" onclick="window.history.back();" title="Volver">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
+                    <h4 class="m-0 fw-bold text-white">
+                        <i class="fas fa-user-edit me-2"></i>Editar Perfil
+                    </h4>
+                    <a href="javascript:history.back()" class="btn btn-sm btn-outline-light">Volver</a>
                 </div>
+
                 <div class="card-body">
+                    {% if form.errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <strong>Error:</strong> Por favor corrige los siguientes errores.
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                    </div>
+                    {% endif %}
+
                     <form id="profile-form" method="post" class="needs-validation" novalidate>
                         {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">
+                                <i class="fas fa-user-circle me-2 text-primary"></i>Usuario
+                            </label>
+                            {% render_field form.username class="form-control" required=True %}
+                            <div class="invalid-feedback">Por favor ingrese su usuario</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">
+                                <i class="fas fa-envelope me-2 text-primary"></i>Correo
+                            </label>
+                            {% render_field form.email class="form-control" required=True %}
+                            <div class="invalid-feedback">Por favor ingrese un correo válido</div>
+                        </div>
 
                         <div class="mb-3">
                             <label for="id_first_name" class="form-label">
@@ -36,44 +66,19 @@
                             <label for="id_ci" class="form-label">
                                 <i class="fas fa-id-badge me-2 text-primary"></i>Cédula de Identidad
                             </label>
-                            {% render_field form.ci class="form-control" pattern="[0-9]{8}" %}
-                            {% if form.ci.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.ci.errors %}
-                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <small class="form-text text-muted">{{ form.ci.help_text }}</small>
+                            {% render_field form.ci class="form-control" %}
                         </div>
 
                         <div class="mb-3">
                             <label for="id_telefono" class="form-label">
                                 <i class="fas fa-phone me-2 text-primary"></i>Teléfono
                             </label>
-                            {% render_field form.telefono class="form-control" pattern="[0-9]{10}" %}
-                            {% if form.telefono.errors %}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.telefono.errors %}
-                                        <i class="fas fa-exclamation-circle"></i> {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <small class="form-text text-muted">{{ form.telefono.help_text }}</small>
+                            {% render_field form.telefono class="form-control" %}
                         </div>
 
-                        <div class="mb-3">
-                            <label for="id_email" class="form-label">
-                                <i class="fas fa-envelope me-2 text-primary"></i>Email
-                            </label>
-                            {% render_field form.email class="form-control" type="email" %}
-                        </div>
-                       
-                        <div class="text-center mt-4">
-                            <button id="submit-btn" type="submit" class="btn btn-primary px-4">
-                                <i class="fas fa-save me-2"></i>
-                                <span id="btn-text">Guardar Cambios</span>
-                                <span id="btn-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                        <div class="d-flex justify-content-center mt-3">
+                            <button type="submit" class="btn btn-sm btn-outline-primary px-3">
+                                <i class="fas fa-save me-1"></i> Guardar cambios
                             </button>
                         </div>
                     </form>
@@ -104,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Validación del formulario
+    // Validación bootstrap
     const form = document.querySelector('.needs-validation');
     form.addEventListener('submit', function(event) {
         if (!form.checkValidity()) {

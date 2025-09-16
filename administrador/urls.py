@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import LoginView, HomeView, AdminView, InvitadoView, SignUpView, CustomPasswordChangeView, test_toast, RolListView, RolCreateView, RolUpdateView, RolDeleteView, SimpleUserCreateView, asignar_rol_usuario, cambiar_estado_usuario
+from .views import LoginView, HomeView, AdminView, InvitadoView, SignUpView, CustomPasswordChangeView, edit_profile, test_toast, RolListView, RolCreateView, RolUpdateView, RolDeleteView, SimpleUserCreateView, asignar_rol_usuario, cambiar_estado_usuario
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
@@ -10,7 +10,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
     path('signup/', SignUpView.as_view(), name='signup'),
     path('password_change/', CustomPasswordChangeView.as_view(), name='password_change'),
-
+    path('profile/edit/', edit_profile, name='edit_profile'),
     path('test-toast/', test_toast, name='test_toast'),
   
     
