@@ -15,7 +15,7 @@ from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.views.generic import TemplateView, CreateView, ListView, UpdateView, DeleteView
+from django.views.generic import TemplateView, CreateView, ListView
 
 # Local application imports
 from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm
@@ -193,25 +193,26 @@ class RolCreateView(LoginRequiredMixin, CreateView):
         messages.error(self.request, 'Error al crear el rol. Por favor revise los datos.')
         return super().form_invalid(form)
 
-class RolUpdateView(LoginRequiredMixin, UpdateView):
-    model = Rol
-    fields = ['nombre', 'descripcion', 'color', 'permisos']
-    template_name = 'includes/administrador/modal/roles/editar_rol_modal.html'
-    success_url = reverse_lazy('listar_roles')
+def editar_rol(request, rol_id):
+    rol = get_object_or_404(Rol, id=rol_id)
+    if request.method == 'POST':
+        rol.nombre = request.POST.get('nombre')
+        rol.descripcion = request.POST.get('descripcion')
+        permisos_ids = request.POST.getlist('permisos')
+        rol.permisos.set(permisos_ids)
+        rol.save()
+        messages.success(request, "Rol actualizado correctamente.")
+        return redirect('listar_roles')
+    return redirect('listar_roles')
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, f'Rol "{self.object.nombre}" actualizado exitosamente!')
-        return response
-
-class RolDeleteView(LoginRequiredMixin, DeleteView):
-    model = Rol
-    success_url = reverse_lazy('listar_roles')
-
-    def delete(self, request, *args, **kwargs):
-        response = super().delete(request, *args, **kwargs)
-        messages.success(self.request, f'Rol eliminado exitosamente!')
-        return response
+def eliminar_rol(request, rol_id):
+    rol = get_object_or_404(Rol, id=rol_id)
+    if rol.user_set.exists():
+        messages.error(request, "No se puede eliminar este rol porque tiene usuarios asociados.")
+    else:
+        rol.delete()
+        messages.success(request, "Rol eliminado correctamente.")
+    return redirect('listar_roles')
 
 #=============================================================
 # VISTA PERSONALIZADA PARA CREAR USUARIOS CON EL ADMINISTRADOR

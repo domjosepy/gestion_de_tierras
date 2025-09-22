@@ -26,6 +26,20 @@ document.addEventListener('DOMContentLoaded', function() {
   const evolucionData = {{ evolucion_cantidades|safe }};
   const rolesLabels = {{ roles_labels|safe }};
   const rolesData = {{ roles_cantidades|safe }};
+  
+  const PALETA = [
+    "#0d6efd", "#6610f2", "#6f42c1", "#d63384", "#dc3545",
+    "#fd7e14", "#ffc107", "#198754", "#20c997", "#0dcaf0",
+    "#ff6f61", "#6a0572", "#2c3e50", "#27ae60", "#f39c12",
+    "#2980b9", "#8e44ad", "#1abc9c", "#95a5a6", "#e67e22"
+  ];
+
+  // Usar los datos del backend directamente
+  const labels = rolesLabels;
+  const data = rolesData;
+ 
+  // Asignar colores en orden
+  const colors = labels.map((_, i) => PALETA[i % PALETA.length]);
 
   // Gráfico de evolución
   new Chart(document.getElementById('usuariosEvolucionChart'), {
@@ -47,19 +61,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Gráfico de roles
-  new Chart(document.getElementById('usuariosRolesChart'), {
-    type: 'doughnut',
+  // Gráfico de roles 
+  new Chart(document.getElementById("usuariosRolesChart"), {
+    type: 'pie',
     data: {
-      labels: rolesLabels,
+      labels: labels,
       datasets: [{
-        data: rolesData,
-        backgroundColor: ['#0dcaf0','#198754','#ffc107','#dc3545','#6c757d','#6610f2']
+        data: data,
+        backgroundColor: colors
       }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'bottom' } }
     }
   });
 });

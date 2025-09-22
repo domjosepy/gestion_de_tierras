@@ -1,5 +1,11 @@
 from django.urls import path
-from .views import LoginView, HomeView, AdminView, InvitadoView, SignUpView, CustomPasswordChangeView, edit_profile, test_toast, RolListView, RolCreateView, RolUpdateView, RolDeleteView, SimpleUserCreateView, asignar_rol_usuario, cambiar_estado_usuario
+from .views import (
+    LoginView, HomeView, AdminView, InvitadoView, SignUpView, 
+    CustomPasswordChangeView, edit_profile, test_toast, 
+    RolListView, RolCreateView, SimpleUserCreateView, 
+    asignar_rol_usuario, cambiar_estado_usuario,
+    editar_rol, eliminar_rol   
+)
 from django.contrib.auth.views import LogoutView
 
 urlpatterns = [
@@ -27,8 +33,9 @@ urlpatterns = [
     # ------------------------------------
     path('roles/', RolListView.as_view(), name='listar_roles'),
     path('roles/crear/', RolCreateView.as_view(), name='crear_rol'),
-    path('roles/editar/<int:pk>/', RolUpdateView.as_view(), name='editar_rol'),
-    path('roles/eliminar/<int:pk>/', RolDeleteView.as_view(), name='eliminar_rol'),
+    path('roles/editar/<int:rol_id>/', editar_rol, name='editar_rol'),
+    path('roles/eliminar/<int:rol_id>/', eliminar_rol, name='eliminar_rol'),
+
 
     #---------------------------------------------
     # 4. Vistas de Crear usuario Form desde admin

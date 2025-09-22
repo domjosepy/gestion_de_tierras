@@ -21,7 +21,7 @@
                 {{ usuario.estado|default:'PENDIENTE' }}
               </span>
             {% elif col.campo == 'rol' or col.campo == 'rol_nombre' %}
-              <span class="badge bg-{% if usuario.rol %}info{% else %}secondary{% endif %}">
+              <span class="badge bg-info text-dark text-uppercase">
                 {{ usuario.rol.nombre|default:'Sin rol' }}
               </span>
             {% else %}
