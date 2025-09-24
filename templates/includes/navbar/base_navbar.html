@@ -1,82 +1,28 @@
-<!-- Nav Item - Search Dropdown (Visible Only XS) -->
-<li class="nav-item dropdown no-arrow d-sm-none">
-    <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-        data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fas fa-search fa-fw"></i>
-    </a>
-    <!-- Dropdown - Search -->
-    <div class="dropdown-menu dropdown-menu-end p-3 shadow animated--grow-in"
-        aria-labelledby="searchDropdown">
-        <form class="d-flex">
-            <div class="input-group">
-                <input type="text" class="form-control bg-light border-0 small"
-                    placeholder="Buscar..." aria-label="Search">
-                <button class="btn btn-primary" type="submit">
-                    <i class="fas fa-search fa-sm"></i>
-                </button>
-            </div>
-        </form>
-    </div>
-</li>
-
 <!-- Notificaciones globales -->
-<li class="nav-item dropdown no-arrow mx-1">
-    <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-       data-bs-toggle="dropdown" aria-expanded="false">
+<li class="nav-item dropdown mo-arrow mx-1 position-relative">
+    <a class="nav-link dropdown-toggle" href="#" id="notificacionesDropdown"
+       role="button" data-bs-toggle="dropdown" aria-expanded="false">
         <i class="fas fa-bell fa-fw"></i>
-        <!-- Contador de notificaciones -->
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-            3+
-            <span class="visually-hidden">notificaciones sin leer</span>
-        </span>
+        {% if notificaciones_no_leidas %}
+            <span class="badge rounded-pill bg-danger position-absolute" 
+                  style="top: 0px; right: 20px; transform: translate(10%, -10%);">
+                {{ notificaciones_no_leidas }}
+            </span>
+        {% endif %}
     </a>
-    <!-- Dropdown - Notifications -->
-    <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
-         aria-labelledby="alertsDropdown">
-        <h6 class="dropdown-header text-primary">
-            <i class="fas fa-bell me-1"></i> Alertas del Sistema
-        </h6>
-        <a class="dropdown-item d-flex align-items-center" href="#">
-            <div class="me-3">
-                <div class="icon-circle bg-warning">
-                    <i class="fas fa-exclamation-triangle text-white"></i>
-                </div>
-            </div>
-            <div>
-                <div class="small text-gray-500">{{ now|date:"H:i" }}</div>
-                <span class="fw-bold">Actualización del sistema disponible</span>
-            </div>
-        </a>
-    </div>
+    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificacionesDropdown">
+        <li class="dropdown-header">Notificaciones</li>
+        {% for n in notificaciones_recientes %}
+            <li>
+                <a class="dropdown-item {% if not n.leida %}fw-bold{% endif %}" href="#">
+                    {{ n.mensaje }}
+                    <small class="text-muted d-block">{{ n.creado|date:"d/m/Y H:i" }}</small>
+                </a>
+            </li>
+        {% empty %}
+            <li><span class="dropdown-item text-muted">Sin notificaciones</span></li>
+        {% endfor %}
+    </ul>
 </li>
 
-<!-- Mensajes (opcional) -->
-<li class="nav-item dropdown no-arrow mx-1">
-    <a class="nav-link dropdown-toggle" href="#" id="messagesDropdown" role="button"
-       data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fas fa-envelope fa-fw"></i>
-        <!-- Contador de mensajes -->
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
-            2
-            <span class="visually-hidden">mensajes sin leer</span>
-        </span>
-    </a>
-    <!-- Dropdown - Messages -->
-    <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
-         aria-labelledby="messagesDropdown">
-        <h6 class="dropdown-header text-primary">
-            <i class="fas fa-envelope me-1"></i> Mensajes
-        </h6>
-        <a class="dropdown-item d-flex align-items-center" href="#">
-            <div class="me-3">
-                <div class="icon-circle bg-primary">
-                    <i class="fas fa-file-alt text-white"></i>
-                </div>
-            </div>
-            <div>
-                <div class="text-truncate">Tienes un nuevo informe de relevamiento</div>
-                <div class="small text-gray-500">Jefe de Monitoreo · 58m</div>
-            </div>
-        </a>
-    </div>
-</li>
+<!-- Fin Notificaciones globales -->

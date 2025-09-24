@@ -1,9 +1,15 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from administrador.models import User
-from .models import Notificacion
+from django.conf import settings
+from core.notificaciones.models import Notificacion
 
-@receiver(post_save, sender=User)
-def notificar_registro_usuario(sender, instance, created, **kwargs):
-    if created and instance.estado == 'PENDIENTE':
-        Notificacion.notificar_nuevo_usuario(instance)
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def notificar_usuario_creado(sender, instance, created, **kwargs):
+    if created:
+        # Notificación genérica al administrador
+        Notificacion.objects.create(
+            usuario=instance,
+            mensaje=f"Se creó el usuario {instance.username}",
+            tipo="SUCCESS"
+        )
+        # Notificación específica al usuario creado

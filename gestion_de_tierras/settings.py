@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.notificaciones.context_processors.notificaciones_context',  # Context processor para notificaciones-- agregado el 22/09/2025
             ],
         },
     },
