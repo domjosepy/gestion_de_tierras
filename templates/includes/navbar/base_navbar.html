@@ -12,6 +12,13 @@
     </a>
     <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificacionesDropdown">
         <li class="dropdown-header">Notificaciones</li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <button id="btnMarcarLeidas" class="dropdown-item text-center">
+                Marcar todas como leídas
+            </button>
+        </li>
+
         {% for n in notificaciones_recientes %}
             <li>
                 <a class="dropdown-item {% if not n.leida %}fw-bold{% endif %}" href="#">
@@ -26,3 +33,32 @@
 </li>
 
 <!-- Fin Notificaciones globales -->
+ <script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btn = document.getElementById("btnMarcarLeidas");
+    if (btn) {
+        btn.addEventListener("click", function() {
+            fetch("{% url 'notificaciones:marcar_todas_leidas' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Resetear contador de la campanita
+                    const badge = document.querySelector("#notificacionesDropdown .badge");
+                    if (badge) badge.textContent = "0";
+
+                    // Opcional: cambiar estilo de las no leídas en el dropdown
+                    document.querySelectorAll(".dropdown-menu .bg-primary").forEach(el => {
+                        el.classList.remove("bg-primary");
+                    });
+                }
+            });
+        });
+    }
+});
+</script>

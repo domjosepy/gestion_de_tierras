@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Notificaciones</h3>
+        <button id="btnMarcarLeidasLista" class="btn btn-sm btn-outline-primary">
+            Marcar todas como leídas
+        </button>
+    </div>
     <ul class="list-group">
         {% for n in notificaciones %}
             <li class="list-group-item d-flex justify-content-between align-items-center 
@@ -15,3 +20,27 @@
     </ul>
 </div>
 {% endblock %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const btnLista = document.getElementById("btnMarcarLeidasLista");
+    if (btnLista) {
+        btnLista.addEventListener("click", function() {
+            fetch("{% url 'notificaciones:marcar_todas_leidas' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Refrescar la página para que se vea todo como leído
+                    window.location.reload();
+                }
+            });
+        });
+    }
+});
+</script>
