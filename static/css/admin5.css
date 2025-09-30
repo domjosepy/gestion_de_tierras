@@ -99,6 +99,13 @@
   box-shadow: 0 0 0 0.2rem rgba(34, 74, 190, 0.25);
 }
 
+.dropdown-menu-notificaciones {
+    max-width: 350px;   /* ancho máximo */
+    white-space: normal; /* permite salto de línea */
+    word-wrap: break-word; /* corta palabras largas */
+}
+
+
 /* ================================= */
 /* ESTRUCTURA PRINCIPAL */
 /* ================================= */
@@ -1596,3 +1603,15 @@ table.dataTable td .dropdown-item:hover {
   border-color: var(--primary-dark);
 }
 
+.checkbox-notification {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid #ced4da;
+  border-radius: 0.375rem;
+  background-color: #fff;
+  transition: 
+    background-color 0.2s cubic-bezier(.4,0,.2,1),
+    border-color 0.2s cubic-bezier(.4,0,.2,1),
+    box-shadow 0.2s cubic-bezier(.4,0,.2,1);
+  box-shadow: none;
+}

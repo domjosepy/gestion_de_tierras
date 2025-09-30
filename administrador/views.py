@@ -11,11 +11,12 @@ from django.db.models import Q, Count
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.shortcuts import render, get_list_or_404, redirect, get_object_or_404
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView, CreateView, ListView
+from core.notificaciones.utils import notificar_a_admins
 
 # Local application imports
 from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm
@@ -187,6 +188,13 @@ class RolCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         messages.success(self.request, f'Rol "{self.object.nombre}" creado exitosamente!')
+        # Notifica a los administradores sobre el nuevo rol creado
+        notificar_a_admins(
+            mensaje=f'Se ha creado un nuevo rol: "{self.object.nombre}".',
+            tipo="INFO",
+            exclude_user=self.request.user,
+            link=reverse("administrador/listar_roles") # Para que el admin pueda ir a ver los roles creados
+    )
         return response
 
     def form_invalid(self, form):
@@ -202,16 +210,21 @@ def editar_rol(request, rol_id):
         rol.permisos.set(permisos_ids)
         rol.save()
         messages.success(request, "Rol actualizado correctamente.")
+        notificar_a_admins(
+            mensaje=f'El rol "{rol.nombre}" fue editado.',
+            tipo="WARNING",
+            exclude_user=request.user
+        )
         return redirect('listar_roles')
     return redirect('listar_roles')
 
 def eliminar_rol(request, rol_id):
     rol = get_object_or_404(Rol, id=rol_id)
     if rol.user_set.exists():
-        messages.error(request, "No se puede eliminar este rol porque tiene usuarios asociados.")
+        messages.error(request, "Este rol está asignado a uno o más usuarios y no puede ser eliminado.")
     else:
         rol.delete()
-        messages.success(request, "Rol eliminado correctamente.")
+        messages.success(request, "Rol eliminado correctamente.")    
     return redirect('listar_roles')
 
 #=============================================================
@@ -225,6 +238,13 @@ class SimpleUserCreateView(CreateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         messages.success(self.request, f'Usuario "{self.object.username}" creado exitosamente!')
+        # Notifica a los administradores sobre el nuevo usuario creado
+        notificar_a_admins(
+            mensaje=f'Se ha registrado a: "{self.object.username}".',
+            tipo="INFO",
+            exclude_user=self.request.user,
+            link=reverse("administrador_dashboard") # Para que el admin pueda ir a ver los usuarios creados
+        )
         return response
 
     def form_invalid(self, form):
@@ -254,6 +274,12 @@ def asignar_rol_usuario(request):
         # opcional: al asignar rol lo activas
         usuario.estado = "ACTIVO" 
         usuario.save()
+        # Notifica a los administradores sobre el nuevo rol asignado
+        notificar_a_admins(
+            mensaje=f'El usuario {usuario.username} fue asignado al rol "{rol.nombre}".',
+            tipo="INFO",
+            exclude_user=request.user
+        )
 
         return JsonResponse({"success": True, "message": f"Rol '{rol.nombre}' asignado a {usuario.username}"})
     except Exception as e:
@@ -287,6 +313,13 @@ def cambiar_estado_usuario(request):
             
         
         user.save()
+        notificar_a_admins(
+            mensaje=f'El estado del usuario {user.username} fue cambiado a "{user.estado}"',
+            tipo="WARNING" if user.estado == "INACTIVO" else "SUCCESS",
+            exclude_user=request.user,
+            link=reverse("administrador_dashboard") 
+        )
+
         return JsonResponse({'success': True, 'message': f'Estado actualizado a {user.estado} para {user.username}'})
         
     except User.DoesNotExist:
@@ -320,16 +353,6 @@ def edit_profile(request):
                     messages.error(request, f"Error en {form.fields[field].label}: {error}")
 
     return render(request, "registration/edit_profile.html", {"form": form})
-
-
-
-
-
-
-
-
-
-
 
 
 

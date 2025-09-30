@@ -19,6 +19,10 @@ class Notificacion(models.Model):
     leida = models.BooleanField(default=False)
     creado = models.DateTimeField(auto_now_add=True)
 
+    
+    link = models.CharField(max_length=255, blank=True, null=True)
+
+
     class Meta:
         ordering = ["-creado"]
 

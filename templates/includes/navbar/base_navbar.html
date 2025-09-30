@@ -1,36 +1,47 @@
+
 <!-- Notificaciones globales -->
-<li class="nav-item dropdown mo-arrow mx-1 position-relative">
-    <a class="nav-link dropdown-toggle" href="#" id="notificacionesDropdown"
-       role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fas fa-bell fa-fw"></i>
-        {% if notificaciones_no_leidas %}
-            <span class="badge rounded-pill bg-danger position-absolute" 
-                  style="top: 0px; right: 20px; transform: translate(10%, -10%);">
+<li class="nav-item dropdown mx-1">
+    <a class="nav-link dropdown-toggle" href="#" id="notificacionesDropdown" role="button"
+       data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bell"></i>
+
+        {% if notificaciones_no_leidas > 0 %}
+            <span class="badge bg-danger rounded-pill">
                 {{ notificaciones_no_leidas }}
             </span>
         {% endif %}
     </a>
-    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificacionesDropdown">
-        <li class="dropdown-header">Notificaciones</li>
-        <li><hr class="dropdown-divider"></li>
-        <li>
-            <button id="btnMarcarLeidas" class="dropdown-item text-center">
-                Marcar todas como leídas
-            </button>
-        </li>
-
+    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-notificaciones" aria-labelledby="notificacionesDropdown">
         {% for n in notificaciones_recientes %}
-            <li>
-                <a class="dropdown-item {% if not n.leida %}fw-bold{% endif %}" href="#">
+            <li class="dropdown-item {% if not n.leida %}fw-bold{% endif %}">
+                {% if n.link %}
+                    <a href="{{ n.link }}" class="text-decoration-none">{{ n.mensaje }}</a>
+                {% else %}
                     {{ n.mensaje }}
-                    <small class="text-muted d-block">{{ n.creado|date:"d/m/Y H:i" }}</small>
-                </a>
+                {% endif %}
+                <small class="text-muted d-block">{{ n.creado|date:"d/m/Y H:i" }}</small>
             </li>
         {% empty %}
-            <li><span class="dropdown-item text-muted">Sin notificaciones</span></li>
+            <li class="dropdown-item text-muted">Sin notificaciones</li>
         {% endfor %}
+
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <a href="{% url 'notificaciones:lista' %}" class="dropdown-item text-center">
+                Ver todas
+            </a>
+        </li>
+        {% if notificaciones_no_leidas > 0 %}
+        <li>
+            <a href="{% url 'notificaciones:marcar_todas_leidas' %}" class="dropdown-item text-center text-primary">
+                <i class="bi bi-check-all"></i>
+                Marcar todas como leídas
+            </a>
+        </li>
+        {% endif %}
     </ul>
 </li>
+
 
 <!-- Fin Notificaciones globales -->
  <script>
