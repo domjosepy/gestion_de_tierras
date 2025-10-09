@@ -1,45 +1,45 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Panel de Administración{% endblock %}
+{% block title %}Panel de Gerencia{% endblock %}
 
 {% block content %}
 
 <div class="container-fluid fade-in">
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Panel de Administración</h1>
+        <h1 class="h3 mb-0 text-gray-800">Panel de Gerencia</h1>
     </div>
     
     <!-- Estadísticas -->
     <div class="row">
-        <!-- Usuarios Totales -->
+        <!-- Departamentos Totales -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-start-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-primary text-uppercase mb-1">
-                                Usuarios Totales</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_usuarios }}</div>
+                                Departamentos</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_departamentos }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                            <i class="fas fa-building fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <!-- Pendientes de Rol -->
+
+        <!-- Distritos Totales -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-start-warning shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">
-                                Pendientes de Rol</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_pendientes.count }}</div>
+                                Distritos</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_distritos }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-user-clock fa-2x text-gray-300"></i>
@@ -48,16 +48,16 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Usuarios Activos -->
+
+        <!-- Colonias Totales -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-start-success shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                                Usuarios Activos</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_activos.count }}</div>
+                                Colonias</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_colonias }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-user-check fa-2x text-gray-300"></i>
@@ -83,6 +83,95 @@
                 </div>
             </div>
         </div>
+    </div>
+    <!-- Estado de Solicitudes y Relevamientos -->
+    <div class="row">
+        <!-- Solicitudes Totales -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Solicitudes</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_solicitudes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-building fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                 <!-- Solicitudes Inactivas -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                Solicitudes Inactivas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_inactivas.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                 <!-- Solicitudes Activas -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                Solicitudes Activas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_activas.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+                 <!-- Solicitudes Pendientes -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                Solicitudes Pendientes</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_pendientes.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+                 <!-- Solicitudes en proceso -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
+                                Solicitudes en proceso</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_en_proceso.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tasks fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
@@ -92,22 +181,27 @@
             
                 <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="todos-tab" data-bs-toggle="tab" data-bs-target="#todos" type="button" role="tab" aria-controls="todos" aria-selected="true">
+                        <button class="nav-link active" id="solicitudes_todas-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_todas" type="button" role="tab" aria-controls="solicitudes_todas" aria-selected="true">
                             <i class="fas fa-users me-1"></i> Todos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab" aria-controls="pendientes" aria-selected="false">
+                        <button class="nav-link" id="solicitudes_proceso-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_proceso" type="button" role="tab" aria-controls="solicitudes_proceso" aria-selected="false">
+                            <i class="fas fa-user-clock me-1"></i> En Proceso
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="solicitudes_pendientes-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_pendientes" type="button" role="tab" aria-controls="solicitudes_pendientes" aria-selected="false">
                             <i class="fas fa-user-clock me-1"></i> Pendientes
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="activos-tab" data-bs-toggle="tab" data-bs-target="#activos" type="button" role="tab" aria-controls="activos" aria-selected="false">
+                        <button class="nav-link" id="solicitudes_activos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_activos" type="button" role="tab" aria-controls="solicitudes_activos" aria-selected="false">
                             <i class="fas fa-user-check me-1"></i> Activos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="inactivos-tab" data-bs-toggle="tab" data-bs-target="#inactivos" type="button" role="tab" aria-controls="inactivos" aria-selected="false">
+                        <button class="nav-link" id="solicitudes_inactivos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_inactivos" type="button" role="tab" aria-controls="solicitudes_inactivos" aria-selected="false">
                             <i class="fas fa-user-times me-1"></i> Inactivos
                         </button>
                     </li>
@@ -115,21 +209,18 @@
             
             <!-- Botones exportación -->
             <div class="btn-group" role="group">
-                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-usuarios" title="Exportar CSV">
+                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-solicitudes" title="Exportar CSV">
                     <i class="fas fa-file-csv"></i>
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-usuarios" title="Exportar Excel">
+                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-solicitudes" title="Exportar Excel">
                     <i class="fas fa-file-excel"></i>
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-usuarios" title="Imprimir">
+                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-solicitudes" title="Imprimir">
                     <i class="fas fa-print"></i>
                 </button>
             </div>
         </div>
 
-            
-           
-        </div>
         <div class="card-body">
             <div class="tab-content" id="usersTabsContent">
                 <div class="tab-pane table-responsive fade show active" id="todos" role="tabpanel" aria-labelledby="todos-tab">

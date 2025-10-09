@@ -11,7 +11,7 @@ from django.db.models import Q, Count
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
 from django.shortcuts import render, get_list_or_404, redirect, get_object_or_404
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse, reverse_lazy, NoReverseMatch
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -32,23 +32,38 @@ class LoginView(DjangoLoginView):
         return super().form_invalid(form)
 
     def form_valid(self, form):
-        messages.success(self.request, f"¡Bienvenido, {form.get_user().username}! 🎉")
+        messages.success(self.request, f"¡Bienvenido, {form.get_user().username}!")
         return super().form_valid(form)
 
     def get_success_url(self):
         user = self.request.user
 
-        # Obtiene el rol normalizado (minúsculas y guiones en lugar de espacios)
+        # Normalizamos el rol
         rol_slug = user.rol_nombre.lower().replace(" ", "-")
-
-        # Construye el nombre de la URL esperada, ej: 'administrador_dashboard'
         nombre_url = f"{rol_slug}_dashboard"
 
-        # Intenta obtener la URL usando reverse_lazy, si falla, fallback a 'home'
+        # --- MAPEO de roles a namespaces reales ---
+        namespace_por_rol = {
+            "gerente": "gerencia",
+            
+              # por ejemplo
+            # podés agregar más roles aquí
+        }
+
+        namespace = namespace_por_rol.get(rol_slug, None)
+
+        # Primero intentamos con namespace si existe
+        if namespace:
+            try:
+                return reverse_lazy(f"{namespace}:{nombre_url}")
+            except NoReverseMatch:
+                pass
+
+        # Si falla, intentamos sin namespace
         try:
             return reverse_lazy(nombre_url)
-        except Exception:
-            return reverse_lazy('home')
+        except NoReverseMatch:
+            return reverse_lazy("home")
         
 # MUESTRA LA VISTA DEL HOME
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -62,7 +77,7 @@ class AdminView(LoginRequiredMixin, TemplateView):
     template_name = 'administrador/administrador_dashboard.html'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs) # Llama al método padre para obtener el contexto base
         context['permisos'] = Permission.objects.all()  # Para el modal de creación de roles
 
         # Estadísticas
@@ -124,14 +139,14 @@ class SignUpView(CreateView):
         response = super().form_valid(form)
         messages.success(
             self.request,
-            "¡Registro exitoso! Por favor inicia sesión. ✅"
+            "¡Registro exitoso! Por favor inicia sesión."
         )
         return response
 
     def form_invalid(self, form):
         messages.error(
             self.request,
-            "Error en el registro. Por favor corrige los errores. ❌",
+            "Error en el registro. Por favor corrige los errores.",
             extra_tags='danger'
         )
         return super().form_invalid(form)
@@ -163,7 +178,7 @@ class CustomPasswordChangeView(PasswordChangeView):
     def form_valid(self, form):
         messages.success(
             self.request,
-            "¡Tu contraseña ha sido cambiada exitosamente! ✅"
+            "¡Tu contraseña ha sido cambiada exitosamente!"
         )
         return super().form_valid(form)
 

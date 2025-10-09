@@ -1,65 +1,83 @@
-<!-- Dashboard -->
+<!-- === admin_sidebar.html (menú de administradores) === -->
 <li class="nav-item">
-    <a class="nav-link" href="{% url 'gerente_dashboard' %}">
-        <i class="fas fa-tachometer-alt me-2 text-primary"></i>
-        <span>Dashboard</span>
-    </a>
+  <a class="nav-link" href="{% url 'gerencia:gerente_dashboard' %}">
+    <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+    <span class="justify-content-center">Panel de Gerencia</span>
+  </a>
 </li>
 
 <hr class="sidebar-divider">
 
-<div class="sidebar-heading text-uppercase small text-muted px-3">
-    Gestión Territorial
+<div class="sidebar-heading text-uppercase small px-3">
+  Gerencia
 </div>
-
-<!-- Colonias -->
-<li class="nav-item">
-    <a class="nav-link d-flex justify-content-between align-items-center collapsed" href="#" 
-       data-bs-toggle="collapse" data-bs-target="#collapseColonies" aria-expanded="false">
-        <span><i class="fas fa-map-marked-alt me-2 text-info"></i>Colonias</span>
-        <i class="fas fa-chevron-down small"></i>
-    </a>
-    <div id="collapseColonies" class="collapse" data-bs-parent="#accordionSidebar">
-        <div class="bg-light py-2 ps-4 collapse-inner rounded">
-            <a class="collapse-item" href="#">Listar Colonias</a>
-            <a class="collapse-item" href="#">Nueva Colonia</a>
-        </div>
-    </div>
-</li>
-
-<!-- Distritos -->
-<li class="nav-item">
-    <a class="nav-link" href="#">
-        <i class="fas fa-map me-2 text-success"></i>
-        <span>Distritos</span>
-    </a>
-</li>
 
 <hr class="sidebar-divider">
 
-<div class="sidebar-heading text-uppercase small text-muted px-3">
-    Operaciones
+<div class="sidebar-heading text-uppercase small px-3">
+  Módulos
+</div>
+<!-- sidebar.html -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-map-marked-alt"></i>
+    </div>
+    <div class="sidebar-brand-text">SRT</div>
+  </div>
+
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link active"  title="Panel de Control" data-bs-toggle="tooltip" href="{% url 'gerencia:gerente_dashboard' %}">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Panel de Control</span>
+      </a>
+    </li>
+
+    <div class="sidebar-heading">Gerencia</div>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers" title="Gestión de Gerencia">
+        <i class="fas fa-users"></i>
+        <span>Gestión de Gerencia</span>
+      </a>
+      <div id="collapseUsers" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">Gestionar Colonias</a>
+          <a class="collapse-item" href="#">Gestionar Relevamientos</a>
+          <a class="collapse-item" href="#">Gestionar Solicitudes</a>
+          <a class="collapse-item" href="#">Gestionar Objetivos</a>
+        </div>
+      </div>
+    </li>
+
+    <div class="sidebar-heading">Módulos</div>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAnalisis" aria-expanded="false" aria-controls="collapseAnalisis" title="Análisis">
+        <i class="fas fa-chart-bar"></i>
+        <span>Análisis</span>
+      </a>
+      <div id="collapseAnalisis" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">Reportes</a>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link" href="#" title="Configuración">
+        <i class="fas fa-cogs"></i>
+        <span>Configuración</span>
+      </a>
+    </li>
+  </ul>
+
+  <button id="sidebarToggle">
+    <i class="fas fa-angle-double-right"></i>
+  </button>
 </div>
 
-<!-- Relevamientos -->
-<li class="nav-item">
-    <a class="nav-link d-flex justify-content-between align-items-center collapsed" href="#" 
-       data-bs-toggle="collapse" data-bs-target="#collapseSurveys" aria-expanded="false">
-        <span><i class="fas fa-clipboard-list me-2 text-warning"></i>Relevamientos</span>
-        <i class="fas fa-chevron-down small"></i>
-    </a>
-    <div id="collapseSurveys" class="collapse" data-bs-parent="#accordionSidebar">
-        <div class="bg-light py-2 ps-4 collapse-inner rounded">
-            <a class="collapse-item" href="#">Solicitudes</a>
-            <a class="collapse-item" href="#">Nueva Solicitud</a>
-        </div>
-    </div>
-</li>
-
-<!-- Análisis -->
-<li class="nav-item">
-    <a class="nav-link" href="#">
-        <i class="fas fa-chart-bar me-2 text-danger"></i>
-        <span>Solicitudes Análisis</span>
-    </a>
-</li>
+<!-- content wrapper -->
+<div id="content-wrapper">
+  {% block content %}
+  {% endblock %}
+</div>

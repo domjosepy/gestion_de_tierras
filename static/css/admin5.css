@@ -114,7 +114,7 @@
 #content,
 .container-fluid {
   max-width: var(--max-content-width);
-  overflow-x: auto;
+  
 }
 
 #content-wrapper {
@@ -1572,6 +1572,13 @@ table.dataTable td .dropdown-item:hover {
   background-color: var(--primary-color);
   color: #fff;
 }
+
+.table-responsive-custom {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--border-radius);
+}
+
 /* ============================== */
 /* CHECKBOX PERSONALIZADO - MEJORADO */ 
 .form-check-input {

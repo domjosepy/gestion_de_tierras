@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+  <h3>Colonias</h3>
+
+  <form class="row g-2 mb-3" method="get">
+    <div class="col-auto">
+      <input name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Buscar colonia...">
+    </div>
+    <div class="col-auto">
+      <select name="estado" class="form-select">
+        <option value="">-- Estado --</option>
+        <option value="activo" {% if request.GET.estado == 'activo' %}selected{% endif %}>Activo</option>
+        <option value="inactivo" {% if request.GET.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+      </select>
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary">Filtrar</button>
+    </div>
+  </form>
+
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Distritos</th>
+        <th>Estado</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in colonias %}
+      <tr>
+        <td>{{ c.nombre }}</td>
+        <td>{{ c.distritos.all|join:", " }}</td>
+        <td>{{ c.get_estado_display }}</td>
+        <td>
+          <a href="{% url 'core:colonias_edit' c.pk %}" class="btn btn-sm btn-outline-secondary">Editar</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4">No se encontraron colonias.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% include "pagination.html" with page_obj=page_obj %}
+</div>
+{% endblock %}
