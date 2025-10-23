@@ -9,13 +9,33 @@
                 {% csrf_token %}
                 <div class="modal-body">
                     <p>¿Estás seguro que deseas eliminar el rol <strong id="rolNombreEliminar"></strong>?</p>
-                    <p class="text-danger">Esta acción no se puede deshacer y afectará a los usuarios con este rol.</p>
+                    <p class="text-danger text-danger">Esta acción no se puede deshacer.</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar Rol</button>
+                <div class="modal-footer border-0 justify-content-between">
+                    <button type="button" class=" btn btn-outline-warning" data-bs-dismiss="modal">
+                        <i class="fas fa-xmark me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-trash-alt me-1"></i> Eliminar
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+{% block scripts %}
+    <script>
+        // Modal Eliminar Rol
+        const eliminarRolModal = document.getElementById('eliminarRolModal');
+        eliminarRolModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const rolId = button.getAttribute('data-rolid');
+            const rolNombre = button.getAttribute('data-rolnombre');
+
+            const form = eliminarRolModal.querySelector('#eliminarRolForm');
+            form.action = `/roles/eliminar/${rolId}/`;
+            document.getElementById('rolNombreEliminar').textContent = rolNombre;
+        });
+    </script>
+{% endblock %}

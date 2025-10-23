@@ -1,0 +1,46 @@
+/* ===== MODAL DANGER CUSTOM ===== */
+.modal-danger .modal-header {
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
+}
+
+.modal-danger .modal-content {
+  border-radius: 1rem;
+  overflow: hidden;
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+/* Animación al aparecer */
+.modal-danger.show .modal-content {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Fondo oscuro con blur */
+.modal-backdrop.show {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+/* Botón con efecto glow */
+.btn-glow {
+  position: relative;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+  transition: all 0.25s ease;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.8);
+  transform: translateY(-2px);
+}
+
+/* Animación de ícono de advertencia */
+.modal-danger .modal-title i {
+  animation: pulse-warning 1.5s infinite;
+}
+@keyframes pulse-warning {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+}
+

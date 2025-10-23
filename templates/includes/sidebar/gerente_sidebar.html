@@ -34,18 +34,33 @@
       </a>
     </li>
 
-    <div class="sidebar-heading">Gerencia</div>
+    <div class="sidebar-heading">
+      <i class="fas fa-chart-line me-1"></i>Gestión de Gerencia
+    </div>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#GerenciaTarget" aria-expanded="false" aria-controls="collapseUsers" title="Gestión de Gerencia">
+        <i class="fa-solid fa-list-check"></i>
+        
+        <span>Area de Trabajo</span>
+      </a>
+      <div id="GerenciaTarget" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">Gestionar Objetivos</a>
+          <a class="collapse-item" href="#">Gestionar Solicitudes</a>
+          <a class="collapse-item" href="#">Gestionar Relevamientos</a>
+        </div>
+      </div>
+    </li>
     <li class="nav-item">
       <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers" title="Gestión de Gerencia">
-        <i class="fas fa-users"></i>
-        <span>Gestión de Gerencia</span>
+        <i class="fas fa-tree-city"></i>
+        <span>Gestión de Colonias</span>
       </a>
       <div id="collapseUsers" class="collapse">
         <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">Gestionar Departamentos</a>
+          <a class="collapse-item" href="#">Gestionar Distritos</a>
           <a class="collapse-item" href="#">Gestionar Colonias</a>
-          <a class="collapse-item" href="#">Gestionar Relevamientos</a>
-          <a class="collapse-item" href="#">Gestionar Solicitudes</a>
-          <a class="collapse-item" href="#">Gestionar Objetivos</a>
         </div>
       </div>
     </li>

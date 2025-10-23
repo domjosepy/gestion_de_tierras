@@ -23,6 +23,8 @@ from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserC
 from .models import User, Rol
 
 # VISTA DE INICIO DE SESION PERSONALIZADA
+
+
 class LoginView(DjangoLoginView):
     template_name = 'login.html'
     redirect_authenticated_user = True
@@ -32,7 +34,8 @@ class LoginView(DjangoLoginView):
         return super().form_invalid(form)
 
     def form_valid(self, form):
-        messages.success(self.request, f"¡Bienvenido, {form.get_user().username}!")
+        messages.success(
+            self.request, f"¡Bienvenido, {form.get_user().username}!")
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -45,8 +48,8 @@ class LoginView(DjangoLoginView):
         # --- MAPEO de roles a namespaces reales ---
         namespace_por_rol = {
             "gerente": "gerencia",
-            
-              # por ejemplo
+
+            # por ejemplo
             # podés agregar más roles aquí
         }
 
@@ -64,32 +67,44 @@ class LoginView(DjangoLoginView):
             return reverse_lazy(nombre_url)
         except NoReverseMatch:
             return reverse_lazy("home")
-        
+
 # MUESTRA LA VISTA DEL HOME
+
+
 class HomeView(LoginRequiredMixin, TemplateView):
     template_name = 'home.html'
-#MUESTRA LA VISTA DEL INVITADO
+# MUESTRA LA VISTA DEL INVITADO
+
+
 class InvitadoView(LoginRequiredMixin, TemplateView):
     template_name = 'invitado_dashboard.html'
 
-#MUESTRA LA VISTA DEL ADMINISTRADOR
+# MUESTRA LA VISTA DEL ADMINISTRADOR
+
+
 class AdminView(LoginRequiredMixin, TemplateView):
     template_name = 'administrador/administrador_dashboard.html'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs) # Llama al método padre para obtener el contexto base
-        context['permisos'] = Permission.objects.all()  # Para el modal de creación de roles
+        # Llama al método padre para obtener el contexto base
+        context = super().get_context_data(**kwargs)
+        # Para el modal de creación de roles
+        context['permisos'] = Permission.objects.all()
 
         # Estadísticas
         context['total_usuarios'] = User.objects.count()
-        context['ultima_actividad'] = User.objects.order_by('-last_login').first().last_login if User.objects.exists() else None
+        context['ultima_actividad'] = User.objects.order_by(
+            '-last_login').first().last_login if User.objects.exists() else None
         context['roles'] = Rol.objects.all()
 
         # Querysets para las pestañas
         context['usuarios_todos'] = User.objects.all().order_by('-date_joined')
-        context['usuarios_pendientes'] = User.objects.filter(estado='PENDIENTE').order_by('-date_joined')
-        context['usuarios_activos'] = User.objects.filter(estado='ACTIVO').order_by('-date_joined')
-        context['usuarios_inactivos'] = User.objects.filter(estado='INACTIVO').order_by('-date_joined')
+        context['usuarios_pendientes'] = User.objects.filter(
+            estado='PENDIENTE').order_by('-date_joined')
+        context['usuarios_activos'] = User.objects.filter(
+            estado='ACTIVO').order_by('-date_joined')
+        context['usuarios_inactivos'] = User.objects.filter(
+            estado='INACTIVO').order_by('-date_joined')
 
         # Columnas para la tabla reutilizable
         context['columnas'] = [
@@ -103,7 +118,6 @@ class AdminView(LoginRequiredMixin, TemplateView):
             {'nombre': 'Último login', 'campo': 'last_login'},
         ]
 
-        
         # Evolución de usuarios por mes (últimos 12 meses)
         evolucion = (
             User.objects.annotate(mes=TruncMonth('date_joined'))
@@ -119,7 +133,8 @@ class AdminView(LoginRequiredMixin, TemplateView):
         # Distribución de roles
         roles = Rol.objects.all()
         roles_labels = [rol.nombre for rol in roles]
-        roles_cantidades = [User.objects.filter(rol=rol).count() for rol in roles]
+        roles_cantidades = [User.objects.filter(
+            rol=rol).count() for rol in roles]
         context['roles_labels'] = json.dumps(roles_labels)
         context['roles_cantidades'] = json.dumps(roles_cantidades)
 
@@ -150,7 +165,7 @@ class SignUpView(CreateView):
             extra_tags='danger'
         )
         return super().form_invalid(form)
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['hide_sidebar'] = True   # Para ocultar barra lateral
@@ -158,6 +173,8 @@ class SignUpView(CreateView):
         return context
 
 # VISTA PERSONALIZADA PARA CAMBIO DE CONTRASEÑA
+
+
 class CustomPasswordChangeView(PasswordChangeView):
     form_class = CustomPasswordChangeForm
     template_name = 'registration/password_change_form.html'
@@ -166,10 +183,10 @@ class CustomPasswordChangeView(PasswordChangeView):
         # Obtiene el rol del usuario actual
         user = self.request.user
         rol_slug = user.rol_nombre.lower().replace(" ", "-")
-        
+
         # Construye el nombre de la URL del dashboard correspondiente
         nombre_url = f"{rol_slug}_dashboard"
-        
+
         try:
             return reverse_lazy(nombre_url)
         except Exception:
@@ -182,14 +199,16 @@ class CustomPasswordChangeView(PasswordChangeView):
         )
         return super().form_valid(form)
 
-#======================================
+# ======================================
 # Vistas para Roles
-#=======================================
+# =======================================
+
 
 class RolListView(LoginRequiredMixin, ListView):
     model = Rol
     template_name = 'administrador/listar_roles.html'
     context_object_name = 'roles'
+
 
 class RolCreateView(LoginRequiredMixin, CreateView):
     model = Rol
@@ -201,20 +220,37 @@ class RolCreateView(LoginRequiredMixin, CreateView):
         return self.request.META.get('HTTP_REFERER', str(reverse_lazy('listar_roles')))
 
     def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, f'Rol "{self.object.nombre}" creado exitosamente!')
-        # Notifica a los administradores sobre el nuevo rol creado
+        # Guardar el rol sin los permisos primero
+        rol = form.save(commit=False)
+        rol.save()
+
+        # Capturar los permisos enviados desde el formulario
+        permisos_ids = self.request.POST.getlist('permisos')
+        if permisos_ids:
+            rol.permisos.set(permisos_ids)
+
+        # Mensaje de éxito
+        messages.success(
+            self.request, f'Rol "{rol.nombre}" creado exitosamente!'
+        )
+
+        # Notificar a los admins
         notificar_a_admins(
-            mensaje=f'Se ha creado un nuevo rol: "{self.object.nombre}".',
+            mensaje=f'Se ha creado un nuevo rol: "{rol.nombre}".',
             tipo="INFO",
             exclude_user=self.request.user,
-            link=reverse("administrador/listar_roles") # Para que el admin pueda ir a ver los roles creados
-    )
-        return response
+
+            link=reverse("listar_roles")
+        )
+
+        return super().form_valid(form)
 
     def form_invalid(self, form):
-        messages.error(self.request, 'Error al crear el rol. Por favor revise los datos.')
+        messages.error(
+            self.request, 'Error al crear el rol. Por favor revise los datos.'
+        )
         return super().form_invalid(form)
+
 
 def editar_rol(request, rol_id):
     rol = get_object_or_404(Rol, id=rol_id)
@@ -233,37 +269,44 @@ def editar_rol(request, rol_id):
         return redirect('listar_roles')
     return redirect('listar_roles')
 
+
 def eliminar_rol(request, rol_id):
     rol = get_object_or_404(Rol, id=rol_id)
     if rol.user_set.exists():
-        messages.error(request, "Este rol está asignado a uno o más usuarios y no puede ser eliminado.")
+        messages.error(
+            request, "Este rol está asignado a uno o más usuarios y no puede ser eliminado.")
     else:
         rol.delete()
-        messages.success(request, "Rol eliminado correctamente.")    
+        messages.success(request, "Rol eliminado correctamente.")
     return redirect('listar_roles')
 
-#=============================================================
+# =============================================================
 # VISTA PERSONALIZADA PARA CREAR USUARIOS CON EL ADMINISTRADOR
-#=============================================================
+# =============================================================
+
+
 class SimpleUserCreateView(CreateView):
     form_class = SimpleUserCreationForm
     template_name = 'administrador/crear_usuario.html'
     success_url = reverse_lazy('administrador_dashboard')
-    
+
     def form_valid(self, form):
         response = super().form_valid(form)
-        messages.success(self.request, f'Usuario "{self.object.username}" creado exitosamente!')
+        messages.success(
+            self.request, f'Usuario "{self.object.username}" creado exitosamente!')
         # Notifica a los administradores sobre el nuevo usuario creado
         notificar_a_admins(
             mensaje=f'Se ha registrado a: "{self.object.username}".',
             tipo="INFO",
             exclude_user=self.request.user,
-            link=reverse("administrador_dashboard") # Para que el admin pueda ir a ver los usuarios creados
+            # Para que el admin pueda ir a ver los usuarios creados
+            link=reverse("administrador_dashboard")
         )
         return response
 
     def form_invalid(self, form):
-        messages.error(self.request, "Error al crear el usuario. Por favor revise los datos.")
+        messages.error(
+            self.request, "Error al crear el usuario. Por favor revise los datos.")
         return super().form_invalid(form)
 
     def get_form_kwargs(self):
@@ -271,9 +314,11 @@ class SimpleUserCreateView(CreateView):
         kwargs['label_suffix'] = ''  # Elimina los dos puntos de las etiquetas
         return kwargs
 
-#=============================================================
+# =============================================================
 # VISTA PARA ASIGNAR ROL A USUARIOS DESDE EL ADMINISTRADOR
-#=============================================================
+# =============================================================
+
+
 @require_POST
 @login_required
 def asignar_rol_usuario(request):
@@ -287,7 +332,7 @@ def asignar_rol_usuario(request):
 
         usuario.rol = rol
         # opcional: al asignar rol lo activas
-        usuario.estado = "ACTIVO" 
+        usuario.estado = "ACTIVO"
         usuario.save()
         # Notifica a los administradores sobre el nuevo rol asignado
         notificar_a_admins(
@@ -299,11 +344,11 @@ def asignar_rol_usuario(request):
         return JsonResponse({"success": True, "message": f"Rol '{rol.nombre}' asignado a {usuario.username}"})
     except Exception as e:
         return JsonResponse({"success": False, "message": f"Error: {str(e)}"})
-    
-    
-#=============================================================
-# VISTA PARA CAMBIAR EL ESTADO DE UN USUARIO (ACTIVO/INACTIVO) 
-#=============================================================
+
+
+# =============================================================
+# VISTA PARA CAMBIAR EL ESTADO DE UN USUARIO (ACTIVO/INACTIVO)
+# =============================================================
 @csrf_exempt
 @require_POST
 def cambiar_estado_usuario(request):
@@ -314,29 +359,28 @@ def cambiar_estado_usuario(request):
         user_id = data.get('user_id')
         estado = data.get('estado')
         user = User.objects.get(id=user_id)
-        
+
         if user.is_superuser and estado != 'ACTIVO':
             return JsonResponse({'warning': False, 'message': 'No se puede desactivar un superusuario.'}, status=400)
-        
+
         if estado == 'ACTIVO':
             user.estado = 'ACTIVO'
             user.is_active = True
-            
+
         else:
             user.estado = 'INACTIVO'
             user.is_active = False
-            
-        
+
         user.save()
         notificar_a_admins(
             mensaje=f'El estado del usuario {user.username} fue cambiado a "{user.estado}"',
             tipo="WARNING" if user.estado == "INACTIVO" else "SUCCESS",
             exclude_user=request.user,
-            link=reverse("administrador_dashboard") 
+            link=reverse("administrador_dashboard")
         )
 
         return JsonResponse({'success': True, 'message': f'Estado actualizado a {user.estado} para {user.username}'})
-        
+
     except User.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Usuario no encontrado'})
     except Exception as e:
@@ -365,19 +409,10 @@ def edit_profile(request):
         else:
             for field, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"Error en {form.fields[field].label}: {error}")
+                    messages.error(
+                        request, f"Error en {form.fields[field].label}: {error}")
 
     return render(request, "registration/edit_profile.html", {"form": form})
-
-
-
-
-
-
-
-
-
-
 
 
 @login_required
@@ -387,4 +422,3 @@ def test_toast(request):
     messages.error(request, "Este es un mensaje de error. ❌")
     messages.info(request, "Novedades disponibles 📢")
     return redirect("home")
-

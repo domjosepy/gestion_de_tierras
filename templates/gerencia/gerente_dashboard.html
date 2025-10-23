@@ -8,205 +8,242 @@
 <div class="container-fluid fade-in">
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Panel de Gerencia</h1>
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-line text-primary me-2"></i> Panel de Gerencia
+        </h1>
     </div>
-    
+
     <!-- Estadísticas -->
-    <div class="row">
-        <!-- Departamentos Totales -->
-        <div class="col-xl-3 col-md-6 mb-4">
+    <div class="row g-3">
+        <!-- Departamentos -->
+        <div class="col-xl-3 col-md-6">
             <div class="card border-start-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
-                                Departamentos</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_departamentos }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-building fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Departamentos</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_departamentos }}</div>
                     </div>
+                    <i class="fas fa-map-marker-alt fa-2x text-primary-300"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Distritos Totales -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <!-- Distritos -->
+        <div class="col-xl-3 col-md-6">
             <div class="card border-start-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">
-                                Distritos</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_distritos }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-clock fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">Distritos</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_distritos }}</div>
                     </div>
+                    <i class="fas fa-city fa-2x text-warning-300"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Colonias Totales -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <!-- Colonias -->
+        <div class="col-xl-3 col-md-6">
             <div class="card border-start-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                                Colonias</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_colonias }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
-                        </div>
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Colonias</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_colonias }}</div>
                     </div>
+                    <i class="fas fa-tree fa-2x text-success-300"></i>
                 </div>
             </div>
-        </div>
-        <!-- Usuarios Inactivos -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
-                                Usuarios Inactivos</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_inactivos.count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
-                        </div>
+        </div> 
+        <!-- Relevadas Colonias -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Colonias Relevadas</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_relevadas }}</div>
                     </div>
+                    <i class="fa-solid fa-tree-city fa-2x text-success-300"></i>
                 </div>
             </div>
-        </div>
+        </div>      
     </div>
-    <!-- Estado de Solicitudes y Relevamientos -->
-    <div class="row">
-        <!-- Solicitudes Totales -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
-                                Solicitudes</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_solicitudes }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-building fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-                 <!-- Solicitudes Inactivas -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
-                                Solicitudes Inactivas</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_inactivas.count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-                 <!-- Solicitudes Activas -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
-                                Solicitudes Activas</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_activas.count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-                 <!-- Solicitudes Pendientes -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
-                                Solicitudes Pendientes</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_pendientes.count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-                 <!-- Solicitudes en proceso -->
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-start-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">
-                                Solicitudes en proceso</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_en_proceso.count }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-tasks fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+</div>
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h5 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-tree-city text-primary me-2"></i> Colonias Registradas
+        </h5>
     </div>
 
-     <!-- Pestañas simplificadas y tabla reutilizable -->
+    <!-- Pestañas simplificadas y tabla reutilizable -->
     <div class="card shadow mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
+
+            <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="colonias_todas-tab" data-bs-toggle="tab" data-bs-target="#colonias_todas" type="button" role="tab" aria-controls="colonias_todas" aria-selected="true">
+                    <i class="fa-solid fa-tree-city me-1"></i> Todos
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="colonias_proceso-tab" data-bs-toggle="tab" data-bs-target="#colonias_proceso" type="button" role="tab" aria-controls="colonias_proceso" aria-selected="false">
+                    <i class="fa-solid fa-hourglass-half me-1"></i> En Proceso
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="colonias_pendientes-tab" data-bs-toggle="tab" data-bs-target="#colonias_pendientes" type="button" role="tab" aria-controls="colonias_pendientes" aria-selected="false">
+                    <i class="fa-solid fa-hourglass-start me-1"></i> Sin Relevamiento
+                    </button>
+                </li>
+            </ul>
+           
+            <!-- Botones exportación -->
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-colonias" title="Exportar CSV">
+                    <i class="fas fa-file-csv"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-colonias" title="Exportar Excel">
+                    <i class="fas fa-file-excel"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-colonias" title="Imprimir">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+
+
+        <div class="card-body">
+            <div class="tab-content" id="usersTabsContent">
+                <div class="tab-pane table-responsive fade show active" id="todos" role="tabpanel" aria-labelledby="todos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_todos columnas=columnas mostrar_acciones=True tabla_id="todos" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="proceso" role="tabpanel" aria-labelledby="proceso-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_pendientes columnas=columnas mostrar_acciones=True tabla_id="pendientes" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="pendientes" role="tabpanel" aria-labelledby="pendientes-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_activos columnas=columnas mostrar_acciones=True tabla_id="activos" %}
+                </div>
+            </div>
             
-                <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="solicitudes_todas-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_todas" type="button" role="tab" aria-controls="solicitudes_todas" aria-selected="true">
-                            <i class="fas fa-users me-1"></i> Todos
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="solicitudes_proceso-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_proceso" type="button" role="tab" aria-controls="solicitudes_proceso" aria-selected="false">
-                            <i class="fas fa-user-clock me-1"></i> En Proceso
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="solicitudes_pendientes-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_pendientes" type="button" role="tab" aria-controls="solicitudes_pendientes" aria-selected="false">
-                            <i class="fas fa-user-clock me-1"></i> Pendientes
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="solicitudes_activos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_activos" type="button" role="tab" aria-controls="solicitudes_activos" aria-selected="false">
-                            <i class="fas fa-user-check me-1"></i> Activos
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="solicitudes_inactivos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_inactivos" type="button" role="tab" aria-controls="solicitudes_inactivos" aria-selected="false">
-                            <i class="fas fa-user-times me-1"></i> Inactivos
-                        </button>
-                    </li>
-                </ul>
-            
+        </div>
+    </div>
+
+<div class="container-fluid mt-4 fade-in">
+    
+    <!-- Estado de Solicitudes -->
+    <div class="row g-3 mt-2">
+        <!-- Totales -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-primary shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Solicitudes Totales</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_solicitudes }}</div>
+                    </div>
+                    <i class="fas fa-folder-open fa-2x text-primary-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pendientes -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-warning shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">Solicitudes Pendientes</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_pendientes.count }}</div>
+                    </div>
+                    <i class="fas fa-hourglass-half fa-2x text-warning-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activas -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Solicitudes Activas</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_activas.count }}</div>
+                    </div>
+                    <i class="fa-solid fa-clipboard-check fa-2x text text-success-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inactivas -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-secondary shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-secondary text-uppercase mb-1">Solicitudes Inactivas</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_inactivas.count }}</div>
+                    </div>
+                    <i class="fas fa-folder-minus fa-2x text-secondary-300"></i>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- En proceso -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-info shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Solicitudes en Proceso</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_en_proceso.count }}</div>
+                    </div>
+                    <i class="fas fa-spinner fa-spin fa-2x text-info-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h5 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-line text-primary me-2"></i> Solicitudes Registradas
+        </h5>
+    </div>
+
+    <!-- Pestañas simplificadas y tabla reutilizable -->
+    <div class="card shadow mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+
+            <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="solicitudes_todas-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_todas" type="button" role="tab" aria-controls="solicitudes_todas" aria-selected="true">
+                <i class="fa-solid fa-users me-1"></i> Todos
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_proceso-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_proceso" type="button" role="tab" aria-controls="solicitudes_proceso" aria-selected="false">
+                <i class="fa-solid fa-hourglass-half me-1"></i> En Proceso
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_pendientes-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_pendientes" type="button" role="tab" aria-controls="solicitudes_pendientes" aria-selected="false">
+                <i class="fa-solid fa-hourglass-start me-1"></i> Pendientes
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_activos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_activos" type="button" role="tab" aria-controls="solicitudes_activos" aria-selected="false">
+                <i class="fa-solid fa-user-check me-1"></i> Activos
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_inactivos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_inactivos" type="button" role="tab" aria-controls="solicitudes_inactivos" aria-selected="false">
+                <i class="fa-solid fa-user-xmark me-1"></i> Inactivos
+                </button>
+            </li>
+            </ul>
+           
             <!-- Botones exportación -->
             <div class="btn-group" role="group">
                 <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-solicitudes" title="Exportar CSV">
@@ -220,6 +257,7 @@
                 </button>
             </div>
         </div>
+
 
         <div class="card-body">
             <div class="tab-content" id="usersTabsContent">

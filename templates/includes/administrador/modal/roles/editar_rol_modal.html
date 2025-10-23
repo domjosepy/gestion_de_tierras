@@ -1,54 +1,62 @@
 <!-- Modal Editar Rol -->
-<div class="modal fade" id="editarRolModal{{ rol.id }}" tabindex="-1" aria-labelledby="editarRolModalLabel{{ rol.id }}" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <form method="post" action="{% url 'editar_rol' rol.id %}">
-        {% csrf_token %}
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="editarRolModalLabel{{ rol.id }}">Editar Rol</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row">
-            <!-- Nombre -->
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="nombre{{ rol.id }}" class="form-label">Nombre</label>
-                <input type="text" class="form-control" id="nombre{{ rol.id }}" name="nombre" value="{{ rol.nombre }}" required>
-              </div>
-            </div>
-            <!-- Descripción -->
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="descripcion{{ rol.id }}" class="form-label">Descripción</label>
-                <textarea class="form-control" id="descripcion{{ rol.id }}" name="descripcion" rows="2">{{ rol.descripcion }}</textarea>
-              </div>
-            </div>
+{% for rol in roles %}
+  {% if rol.id %}
+  <!-- Modal Editar Rol -->
+  <div class="modal fade modal-warning" id="editarRolModal{{ rol.id }}" tabindex="-1" aria-labelledby="editarRolModalLabel{{ rol.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form method="post" action="{% url 'editar_rol' rol.id %}">
+          {% csrf_token %}
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="editarRolModalLabel{{ rol.id }}">Editar Rol</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
-          <!-- Permisos -->
-          <div class="mb-3">
-            <label class="form-label">Permisos</label>
+          <div class="modal-body">
             <div class="row">
-              {% for permiso in permisos %}
-              <div class="col-md-4">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="permiso{{ rol.id }}{{ permiso.id }}" name="permisos" value="{{ permiso.id }}"
-                         {% if permiso in rol.permisos.all %}checked{% endif %}>
-                  <label class="form-check-label" for="permiso{{ rol.id }}{{ permiso.id }}">
-                    {{ permiso.name }}
-                  </label>
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="nombre{{ rol.id }}" class="form-label">Nombre</label>
+                  <input type="text" class="form-control" id="nombre{{ rol.id }}" name="nombre" value="{{ rol.nombre }}" required>
                 </div>
               </div>
-              {% endfor %}
+              <div class="col-md-6">
+                <div class="mb-3">
+                  <label for="descripcion{{ rol.id }}" class="form-label">Descripción</label>
+                  <textarea class="form-control" id="descripcion{{ rol.id }}" name="descripcion" rows="2">{{ rol.descripcion }}</textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Permisos</label>
+              <div class="row">
+                {% for permiso in permisos %}
+                <div class="col-md-4">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="permiso{{ rol.id }}{{ permiso.id }}" name="permisos"
+                           value="{{ permiso.id }}" {% if permiso in rol.permisos.all %}checked{% endif %}>
+                    <label class="form-check-label" for="permiso{{ rol.id }}{{ permiso.id }}">
+                      {{ permiso.name }}
+                    </label>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar cambios</button>
-        </div>
-      </form>
+
+          <div class="modal-footer justify-content-between">
+            <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-outline-primary">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>
+  {% endif %}
+{% endfor %}
+
 <!-- Fin Modal Editar Rol -->
+
+
+

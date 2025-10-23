@@ -1,41 +1,23 @@
-<!-- Nav Item - Alerts -->
-<li class="nav-item dropdown no-arrow mx-1">
-    <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-        data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="fas fa-bell fa-fw"></i>
-        <!-- Counter - Alerts -->
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-            3+
-            <span class="visually-hidden">alertas sin leer</span>
-        </span>
-    </a>
-    <!-- Dropdown - Alerts -->
-    <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in"
-        aria-labelledby="alertsDropdown">
-        <h6 class="dropdown-header text-primary">
-            <i class="fas fa-bell me-1"></i> Centro de Alertas
-        </h6>
-        <a class="dropdown-item d-flex align-items-center" href="#">
-            <div class="me-3">
-                <div class="icon-circle bg-primary">
-                    <i class="fas fa-file-alt text-white"></i>
-                </div>
-            </div>
-            <div>
-                <div class="small text-gray-500">
-                    {{ now|date:"d F Y H:i" }}
-                </div>
-                <span class="fw-bold">Nuevo informe de relevamiento disponible</span>
-            </div>
-        </a>
-    </div>
-</li>
 
 <!-- Nav Item - Quick Actions -->
 <li class="nav-item mx-1">
     <a class="nav-link" href="#" 
        title="Nueva solicitud" data-bs-toggle="tooltip" data-bs-placement="bottom">
         <i class="fas fa-plus-circle me-1"></i>
-        <span class="d-none d-lg-inline">Nueva Solicitud</span>
+        <span class="d-none d-lg-inline">Colonia</span>
+    </a>
+</li>
+<li class="nav-item mx-1">
+    <a class="nav-link" href="#" 
+       title="Nueva solicitud" data-bs-toggle="tooltip" data-bs-placement="bottom">
+        <i class="fas fa-plus-circle me-1"></i>
+        <span class="d-none d-lg-inline">Solicitud</span>
+    </a>
+</li>
+<li class="nav-item mx-1">
+    <a class="nav-link" href="#" 
+       title="Nueva solicitud" data-bs-toggle="tooltip" data-bs-placement="bottom">
+        <i class="fas fa-plus-circle me-1"></i>
+        <span class="d-none d-lg-inline">Objetivo</span>
     </a>
 </li>

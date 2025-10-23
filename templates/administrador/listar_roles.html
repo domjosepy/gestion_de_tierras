@@ -6,7 +6,8 @@
 {% block content %}
 <div class="container-fluid fade-in">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Gestión de Roles</h1>
+        <h1 class="h3 mb-0 text-gray-800">
+          <i class="fa-solid fa-person-walking-luggage me-1"></i>Gestión de Roles</h1>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearRolModal">
             <i class="fas fa-plus me-1"></i> Crear Nuevo Rol
         </button>
@@ -35,7 +36,7 @@
                                 <button 
                                     class="btn btn-sm btn-warning me-1"
                                     data-bs-toggle="modal"
-                                    data-bs-target="#editarRolModal"
+                                    data-bs-target="#editarRolModal{{ rol.id }}"
                                     data-rolid="{{ rol.id }}"
                                     data-rolnombre="{{ rol.nombre }}"
                                     data-roldescripcion="{{ rol.descripcion }}"
@@ -80,57 +81,9 @@
 
 <!-- Modales -->
 {% include 'includes/administrador/modal/roles/crear_rol_modal.html' %}
+{% include 'includes/administrador/modal/roles/editar_rol_modal.html' %}
+{% include 'includes/administrador/modal/roles/eliminar_rol_modal.html' %}
 
-<!-- Modal edición (dinámico) -->
-<div class="modal fade" id="editarRolModal" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" id="editarRolForm">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Editar Rol</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="rolNombre" class="form-label">Nombre</label>
-            <input type="text" name="nombre" id="rolNombre" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label for="rolDescripcion" class="form-label">Descripción</label>
-            <textarea name="descripcion" id="rolDescripcion" class="form-control"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar cambios</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal eliminación (dinámico) -->
-<div class="modal fade" id="eliminarRolModal" tabindex="-1">
-  <div class="modal-dialog">
-    <form method="post" id="eliminarRolForm">
-      {% csrf_token %}
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Eliminar Rol</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <p>¿Seguro que deseas eliminar el rol <strong id="rolNombreEliminar"></strong>?</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger">Eliminar</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
 
 {% endblock %}
 
@@ -147,32 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
             info: "Mostrando {start} a {end} de {rows} roles"
         }
     });
-
-    // Modal Editar Rol
-    const editarRolModal = document.getElementById('editarRolModal');
-    editarRolModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const rolId = button.getAttribute('data-rolid');
-        const rolNombre = button.getAttribute('data-rolnombre');
-        const rolDescripcion = button.getAttribute('data-roldescripcion');
-
-        const form = editarRolModal.querySelector('#editarRolForm');
-        form.action = `/roles/editar/${rolId}/`;
-        form.querySelector('#rolNombre').value = rolNombre;
-        form.querySelector('#rolDescripcion').value = rolDescripcion;
-    });
-
-    // Modal Eliminar Rol
-    const eliminarRolModal = document.getElementById('eliminarRolModal');
-    eliminarRolModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const rolId = button.getAttribute('data-rolid');
-        const rolNombre = button.getAttribute('data-rolnombre');
-
-        const form = eliminarRolModal.querySelector('#eliminarRolForm');
-        form.action = `/roles/eliminar/${rolId}/`;
-        document.getElementById('rolNombreEliminar').textContent = rolNombre;
-    });
+  
 });
 // Inicializar tooltips
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {

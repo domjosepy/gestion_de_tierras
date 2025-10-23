@@ -13,8 +13,6 @@
 
     <!-- Topbar Navbar -->
     <ul class="navbar-nav ms-auto">
-        {% include 'includes/navbar/base_navbar.html' %}
-
         {% if user.is_authenticated %}
             {% with 'includes/navbar/'|add:user.rol_efectivo.nombre|lower|add:'_links.html' as navbar_links %}
                 {% include navbar_links %}
@@ -22,7 +20,8 @@
         {% else %}
             {% include 'includes/navbar/base_navbar.html' %}
         {% endif %}
-
+        
+        {% include 'includes/navbar/base_navbar.html' %}
         <li class="nav-item d-none d-sm-block">
             <div class="topbar-divider h-100 border-start border-white opacity-50 ms-2 me-3"></div>
         </li>

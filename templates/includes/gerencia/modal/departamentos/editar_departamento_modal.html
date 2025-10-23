@@ -1,0 +1,57 @@
+<!-- Modal Editar Departamento -->
+<div class="modal fade modal-warning" id="editarDeptoModal" tabindex="-1" aria-labelledby="editarDeptoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+      <form id="editarDeptoForm" method="post">
+        {% csrf_token %}
+        <div class="modal-header text-white">
+          <h5 class="modal-title fw-bold" id="editarDeptoModalLabel">
+            <i class="fas fa-pen-to-square me-2"></i> Editar Departamento
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="departamentoCodigo" class="form-label fw-semibold">Código</label>
+              <input type="text" class="form-control form-control-glow" id="departamentoCodigo" name="codigo" required>
+            </div>
+            <div class="col-md-6">
+              <label for="departamentoNombre" class="form-label fw-semibold text-primary">Nombre</label>
+              <input type="text" class="form-control form-control-glow" id="departamentoNombre" name="nombre" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 justify-content-between">
+          <button type="button" class="btn btn-outline-warning " data-bs-dismiss="modal">
+            <i class="fas fa-xmark me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary btn-outline-primary">
+            <i class="fas fa-save me-1"></i>Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const editarDeptoModal = document.getElementById('editarDeptoModal');
+
+  editarDeptoModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const departamentoId = button.getAttribute('data-departamentoid');
+    const departamentoCodigo = button.getAttribute('data-departamentocodigo');
+    const departamentoNombre = button.getAttribute('data-departamentonombre');
+
+    const form = editarDeptoModal.querySelector('#editarDeptoForm');
+    form.action = `/gerencia/departmento/editar/${departamentoId}/`;  // ✅ URL dinámica real
+    form.querySelector('#departamentoCodigo').value = departamentoCodigo;
+    form.querySelector('#departamentoNombre').value = departamentoNombre;
+  });
+});
+</script>
