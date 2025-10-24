@@ -1,0 +1,44 @@
+<!-- Modal Eliminar Colonia -->
+<div class="modal fade modal-danger" id="eliminarColoniaModal" tabindex="-1" aria-labelledby="eliminarColoniaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header text-white">
+        <h5 class="modal-title fw-bold" id="eliminarColoniaModalLabel">
+          <i class="fas fa-triangle-exclamation me-2"></i> Confirmar Eliminación
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <form method="post" id="eliminarColoniaForm" action="">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="fs-5 mb-2">¿Estás seguro que deseas eliminar la Colonia <strong id="ColoniaNombreEliminar"></strong>?</p>
+          <p class="text-danger fw-semibold mb-0 text-center"><strong>Esta acción no se puede deshacer.</strong></p>
+        </div>
+
+        <div class="modal-footer border-0 justify-content-between">
+          <button type="button" class=" btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-xmark me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-danger">
+            <i class="fas fa-trash-alt me-1"></i> Eliminar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Modal Eliminar Colonia
+  const eliminarColoniaModal = document.getElementById('eliminarColoniaModal');
+  eliminarColoniaModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      const coloniaId = button.getAttribute('data-coloniaid');
+      const coloniaNombre = button.getAttribute('data-colonianombre');
+
+      const form = eliminarColoniaModal.querySelector('#eliminarColoniaForm');
+      form.action = `{% url 'gerencia:eliminar_colonia' 0 %}`.replace('0', coloniaId);
+      document.getElementById('ColoniaNombreEliminar').textContent = coloniaNombre;
+  });
+</script>

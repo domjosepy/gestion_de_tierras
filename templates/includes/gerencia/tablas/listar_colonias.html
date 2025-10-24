@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Colonias{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-map-marked-alt me-1"></i>Gestión de Colonias
+        </h1>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="distrito" class="form-label">Distrito</label>
+                    <select name="distrito" id="distrito" class="form-control">
+                        <option value="">Todos los distritos</option>
+                        {% for distrito in distritos %}
+                        <option value="{{ distrito.id }}" {% if request.GET.distrito == distrito.id|stringformat:"s" %}selected{% endif %}>
+                            {{ distrito.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select name="estado" id="estado" class="form-control">
+                        <option value="">Todos los estados</option>
+                        {% for estado in estado_choices %}
+                        <option value="{{ estado.0 }}" {% if request.GET.estado == estado.0 %}selected{% endif %}>
+                            {{ estado.1 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="q" name="q" 
+                           value="{{ request.GET.q }}" placeholder="Buscar colonia...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'gerencia:listar_colonias' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="coloniaTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">Código</th>
+                            <th class="text-center">Nombre</th>
+                            <th class="text-center">Distritos</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Finca Matriz</th>
+                            <th class="text-center">Padrón Matriz</th>
+                            <th class="text-center">Acciones
+                                <button class="btn btn-sm btn-primary bg-primary" title="Agregar Colonia" 
+                                        data-bs-toggle="modal" data-bs-target="#crearColoniaModal">
+                                    <i class="fas fa-plus me-1"></i>
+                                    <i class="fas fa-map-marked-alt"></i>
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for colonia in colonias %}
+                        <tr class="text-center">
+                            <td>{{ colonia.codigo }}</td>
+                            <td class="text-uppercase">{{ colonia.nombre }}</td>
+                            <td>
+                                {% for distrito in colonia.distritos.all %}
+                                <span class="badge bg-secondary">{{ distrito.nombre }}</span>
+                                {% endfor %}
+                            </td>
+                            <td>
+                                <span class="badge {% if colonia.estado == 'activo' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ colonia.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>{{ colonia.finca_matriz|default:"-" }}</td>
+                            <td>{{ colonia.padron_matriz|default:"-" }}</td>
+                            <td class="text-center">
+                                <!-- Botón editar -->
+                                <button class="btn btn-sm me-1 btn-warning" 
+                                        data-bs-toggle="modal" data-bs-target="#editarColoniaModal"
+                                        data-coloniaid="{{ colonia.id }}"
+                                        data-coloniacodigo="{{ colonia.codigo }}"
+                                        data-colonianombre="{{ colonia.nombre }}"
+                                        data-coloniaestado="{{ colonia.estado }}"
+                                        data-coloniafinca="{{ colonia.finca_matriz|default:'' }}"
+                                        data-coloniapadron="{{ colonia.padron_matriz|default:'' }}"
+                                        data-coloniadistritos="{{ colonia.distritos.all|join:',' }}"
+                                        title="Editar Colonia">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <!-- Botón eliminar -->
+                                {% if not colonia.solicitudes.exists and not colonia.relevamientos.exists %}
+                                <button class="btn btn-sm me-1 btn-danger"
+                                        data-bs-toggle="modal" data-bs-target="#eliminarColoniaModal"
+                                        data-coloniaid="{{ colonia.id }}"
+                                        data-colonianombre="{{ colonia.nombre }}"
+                                        title="Eliminar Colonia">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-danger" disabled
+                                        title="No se puede eliminar: Colonia en uso">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay Colonias registradas</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales -->
+{% include 'includes/gerencia/modal/colonias/crear_colonia_modal.html' %}
+{% include 'includes/gerencia/modal/colonias/editar_colonia_modal.html' %}
+{% include 'includes/gerencia/modal/colonias/eliminar_colonia_modal.html' %}
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new simpleDatatables.DataTable('#coloniaTable', {
+        perPage: 10,
+        labels: {
+            placeholder: "Buscar...",
+            perPage: "Registros por página",
+            noRows: "No se encontraron Colonias registradas",
+            info: "Mostrando {start} a {end} de {rows} Colonias"
+        }
+    });
+
+    // Inicializar tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

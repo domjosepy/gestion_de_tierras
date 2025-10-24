@@ -5,75 +5,104 @@
 
 {% block content %}
 <div class="container-fluid fade-in">
-    <div class="d-sm-flex align-items-center mb-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">
-          <i class="fas fa-city me-1"></i>Gestión de Distritos</h1>
+            <i class="fas fa-city me-3"></i>Gestión de Distritos
+        </h1>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="departamento" class="form-label">Departamento</label>
+                    <select name="departamento" id="departamento" class="form-control">
+                        <option value="">Todos los departamentos</option>
+                        {% for dept in departamentos %}
+                        <option value="{{ dept.id }}" {% if request.GET.departamento == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="q" name="q" 
+                           value="{{ request.GET.q }}" placeholder="Buscar distrito...">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'gerencia:listar_distritos' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div class="card shadow mb-4">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="dttoTable" width="100%" cellspacing="0">
+                <table class="table table-bordered table-hover" id="distritoTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-center">Codigo</th>
+                            <th class="text-center">Código</th>
                             <th class="text-center">Nombre</th>
+                            <th class="text-center">Departamento</th>
                             <th class="text-center">Acciones
-                              <button class="btn btn-sm btn-primary bg-primary" title="Agregar Departamento" data-bs-toggle="modal" data-bs-target="#crearDeptoModal">
-                                  <i class="fas fa-plus me-1"> <i class="fas fa-map-marker-alt"> </i></i> 
-                              </button>
+                                <button class="btn btn-sm btn-primary bg-primary" title="Agregar Distrito" 
+                                        data-bs-toggle="modal" data-bs-target="#crearDistritoModal">
+                                    <i class="fas fa-plus me-1"></i>
+                                    <i class="fas fa-city"></i>
+                                </button>
                             </th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for departamento in departamentos %}
+                        {% for distrito in distritos %}
                         <tr class="text-center">
-                            <td class="text-alert">{{departamento.codigo }}</td>
-                            <td class="text-uppercase">{{departamento.nombre }}</td>
-                            
+                            <td>{{ distrito.codigo }}</td>
+                            <td class="text-uppercase">{{ distrito.nombre }}</td>
+                            <td class="text-uppercase">{{ distrito.departamento.nombre }}</td>
                             <td class="text-center">
                                 <!-- Botón editar -->
-                                <button 
-                                    class="btn btn-sm me-1 btn-warning" 
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editarDeptoModal"
-                                    data-departamentoid="{{ departamento.id }}"
-                                    data-departamentocodigo="{{ departamento.codigo }}"
-                                    data-departamentonombre="{{ departamento.nombre }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Editar Departamento">
+                                <button class="btn btn-sm me-1 btn-warning" 
+                                        data-bs-toggle="modal" data-bs-target="#editarDistritoModal"
+                                        data-distritoid="{{ distrito.id }}"
+                                        data-distritocodigo="{{ distrito.codigo }}"
+                                        data-distritonombre="{{ distrito.nombre }}"
+                                        data-distritodepartamento="{{ distrito.departamento.id }}"
+                                        title="Editar Distrito">
                                     <i class="fas fa-edit"></i>
                                 </button>
 
                                 <!-- Botón eliminar -->
-                                {% if not departamento.distritos.exists %}
-                                <button 
-                                    class="btn btn-sm me-5 btn-danger"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#eliminarDeptoModal"
-                                    data-departamentoid="{{ departamento.id }}"
-                                    data-departamentonombre="{{ departamento.nombre }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Eliminar Departamento">
+                                {% if not distrito.colonias.exists %}
+                                <button class="btn btn-sm me-1 btn-danger me-5"
+                                        data-bs-toggle="modal" data-bs-target="#eliminarDistritoModal"
+                                        data-distritoid="{{ distrito.id }}"
+                                        data-distritonombre="{{ distrito.nombre }}"
+                                        title="Eliminar Distrito">
                                     <i class="fas fa-trash-alt"></i>
-                                </button> 
+                                </button>
                                 {% else %}
-                                <button class="btn btn-sm btn-danger" disabled 
-                                        data-bs-toggle="tooltip" 
-                                        title="No se puede eliminar: Departmamento en uso">
+                                <button class="btn btn-sm btn-danger me-5" disabled
+                                        title="No se puede eliminar: Distrito en uso">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 {% endif %}
-                                <button class="btn btn-sm btn-warning" title="Agregar Distrito" data-bs-toggle="modal" data-bs-target="#crearDttoModal">
+                                <button class="btn btn-sm btn-success bg-success" title="Agregar Colonia" data-bs-toggle="modal" data-bs-target="#AsignarColoniaModal">
                                     <i class="fas fa-plus"></i>
-                                    <i class="fas fa-city"></i>
+                                    <i class="fas fa-tree-city"></i>
                                 </button>
                             </td>
-
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center">No hay Departamentos registrados</td>
+                            <td colspan="4" class="text-center">No hay Distritos registrados</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -84,9 +113,9 @@
 </div>
 
 <!-- Modales -->
-{% include 'includes/gerencia/modal/departamentos/crear_departamento_modal.html' %}
-{% include 'includes/gerencia/modal/departamentos/editar_departamento_modal.html' %}
-{% include 'includes/gerencia/modal/departamentos/eliminar_departamento_modal.html' %}
+{% include 'includes/gerencia/modal/distritos/crear_distrito_modal.html' %}
+{% include 'includes/gerencia/modal/distritos/editar_distrito_modal.html' %}
+{% include 'includes/gerencia/modal/distritos/eliminar_distrito_modal.html' %}  
 
 
 
@@ -94,23 +123,23 @@
 
 {% block scripts %}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-      new simpleDatatables.DataTable('#deptoTable', {
-          perPage: 10,
-          labels: {
-              placeholder: "Buscar...",
-              perPage: "Registros por página",
-              noRows: "No se encontraron Departamentos registrados",
-              info: "Mostrando {start} a {end} de {rows} Departamentos"
-          }
-      });
-   
-  });
+document.addEventListener('DOMContentLoaded', function() {
+    new simpleDatatables.DataTable('#distritoTable', {
+        perPage: 10,
+        labels: {
+            placeholder: "Buscar...",
+            perPage: "Registros por página",
+            noRows: "No se encontraron Distritos registrados",
+            info: "Mostrando {start} a {end} de {rows} Distritos"
+        }
+    });
 
-  // Inicializar tooltips para los botones de acción en la tabla
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-      new bootstrap.Tooltip(el);
-  });
+    // Inicializar tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+
+    
+});
 </script>
-
 {% endblock %}

@@ -1,0 +1,107 @@
+<!-- Modal Editar Colonia -->
+<div class="modal fade modal-warning" id="editarColoniaModal" tabindex="-1" aria-labelledby="editarColoniaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+      <form id="editarColoniaForm" method="post">
+        {% csrf_token %}
+        <div class="modal-header text-white">
+          <h5 class="modal-title fw-bold" id="editarColoniaModalLabel">
+            <i class="fas fa-pen-to-square me-2"></i> Editar Colonia
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="coloniaCodigo" class="form-label fw-semibold">Código</label>
+              <input type="text" class="form-control form-control-glow" id="coloniaCodigo" name="codigo" required>
+            </div>
+            <div class="col-md-6">
+              <label for="coloniaNombre" class="form-label fw-semibold text-primary">Nombre</label>
+              <input type="text" class="form-control form-control-glow" id="coloniaNombre" name="nombre" required>
+            </div>
+            <div class="col-md-6">
+              <label for="coloniaEstado" class="form-label fw-semibold">Estado</label>
+              <select class="form-control form-control-glow" id="coloniaEstado" name="estado" required>
+                {% for estado in estado_choices %}
+                <option value="{{ estado.0 }}">{{ estado.1 }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="coloniaDistritos" class="form-label fw-semibold">Distritos</label>
+              <select class="form-control form-control-glow" id="coloniaDistritos" name="distritos" multiple required>
+                {% for distrito in distritos %}
+                <option value="{{ distrito.id }}">{{ distrito.nombre }} - {{ distrito.departamento.nombre }}</option>
+                {% endfor %}
+              </select>
+              <small class="form-text text-muted">Mantén presionado Ctrl para seleccionar múltiples distritos</small>
+            </div>
+            <div class="col-md-6">
+              <label for="coloniaFinca" class="form-label fw-semibold">Finca Matriz</label>
+              <input type="text" class="form-control form-control-glow" id="coloniaFinca" name="finca_matriz">
+            </div>
+            <div class="col-md-6">
+              <label for="coloniaPadron" class="form-label fw-semibold">Padrón Matriz</label>
+              <input type="text" class="form-control form-control-glow" id="coloniaPadron" name="padron_matriz">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer border-0 justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-xmark me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary btn-outline-primary">
+            <i class="fas fa-save me-1"></i>Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const editarColoniaModal = document.getElementById('editarColoniaModal');
+
+        editarColoniaModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const coloniaId = button.getAttribute('data-coloniaid');
+            const coloniaCodigo = button.getAttribute('data-coloniacodigo');
+            const coloniaNombre = button.getAttribute('data-colonianombre');
+            const coloniaEstado = button.getAttribute('data-coloniaestado');
+            const coloniaFinca = button.getAttribute('data-coloniafinca');
+            const coloniaPadron = button.getAttribute('data-coloniapadron');
+            const coloniaDistritos = button.getAttribute('data-coloniadistritos');
+
+            const form = editarColoniaModal.querySelector('#editarColoniaForm');
+            form.action = `/gerencia/colonia/editar/${coloniaId}/`; 
+            
+            // Llenar campos básicos
+            form.querySelector('#coloniaCodigo').value = coloniaCodigo;
+            form.querySelector('#coloniaNombre').value = coloniaNombre;
+            form.querySelector('#coloniaEstado').value = coloniaEstado;
+            form.querySelector('#coloniaFinca').value = coloniaFinca || '';
+            form.querySelector('#coloniaPadron').value = coloniaPadron || '';
+
+            // Llenar distritos (multiple select)
+            const distritosSelect = form.querySelector('#coloniaDistritos');
+            const distritosArray = coloniaDistritos ? coloniaDistritos.split(',') : [];
+            
+            // Limpiar selecciones previas
+            for (let i = 0; i < distritosSelect.options.length; i++) {
+            distritosSelect.options[i].selected = false;
+            }
+            
+            // Seleccionar los distritos de la colonia
+            for (let i = 0; i < distritosSelect.options.length; i++) {
+            const option = distritosSelect.options[i];
+            if (distritosArray.includes(option.text)) {
+                option.selected = true;
+            }
+            }
+        });
+    });
+</script>

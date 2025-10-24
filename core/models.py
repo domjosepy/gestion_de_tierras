@@ -55,26 +55,8 @@ class Distrito(models.Model):
         verbose_name_plural = "Distritos"
         ordering = ["departamento__nombre", "nombre"]
 
-    def save(self, *args, **kwargs):
-        if not self.codigo:
-            codigos_existentes = list(
-                self.__class__.objects.exclude(codigo__isnull=True)
-                .values_list("codigo", flat=True)
-            )
-            nuevo_codigo = 1
-            while nuevo_codigo in codigos_existentes:
-                nuevo_codigo += 1
-            self.codigo = nuevo_codigo
-        super().save(*args, **kwargs)
-
-    def clean(self):
-        if not self.departamento:
-            raise ValidationError(
-                "Un distrito debe estar vinculado a un departamento."
-            )
-
     def __str__(self):
-        return f"{self.nombre} ({self.departamento})"
+        return f"{self.nombre} ({self.departamento.nombre})"
 
 
 # ===============================

@@ -100,16 +100,79 @@ def eliminar_departamento(request, departamento_id):
 class DistritoListView(LoginRequiredMixin, ListView):
     model = Distrito
     paginate_by = 25
-
-    template_name = "gerencia:listar_distritos.html"
-    context_object_name = "distritos"
+    template_name = 'includes/gerencia/tablas/listar_distritos.html'
+    context_object_name = 'distritos'
 
     def get_queryset(self):
-        qs = Distrito.objects.prefetch_related("departamentos").all()
-        q = self.request.GET.get("q")
+        qs = Distrito.objects.select_related('departamento').all()
+
+        # Filtros
+        departamento_id = self.request.GET.get('departamento')
+        q = self.request.GET.get('q')
+
+        if departamento_id:
+            qs = qs.filter(departamento_id=departamento_id)
         if q:
-            qs = qs.filter(nombre__icontains=q)
-        return qs.distinct()
+            qs = qs.filter(
+                Q(nombre__icontains=q) |
+                Q(departamento__nombre__icontains=q)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['departamentos'] = Departamento.objects.all()
+        return context
+
+
+class DistritoCreateView(LoginRequiredMixin, CreateView):
+    model = Distrito
+    form_class = DistritoForm
+    template_name = 'includes/gerencia/modal/distritos/crear_distrito_modal.html'
+
+    def get_success_url(self):
+        return self.request.META.get('HTTP_REFERER', reverse_lazy('gerencia:listar_distritos'))
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f'Distrito "{self.object.nombre}" creado exitosamente!'
+        )
+        return response
+
+    def form_invalid(self, form):
+        messages.error(
+            self.request,
+            'Error al crear el distrito. Por favor revise los datos.'
+        )
+        return super().form_invalid(form)
+
+
+def editar_distrito(request, distrito_id):
+    distrito = get_object_or_404(Distrito, id=distrito_id)
+    if request.method == 'POST':
+        form = DistritoForm(request.POST, instance=distrito)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Distrito actualizado correctamente.")
+        else:
+            messages.error(request, "Error al actualizar el distrito.")
+        return redirect('gerencia:listar_distritos')
+    return redirect('gerencia:listar_distritos')
+
+
+def eliminar_distrito(request, distrito_id):
+    distrito = get_object_or_404(Distrito, id=distrito_id)
+    if distrito.colonias.exists():
+        messages.error(
+            request,
+            "Este Distrito está asignado a una o más Colonias y no puede ser eliminado."
+        )
+    else:
+        distrito.delete()
+        messages.success(request, "Distrito eliminado correctamente.")
+    return redirect('gerencia:listar_distritos')
 
 # ======================================
 # Vistas para Colonias
@@ -119,43 +182,78 @@ class DistritoListView(LoginRequiredMixin, ListView):
 class ColoniaListView(LoginRequiredMixin, ListView):
     model = Colonia
     paginate_by = 25
-    template_name = "gerencia/colonias_list.html"
-    context_object_name = "colonias"
+    template_name = 'includes/gerencia/tablas/listar_colonias.html'
+    context_object_name = 'colonias'
 
     def get_queryset(self):
-        qs = Colonia.objects.prefetch_related("distritos").all()
-        q = self.request.GET.get("q")
-        estado = self.request.GET.get("estado")
-        distrito = self.request.GET.get("distrito")
+        qs = Colonia.objects.prefetch_related('distritos').all()
+
+        q = self.request.GET.get('q')
+        estado = self.request.GET.get('estado')
+        distrito_id = self.request.GET.get('distrito')
+
         if q:
             qs = qs.filter(nombre__icontains=q)
         if estado:
             qs = qs.filter(estado=estado)
-        if distrito:
-            qs = qs.filter(distritos__id=distrito)
+        if distrito_id:
+            qs = qs.filter(distritos__id=distrito_id)
+
         return qs.distinct()
-# Crear colonia
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['distritos'] = Distrito.objects.all()
+        context['estado_choices'] = Colonia.ESTADO_CHOICES
+        return context
 
 
 class ColoniaCreateView(LoginRequiredMixin, CreateView):
     model = Colonia
     form_class = ColoniaForm
-    template_name = "gerencia/colonia_form.html"
-    success_url = reverse_lazy("gerencia:colonias_list")
+    template_name = 'includes/gerencia/modal/colonias/crear_colonia_modal.html'
 
-# Editar colonia
+    def get_success_url(self):
+        return self.request.META.get('HTTP_REFERER', reverse_lazy('gerencia:listar_colonias'))
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request,
+            f'Colonia "{self.object.nombre}" creada exitosamente!'
+        )
+        return response
+
+    def form_invalid(self, form):
+        messages.error(
+            self.request,
+            'Error al crear la colonia. Por favor revise los datos.'
+        )
+        return super().form_invalid(form)
 
 
-class ColoniaUpdateView(LoginRequiredMixin, UpdateView):
-    model = Colonia
-    form_class = ColoniaForm
-    template_name = "gerencia/colonia_form.html"
-    success_url = reverse_lazy("gerencia:colonias_list")
+def editar_colonia(request, colonia_id):
+    colonia = get_object_or_404(Colonia, id=colonia_id)
+    if request.method == 'POST':
+        # Para ManyToMany fields, necesitamos usar el form
+        form = ColoniaForm(request.POST, instance=colonia)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Colonia actualizada correctamente.")
+        else:
+            messages.error(request, "Error al actualizar la colonia.")
+        return redirect('gerencia:listar_colonias')
+    return redirect('gerencia:listar_colonias')
 
-# Eliminar colonia
 
-
-class ColoniaDeleteView(LoginRequiredMixin, DeleteView):
-    model = Colonia
-    template_name = "gerencia/colonia_confirm_delete.html"
-    success_url = reverse_lazy("gerencia:colonias_list")
+def eliminar_colonia(request, colonia_id):
+    colonia = get_object_or_404(Colonia, id=colonia_id)
+    if colonia.solicitudes.exists() or colonia.relevamientos.exists():
+        messages.error(
+            request,
+            "Esta Colonia tiene solicitudes o relevamientos asociados y no puede ser eliminada."
+        )
+    else:
+        colonia.delete()
+        messages.success(request, "Colonia eliminada correctamente.")
+    return redirect('gerencia:listar_colonias')
