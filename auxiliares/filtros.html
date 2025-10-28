@@ -1,0 +1,75 @@
+<!-- Filtros para Distritos y departamentos -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="departamento" class="form-label">Departamento</label>
+                    <select name="departamento" id="departamento" class="form-control">
+                        <option value="">Todos los departamentos</option>
+                        {% for dept in departamentos %}
+                        <option value="{{ dept.id }}" {% if request.GET.departamento == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="q" name="q" 
+                           value="{{ request.GET.q }}" placeholder="Buscar distrito...">
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'gerencia:listar_distritos' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Fin Filtros -->
+
+    <!-- Filtros Colonias y Distritos -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="distrito" class="form-label">Distrito</label>
+                    <select name="distrito" id="distrito" class="form-control">
+                        <option value="">Todos los distritos</option>
+                        {% for distrito in distritos %}
+                        <option value="{{ distrito.id }}" {% if request.GET.distrito == distrito.id|stringformat:"s" %}selected{% endif %}>
+                            {{ distrito.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="estado" class="form-label">Estado</label>
+                    <select name="estado" id="estado" class="form-control">
+                        <option value="">Todos los estados</option>
+                        {% for estado in estado_choices %}
+                        <option value="{{ estado.0 }}" {% if request.GET.estado == estado.0 %}selected{% endif %}>
+                            {{ estado.1 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Buscar</label>
+                    <input type="text" class="form-control" id="q" name="q" 
+                           value="{{ request.GET.q }}" placeholder="Buscar colonia...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-1"></i> Filtrar
+                    </button>
+                    <a href="{% url 'gerencia:listar_colonias' %}" class="btn btn-secondary">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>

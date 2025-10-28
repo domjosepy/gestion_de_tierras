@@ -5,9 +5,10 @@ from .models import Departamento, Distrito, Colonia, Solicitud, Relevamiento
 class DistritoForm(forms.ModelForm):
     class Meta:
         model = Distrito
-        fields = ['nombre', 'departamento']
+        fields = ['nombre', 'codigo', 'departamento']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'codigo': forms.NumberInput(attrs={'class': 'form-control'}),
             'departamento': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -26,10 +27,11 @@ class ColoniaForm(forms.ModelForm):
 
     class Meta:
         model = Colonia
-        fields = ['nombre', 'distritos', 'estado',
+        fields = ['nombre', 'codigo', 'distritos', 'estado',
                   'finca_matriz', 'padron_matriz']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control form-control-glow'}),
+            'codigo': forms.NumberInput(attrs={'class': 'form-control form-control-glow'}),
             'estado': forms.Select(attrs={'class': 'form-control form-control-glow'}),
             'finca_matriz': forms.TextInput(attrs={'class': 'form-control form-control-glow'}),
             'padron_matriz': forms.TextInput(attrs={'class': 'form-control form-control-glow'}),

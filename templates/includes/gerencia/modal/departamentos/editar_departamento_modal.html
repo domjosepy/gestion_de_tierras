@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const departamentoNombre = button.getAttribute('data-departamentonombre');
 
     const form = editarDeptoModal.querySelector('#editarDeptoForm');
-    form.action = `/gerencia/departmento/editar/${departamentoId}/`;  // ✅ URL dinámica real
+    form.action = `/gerencia/departamento/editar/${departamentoId}/`; 
     form.querySelector('#departamentoCodigo').value = departamentoCodigo;
     form.querySelector('#departamentoNombre').value = departamentoNombre;
   });

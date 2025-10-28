@@ -16,11 +16,12 @@
                 <table class="table table-bordered table-hover" id="deptoTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr >
-                            <th class="text-center">Codigo</th>
-                            <th class="text-center">Nombre</th>
+                            <th class="text-center">Código</th>
+                            <th class="text-center">Departamento</th>
+                            <th class="text-center">Distritos Asociados</th>
                             <th class="text-center">Acciones
-                              <button class="btn btn-sm btn-primary bg-primary" title="Agregar Departamento" data-bs-toggle="modal" data-bs-target="#crearDeptoModal">
-                                  <i class="fas fa-plus me-1"> <i class="fas fa-map-marker-alt"> </i></i> 
+                              <button class="btn btn-sm btn-success bg-success" title="Agregar Departamento" data-bs-toggle="modal" data-bs-target="#crearDeptoModal">
+                                  <i class="fas fa-plus"> <i class="fas fa-map-marker-alt"> </i></i> 
                               </button>
                             </th>
                         </tr>
@@ -28,9 +29,14 @@
                     <tbody>
                         {% for departamento in departamentos %}
                         <tr class="text-center">
-                            <td class="text-alert">{{departamento.codigo }}</td>
-                            <td class="text-uppercase">{{departamento.nombre }}</td>
-                            
+                            <td class="text-alert">{{ departamento.codigo }}</td>
+                            <td class="text-uppercase">{{ departamento.nombre }}</td>
+                            <td>
+                                <span class="badge {% if departamento.distritos.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                                    <i class="fas fa-city me-1"></i>
+                                    {{ departamento.distritos.count }} distrito{{ departamento.distritos.count|pluralize }}
+                                </span>
+                            </td>
                             <td class="text-center">
                                 <!-- Botón editar -->
                                 <button 
@@ -48,7 +54,7 @@
                                 <!-- Botón eliminar -->
                                 {% if not departamento.distritos.exists %}
                                 <button 
-                                    class="btn btn-sm me-5 btn-danger"
+                                    class="btn btn-sm me-1 btn-danger"
                                     data-bs-toggle="modal"
                                     data-bs-target="#eliminarDeptoModal"
                                     data-departamentoid="{{ departamento.id }}"
@@ -58,18 +64,24 @@
                                     <i class="fas fa-trash-alt"></i>
                                 </button> 
                                 {% else %}
-                                <button class="btn btn-sm btn-danger me-5" disabled 
+                                <button class="btn btn-sm btn-danger me-1" disabled 
                                         data-bs-toggle="tooltip" 
-                                        title="No se puede eliminar: Departmamento en uso">
+                                        title="No se puede eliminar: Departamento en uso">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 {% endif %}
-                                <button class="btn btn-sm btn-warning " title="Agregar Distrito" data-bs-toggle="modal" data-bs-target="#crearDttoModal">
+                                
+                                <!-- Botón Agregar Distrito -->
+                                <button class="btn btn-sm btn-success" 
+                                        title="Agregar Distrito" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#crearDistritoDesdeDeptoModal"
+                                        data-departamentoid="{{ departamento.id }}"
+                                        data-departamentonombre="{{ departamento.nombre }}">
                                     <i class="fas fa-plus"></i>
                                     <i class="fas fa-city"></i>
                                 </button>
                             </td>
-
                         </tr>
                         {% empty %}
                         <tr>
@@ -87,8 +99,7 @@
 {% include 'includes/gerencia/modal/departamentos/crear_departamento_modal.html' %}
 {% include 'includes/gerencia/modal/departamentos/editar_departamento_modal.html' %}
 {% include 'includes/gerencia/modal/departamentos/eliminar_departamento_modal.html' %}
-
-
+{% include 'includes/gerencia/modal/departamentos/crear_distrito_desde_depto_modal.html' %}
 
 {% endblock %}
 
@@ -112,5 +123,4 @@
       new bootstrap.Tooltip(el);
   });
 </script>
-
 {% endblock %}

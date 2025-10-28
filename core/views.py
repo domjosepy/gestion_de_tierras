@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse, reverse_lazy
@@ -13,11 +14,20 @@ from core.notificaciones.utils import notificar_a_admins
 # =======================================
 
 
+
 class DepartamentoListView(LoginRequiredMixin, ListView):
     model = Departamento
     template_name = 'includes/gerencia/tablas/listar_departamentos.html'
     context_object_name = 'departamentos'
 
+    def get_queryset(self):
+        # Optimizar consulta contando distritos
+        return Departamento.objects.prefetch_related('distritos').all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['departamentos'] = Departamento.objects.all()
+        return context
 
 class DepartamentoCreateView(LoginRequiredMixin, CreateView):
     model = Departamento
@@ -88,6 +98,7 @@ def eliminar_departamento(request, departamento_id):
         messages.success(request, "Departamento eliminado correctamente.")
     return redirect('gerencia:listar_departamentos')
 
+
 # ======================================
 # FIN para Departamentos
 # ======================================
@@ -104,9 +115,10 @@ class DistritoListView(LoginRequiredMixin, ListView):
     context_object_name = 'distritos'
 
     def get_queryset(self):
-        qs = Distrito.objects.select_related('departamento').all()
+        # Optimizar consultas relacionadas
+        qs = Distrito.objects.select_related('departamento').prefetch_related('colonias')
 
-        # Filtros
+        # Filtros existentes...
         departamento_id = self.request.GET.get('departamento')
         q = self.request.GET.get('q')
 
@@ -124,30 +136,50 @@ class DistritoListView(LoginRequiredMixin, ListView):
         context['departamentos'] = Departamento.objects.all()
         return context
 
-
 class DistritoCreateView(LoginRequiredMixin, CreateView):
     model = Distrito
-    form_class = DistritoForm
+    fields = ['nombre', 'departamento']
     template_name = 'includes/gerencia/modal/distritos/crear_distrito_modal.html'
 
     def get_success_url(self):
-        return self.request.META.get('HTTP_REFERER', reverse_lazy('gerencia:listar_distritos'))
+        return reverse_lazy('gerencia:listar_distritos')
 
     def form_valid(self, form):
+        # Buscar el menor número faltante (antes de guardar)
+        codigos_existentes = set(
+            Distrito.objects.values_list('codigo', flat=True))
+        codigo = 1
+        while codigo in codigos_existentes:
+            codigo += 1
+        form.instance.codigo = codigo  # asignar el primer número libre
+
         response = super().form_valid(form)
-        messages.success(
-            self.request,
-            f'Distrito "{self.object.nombre}" creado exitosamente!'
-        )
-        return response
+
+        try:
+            response = super().form_valid(form)
+            messages.success(
+                self.request, 
+                f'Distrito "{self.object.nombre}" creado exitosamente!'
+            )
+            
+            return response
+        except Exception as e:
+            
+            messages.error(self.request, f"Error al crear distrito: {e}")
+            return self.form_invalid(form)
 
     def form_invalid(self, form):
+        
         messages.error(
             self.request,
             'Error al crear el distrito. Por favor revise los datos.'
         )
         return super().form_invalid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['departamentos'] = Departamento.objects.all()
+        return context
 
 def editar_distrito(request, distrito_id):
     distrito = get_object_or_404(Distrito, id=distrito_id)
@@ -156,11 +188,24 @@ def editar_distrito(request, distrito_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Distrito actualizado correctamente.")
+            
+            # Para AJAX
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Distrito actualizado correctamente.'
+                })
         else:
             messages.error(request, "Error al actualizar el distrito.")
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors
+                }, status=400)
+        
+        # Redirección normal para requests no-AJAX
         return redirect('gerencia:listar_distritos')
     return redirect('gerencia:listar_distritos')
-
 
 def eliminar_distrito(request, distrito_id):
     distrito = get_object_or_404(Distrito, id=distrito_id)
@@ -178,7 +223,6 @@ def eliminar_distrito(request, distrito_id):
 # Vistas para Colonias
 # =======================================
 
-
 class ColoniaListView(LoginRequiredMixin, ListView):
     model = Colonia
     paginate_by = 25
@@ -186,10 +230,12 @@ class ColoniaListView(LoginRequiredMixin, ListView):
     context_object_name = 'colonias'
 
     def get_queryset(self):
-        qs = Colonia.objects.prefetch_related('distritos').all()
+        # Optimizar consultas relacionadas
+        qs = Colonia.objects.prefetch_related('solicitudes').all()
 
         q = self.request.GET.get('q')
         estado = self.request.GET.get('estado')
+        departamento_id = self.request.GET.get('departamento')  
         distrito_id = self.request.GET.get('distrito')
 
         if q:
@@ -218,6 +264,26 @@ class ColoniaCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
+
+        # Buscar el menor número faltante (antes de guardar)
+        codigos_existentes = set(
+            Colonia.objects.values_list('codigo', flat=True))
+        codigo = 1
+        while codigo in codigos_existentes:
+            codigo += 1
+        form.instance.codigo = codigo  # asignar el primer número libre
+
+        response = super().form_valid(form)
+        
+        # Si viene de un distrito específico, asegurarnos de que esté asignado
+        distrito_id = self.request.POST.get('distritos')
+        if distrito_id:
+            try:
+                distrito = Distrito.objects.get(id=distrito_id)
+                self.object.distritos.add(distrito)
+            except Distrito.objects.DoesNotExist:
+                pass
+        
         messages.success(
             self.request,
             f'Colonia "{self.object.nombre}" creada exitosamente!'

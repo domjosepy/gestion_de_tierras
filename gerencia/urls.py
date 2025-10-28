@@ -19,7 +19,7 @@ urlpatterns = [
          name='listar_departamentos'),
     path('departamento/crear/', DepartamentoCreateView.as_view(),
          name='crear_departamento'),
-    path('departmento/editar/<int:departamento_id>/',
+    path('departamento/editar/<int:departamento_id>/',
          editar_departamento, name='editar_departamento'),
     path('departamento/eliminar/<int:departamento_id>/',
          eliminar_departamento, name='eliminar_departamento'),

@@ -11,51 +11,21 @@
         </h1>
     </div>
 
-    <!-- Filtros -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <label for="departamento" class="form-label">Departamento</label>
-                    <select name="departamento" id="departamento" class="form-control">
-                        <option value="">Todos los departamentos</option>
-                        {% for dept in departamentos %}
-                        <option value="{{ dept.id }}" {% if request.GET.departamento == dept.id|stringformat:"s" %}selected{% endif %}>
-                            {{ dept.nombre }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="q" class="form-label">Buscar</label>
-                    <input type="text" class="form-control" id="q" name="q" 
-                           value="{{ request.GET.q }}" placeholder="Buscar distrito...">
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search me-1"></i> Filtrar
-                    </button>
-                    <a href="{% url 'gerencia:listar_distritos' %}" class="btn btn-secondary">
-                        <i class="fas fa-undo me-1"></i> Limpiar
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-
+    
     <div class="card shadow mb-4">
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-bordered table-hover" id="distritoTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-center">Código</th>
-                            <th class="text-center">Nombre</th>
                             <th class="text-center">Departamento</th>
+                            <th class="text-center">Código</th>
+                            <th class="text-center">Distrito</th>
+                            <th class="text-center">Colonias Asociadas</th>
                             <th class="text-center">Acciones
                                 <button class="btn btn-sm btn-primary bg-primary" title="Agregar Distrito" 
                                         data-bs-toggle="modal" data-bs-target="#crearDistritoModal">
-                                    <i class="fas fa-plus me-1"></i>
+                                    <i class="fas fa-plus"></i>
                                     <i class="fas fa-city"></i>
                                 </button>
                             </th>
@@ -64,9 +34,17 @@
                     <tbody>
                         {% for distrito in distritos %}
                         <tr class="text-center">
+                            <td class="text-uppercase">
+                                <strong>{{ distrito.departamento.codigo }}.</strong> {{ distrito.departamento.nombre }}
+                            </td>
                             <td>{{ distrito.codigo }}</td>
                             <td class="text-uppercase">{{ distrito.nombre }}</td>
-                            <td class="text-uppercase">{{ distrito.departamento.nombre }}</td>
+                            <td>
+                                <span class="badge {% if distrito.colonias.count > 0 %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                                    <i class="fas fa-tree-city me-1"></i>
+                                    {{ distrito.colonias.count }} colonia{{ distrito.colonias.count|pluralize }}
+                                </span>
+                            </td>
                             <td class="text-center">
                                 <!-- Botón editar -->
                                 <button class="btn btn-sm me-1 btn-warning" 
@@ -81,7 +59,7 @@
 
                                 <!-- Botón eliminar -->
                                 {% if not distrito.colonias.exists %}
-                                <button class="btn btn-sm me-1 btn-danger me-5"
+                                <button class="btn btn-sm me-1 btn-danger"
                                         data-bs-toggle="modal" data-bs-target="#eliminarDistritoModal"
                                         data-distritoid="{{ distrito.id }}"
                                         data-distritonombre="{{ distrito.nombre }}"
@@ -89,12 +67,19 @@
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 {% else %}
-                                <button class="btn btn-sm btn-danger me-5" disabled
+                                <button class="btn btn-sm btn-danger me-1" disabled
                                         title="No se puede eliminar: Distrito en uso">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 {% endif %}
-                                <button class="btn btn-sm btn-success bg-success" title="Agregar Colonia" data-bs-toggle="modal" data-bs-target="#AsignarColoniaModal">
+                                
+                                <!-- Botón Agregar Colonia -->
+                                <button class="btn btn-sm btn-success" 
+                                        title="Agregar Colonia" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#crearColoniaDesdeDistritoModal"
+                                        data-distritoid="{{ distrito.id }}"
+                                        data-distritonombre="{{ distrito.nombre }}">
                                     <i class="fas fa-plus"></i>
                                     <i class="fas fa-tree-city"></i>
                                 </button>
@@ -102,7 +87,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center">No hay Distritos registrados</td>
+                            <td colspan="5" class="text-center">No hay Distritos registrados</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -116,8 +101,7 @@
 {% include 'includes/gerencia/modal/distritos/crear_distrito_modal.html' %}
 {% include 'includes/gerencia/modal/distritos/editar_distrito_modal.html' %}
 {% include 'includes/gerencia/modal/distritos/eliminar_distrito_modal.html' %}  
-
-
+{% include 'includes/gerencia/modal/distritos/crear_colonia_desde_distrito_modal.html' %}
 
 {% endblock %}
 
@@ -138,8 +122,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         new bootstrap.Tooltip(el);
     });
-
-    
 });
 </script>
 {% endblock %}

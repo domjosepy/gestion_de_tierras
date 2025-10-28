@@ -1,0 +1,61 @@
+<!-- Modal Crear Distrito desde Departamento -->
+<div class="modal fade modal-success" id="crearDistritoDesdeDeptoModal" tabindex="-1" aria-labelledby="crearDistritoDesdeDeptoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'gerencia:crear_distrito' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <!-- Encabezado -->
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="crearDistritoDesdeDeptoModalLabel">
+            <i class="fas fa-plus-circle me-2"></i> Crear Distrito para Departamento
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="departamentoSeleccionado" class="form-label">Departamento</label>
+            <input type="text" class="form-control" id="departamentoSeleccionado" readonly>
+            <input type="hidden" id="departamentoId" name="departamento">
+          </div>
+          <div class="mb-3">
+            <label for="nombreDistrito" class="form-label">Nombre del Distrito</label>
+            <input type="text" class="form-control" id="nombreDistrito" name="nombre" required>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Crear Distrito
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const crearDistritoDesdeDeptoModal = document.getElementById('crearDistritoDesdeDeptoModal');
+  
+  crearDistritoDesdeDeptoModal.addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const departamentoId = button.getAttribute('data-departamentoid');
+    const departamentoNombre = button.getAttribute('data-departamentonombre');
+    
+    // Llenar los campos del modal
+    document.getElementById('departamentoSeleccionado').value = departamentoNombre;
+    document.getElementById('departamentoId').value = departamentoId;
+    
+    // Limpiar y enfocar el campo de nombre
+    const nombreInput = document.getElementById('nombreDistrito');
+    nombreInput.value = '';
+    setTimeout(() => nombreInput.focus(), 500);
+  });
+});
+</script>

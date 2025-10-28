@@ -1,0 +1,90 @@
+<!-- Modal Crear Colonia desde Distrito -->
+<div class="modal fade modal-success" id="crearColoniaDesdeDistritoModal" tabindex="-1" aria-labelledby="crearColoniaDesdeDistritoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form method="post" action="{% url 'gerencia:crear_colonia' %}">
+      {% csrf_token %}
+      <div class="modal-content">
+        <!-- Encabezado -->
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title" id="crearColoniaDesdeDistritoModalLabel">
+            <i class="fas fa-tree-city me-2"></i> Crear Colonia para Distrito
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="distritoSeleccionado" class="form-label">Distrito</label>
+              <input type="text" class="form-control" id="distritoSeleccionado" readonly>
+              <input type="hidden" id="distritoId" name="distritos">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="nombreColonia" class="form-label">Nombre de la Colonia</label>
+              <input type="text" class="form-control" id="nombreColonia" name="nombre" required>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="estadoColonia" class="form-label">Estado</label>
+              <select class="form-control" id="estadoColonia" name="estado" required>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="codigoColonia" class="form-label">Código</label>
+              <input type="number" class="form-control" id="codigoColonia" name="codigo" required>
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="fincaMatriz" class="form-label">Finca Matriz</label>
+              <input type="text" class="form-control" id="fincaMatriz" name="finca_matriz">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="padronMatriz" class="form-label">Padrón Matriz</label>
+              <input type="text" class="form-control" id="padronMatriz" name="padron_matriz">
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Crear Colonia
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const crearColoniaDesdeDistritoModal = document.getElementById('crearColoniaDesdeDistritoModal');
+  
+  crearColoniaDesdeDistritoModal.addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const distritoId = button.getAttribute('data-distritoid');
+    const distritoNombre = button.getAttribute('data-distritonombre');
+    
+    // Llenar los campos del modal
+    document.getElementById('distritoSeleccionado').value = distritoNombre;
+    document.getElementById('distritoId').value = distritoId;
+    
+    // Limpiar y enfocar el campo de nombre
+    const nombreInput = document.getElementById('nombreColonia');
+    nombreInput.value = '';
+    setTimeout(() => nombreInput.focus(), 500);
+    
+    
+  });
+});
+</script>
