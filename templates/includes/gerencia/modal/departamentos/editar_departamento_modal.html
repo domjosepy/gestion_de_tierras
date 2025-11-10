@@ -1,35 +1,36 @@
-<!-- Modal Editar Departamento -->
 <div class="modal fade modal-warning" id="editarDeptoModal" tabindex="-1" aria-labelledby="editarDeptoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
       <form id="editarDeptoForm" method="post">
         {% csrf_token %}
-        <div class="modal-header text-white">
-          <h5 class="modal-title fw-bold" id="editarDeptoModalLabel">
-            <i class="fas fa-pen-to-square me-2"></i> Editar Departamento
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title">
+            <i class="fa-solid fa-pen-to-square me-2"></i>Editar Departamento
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
 
         <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label for="departamentoCodigo" class="form-label fw-semibold">Código</label>
-              <input type="text" class="form-control form-control-glow" id="departamentoCodigo" name="codigo" required>
-            </div>
-            <div class="col-md-6">
-              <label for="departamentoNombre" class="form-label fw-semibold text-primary">Nombre</label>
-              <input type="text" class="form-control form-control-glow" id="departamentoNombre" name="nombre" required>
-            </div>
+          <input type="hidden" id="editarDeptoId" name="departamento_id">
+
+          <div class="mb-3">
+            <label for="editarDeptoCodigo" class="form-label">Código</label>
+            <input type="text" id="editarDeptoCodigo" name="codigo" class="form-control" required>
           </div>
+
+          <div class="mb-3">
+            <label for="editarDeptoNombre" class="form-label">Nombre</label>
+            <input type="text" id="editarDeptoNombre" name="nombre" class="form-control" required>
+          </div>
+
+          <div id="editarDeptoError" class="text-danger small"></div>
         </div>
 
-        <div class="modal-footer border-0 justify-content-between">
-          <button type="button" class="btn btn-outline-warning " data-bs-dismiss="modal">
-            <i class="fas fa-xmark me-1"></i> Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary btn-outline-primary">
-            <i class="fas fa-save me-1"></i>Guardar
+        <div class="modal-footer justify-content-between">
+          
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-outline-warning">
+            <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios
           </button>
         </div>
       </form>
@@ -37,21 +38,40 @@
   </div>
 </div>
 
-
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const editarDeptoModal = document.getElementById('editarDeptoModal');
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEditar = document.getElementById('editarDeptoModal');
+  const form = document.getElementById('editarDeptoForm');
+  const errorDiv = document.getElementById('editarDeptoError');
 
-  editarDeptoModal.addEventListener('show.bs.modal', function (event) {
+  modalEditar.addEventListener('show.bs.modal', event => {
     const button = event.relatedTarget;
-    const departamentoId = button.getAttribute('data-departamentoid');
-    const departamentoCodigo = button.getAttribute('data-departamentocodigo');
-    const departamentoNombre = button.getAttribute('data-departamentonombre');
+    const id = button.getAttribute('data-id');
+    const codigo = button.getAttribute('data-codigo');
+    const nombre = button.getAttribute('data-nombre');
+    
+    form.action = `/gerencia/departamentos/editar/${id}/`;
+    document.getElementById('editarDeptoId').value = id;
+    document.getElementById('editarDeptoCodigo').value = codigo;
+    document.getElementById('editarDeptoNombre').value = nombre;
+    errorDiv.textContent = '';
+  });
 
-    const form = editarDeptoModal.querySelector('#editarDeptoForm');
-    form.action = `/gerencia/departamento/editar/${departamentoId}/`; 
-    form.querySelector('#departamentoCodigo').value = departamentoCodigo;
-    form.querySelector('#departamentoNombre').value = departamentoNombre;
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const res = await fetch(form.action, {
+      method: 'POST',
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+      body: formData
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      location.reload();
+    } else {
+      errorDiv.textContent = data.message || 'Error al guardar los cambios.';
+    }
   });
 });
 </script>

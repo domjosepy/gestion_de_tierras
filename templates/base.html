@@ -23,6 +23,7 @@
 
     <!-- Nuestro nuevo CSS personalizado -->
     <link href="{% static 'css/admin5.css' %}" rel="stylesheet">
+    <link href="{% static 'css/tablas.css' %}" rel="stylesheet">
     <link href="{% static 'css/modal.css' %}" rel="stylesheet">
     
     <link rel="shortcut icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
@@ -78,6 +79,7 @@
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     
     <!-- Bootstrap 5 JS Bundle con Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- DataTables BS5 JS -->
@@ -89,7 +91,11 @@
 
     <!-- Tu archivo de scripts -->
     <script src="{% static 'js/admin5.js' %}"></script>
+    
     <script src="{% static 'js/tablas.js' %}"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>     
 
     {% block scripts %}{% endblock %}
 
@@ -102,32 +108,28 @@
     });
     
     function restoreSessionToast() {
-        console.log('🔍 restoreSessionToast() ejecutándose...');
+        
         try {
             const message = sessionStorage.getItem('toastMessage');
             const type = sessionStorage.getItem('toastType') || 'info';
             
-            console.log('📦 Mensaje en sessionStorage:', message);
-            console.log('🎨 Tipo en sessionStorage:', type);
-            
             if (!message) {
-                console.log('ℹ️ No hay mensajes para restaurar');
+                
                 return;
             }
 
             const showToast = () => {
-                console.log('🔄 Intentando mostrar toast...');
                 
                 if (window.ToastManager && typeof window.ToastManager.create === 'function') {
-                    console.log('✅ ToastManager disponible');
+                    
                     const valid = ['primary','secondary','success','danger','warning','info','light','dark'];
                     const safeType = valid.includes(type) ? type : 'info';
                     window.ToastManager.create(message, safeType, { delay: 4000 });
                     sessionStorage.removeItem('toastMessage');
                     sessionStorage.removeItem('toastType');
-                    console.log('🎉 Toast mostrado correctamente');
+                   
                 } else {
-                    console.warn('⚠️ ToastManager no disponible, usando fallback');
+                    
                     // Fallback con Bootstrap nativo
                     const toastContainer = document.querySelector('.toast-container') || document.body;
                     const toastEl = document.createElement('div');
@@ -155,7 +157,7 @@
                 } else if (attempts < 5) {
                     setTimeout(tryShowToast, 100);
                 } else {
-                    console.warn('❌ ToastManager no disponible después de 5 intentos');
+                   
                     // Fallback final
                     alert(message);
                     sessionStorage.removeItem('toastMessage');
@@ -166,19 +168,17 @@
             tryShowToast();
             
         } catch (e) {
-            console.error('[ToastRestore] Error restaurando toast', e);
+    
         }
     }
     
     window.addEventListener('load', restoreSessionToast);
 
-    console.log('🔄 Verificando ToastManager...');
-    console.log('ToastManager disponible:', typeof window.ToastManager);
-    console.log('ToastManager.create disponible:', window.ToastManager && typeof window.ToastManager.create);
+   
     
     // Verificar después de un delay
     setTimeout(() => {
-        console.log('🔄 Verificación delay - ToastManager:', typeof window.ToastManager);
+       
     }, 1000);
 </script>
 </body>

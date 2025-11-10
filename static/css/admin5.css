@@ -1622,11 +1622,6 @@ table.dataTable td .dropdown-item:hover {
   color: #fff;
 }
 
-.table-responsive-custom {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: var(--border-radius);
-}
 
 .color-btn {
     width: 50px !important;

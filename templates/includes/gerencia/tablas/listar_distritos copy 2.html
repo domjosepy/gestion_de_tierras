@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% block title %}Gerencia{% endblock %}
+{% block content %}
+  <div class="container fade-in py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="text-success fw-bold mb-0">
+        <i class="fas fa-map me-3"></i>Distritos
+      </h2>
+    </div>
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body">
+       
+        <div class="table-container">
+          <table class="beautiful-table" id="deptoTable" width="100%" cellspacing="0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Departamento</th>
+                <th class="text-center">Código</th>
+                <th class="text-center">Distrito</th>
+                <th class="text-center">Colonias Asignadas</th>
+                <th class="text-center">Acciones
+                  <button class="btn btn-sm btn-primary bg-primary" title="Agregar Distrito" data-bs-toggle="modal" data-bs-target="#crearDistritoModal">
+                                  <i class="fas fa-plus"></i>
+                                  <i class="fas fa-map"> </i>
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dist in distritos %}
+              <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">
+                  <strong>{{dist.departamento.codigo}}. </strong>
+                  {{ dist.departamento.nombre }}</td>
+                <td class="text-center">{{ dist.codigo }}</td>
+                <td class="text-center">{{ dist.nombre }}</td>
+                <td class="text-center">
+                  <span class="badge {% if dist.colonias.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                                    <i class="fas fa-city me-1"></i>
+                                    {{ dist.colonias.count }} colonia{{ dist.colonias.count|pluralize }}
+                  </span>
+                </td>
+
+                <td class="text-center">
+                  <button class="btn btn-warning btn-sm me-1 editar-btn"
+                          data-id="{{ dist.id }}"
+                          data-nombre="{{ dist.nombre }}"
+                          data-codigo="{{ dist.codigo }}"
+                          data-departamento="{{ dist.departamento.id }}"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editarDistritoModal">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                   {% if not dist.colonias.exists %}
+                      <button class="btn btn-danger btn-sm eliminar-btn"
+                              data-id="{{ dist.id }}"
+                              data-nombre="{{ dist.nombre }}"
+                              data-bs-toggle="modal"
+                              data-bs-target="#eliminarDistritoModal">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    {% else %}
+                      <button class="btn btn-sm btn-outline-danger" title="No se puede eliminar un distrito con colonias asignadas" disabled>
+                        <i class="fa-solid fa-trash"></i>
+                      </button>
+                    {% endif %}
+                    <!-- Botón agregar distrito al departamento -->
+                    <button class="btn btn-sm btn-primary"  title="Agregar Colonia"
+                            data-bs-toggle="modal"
+                            data-bs-target="#crearColoniaDesdeDistritoModal"
+                            data-id="{{ dist.id }}"
+                            data-nombre="{{ dist.nombre }}">
+                      <i class="fas fa-plus"></i>
+                      <i class="fas fa-tractor"></i>
+                   </button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">No hay Distritos registrados.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>  
+  </div>
+</div>
+  <!-- Modales Distrito -->
+  {% include 'includes/gerencia/modal/distritos/crear_distrito_modal.html' %}
+  {% include 'includes/gerencia/modal/distritos/editar_distrito_modal.html' %}
+  {% include 'includes/gerencia/modal/distritos/eliminar_distrito_modal.html' %}
+  {% include 'includes/gerencia/modal/distritos/crear_colonia_desde_distrito_modal.html' %}
+
+
+
+<!-- Modal Editar Distrito -->
+<div class="modal fade modal-warning" id="editarDistritoModal" tabindex="-1" aria-labelledby="editarDistritoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="editarDistritoForm">
+        {% csrf_token %}
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title" id="editarDistritoModalLabel">Editar Distrito</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="edit_nombre" class="form-label">Nombre</label>
+            <input type="text" id="edit_nombre" name="nombre" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="edit_codigo" class="form-label">Código</label>
+            <input type="text" id="edit_codigo" name="codigo" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label for="edit_departamento" class="form-label">Departamento</label>
+            <select id="edit_departamento" name="departamento" class="form-select" required>
+              {% for departamento in departamentos %}
+              <option value="{{ departamento.id }}">{{ departamento.nombre }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-warning">Actualizar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Eliminar Distrito -->
+<div class="modal fade modal-danger" id="eliminarDistritoModal" tabindex="-1" aria-labelledby="eliminarDistritoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" id="eliminarDistritoForm">
+        {% csrf_token %}
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title" id="eliminarDistritoModalLabel">Eliminar Distrito</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p>¿Estás seguro que deseas eliminar el distrito <strong id="eliminarDistritoNombre"></strong>?</p>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+      // 🔧 DataTable
+        const dataTable = new simpleDatatables.DataTable('#deptoTable', {
+            perPage: 10,
+            labels: { 
+                placeholder: "Buscar...",
+                perPage: "Registros por página",
+                noRows: "No se encontraron Departamentos registrados",
+                info: "Mostrando {start} a {end} de {rows} Departamentos"
+            }
+        });
+        
+    });
+  // Rellenar el modal de edición
+  document.querySelectorAll('.editar-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const nombre = btn.getAttribute('data-nombre');
+      const codigo = btn.getAttribute('data-codigo');
+      const departamento = btn.getAttribute('data-departamento');
+      
+      document.getElementById('edit_nombre').value = nombre;
+      document.getElementById('edit_codigo').value = codigo;
+      document.getElementById('edit_departamento').value = departamento;
+
+      document.getElementById('editarDistritoForm').action = `/editar-distrito/${id}/`;
+    });
+  });
+
+  // Configurar el modal de eliminación
+  document.querySelectorAll('.eliminar-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const nombre = btn.getAttribute('data-nombre');
+      document.getElementById('eliminarDistritoNombre').textContent = nombre;
+      document.getElementById('eliminarDistritoForm').action = `/eliminar-distrito/${id}/`;
+    });
+  });
+</script>
+
+{% endblock %}

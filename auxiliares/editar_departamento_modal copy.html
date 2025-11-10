@@ -1,0 +1,42 @@
+<!-- Modal Editar Departamento -->
+<div class="modal fade modal-warning" id="editarDeptoModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="editarDeptoForm" class="needs-validation" action="" novalidate method="post">
+      {% csrf_token %}
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title">
+            <i class="fas fa-edit me-2"></i> Editar Departamento
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- ALERT -->
+          <div id="editarDeptoAlert" class="alert d-none mb-3" role="alert"></div>
+          
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="departamentoCodigo" class="form-label">Código <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="departamentoCodigo" name="codigo" required minlength="1" maxlength="10" pattern="[A-Za-z0-9]+" title="Solo alfanuméricos">
+              <div class="invalid-feedback">Código obligatorio y único.</div>
+              <div class="valid-feedback"><i class="fas fa-check"></i></div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="departamentoNombre" class="form-label">Nombre <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="departamentoNombre" name="nombre" required minlength="2" maxlength="100" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+">
+              <div class="invalid-feedback">Nombre obligatorio, mínimo 2 letras.</div>
+              <div class="valid-feedback"><i class="fas fa-check"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-warning" id="editarDeptoBtn">
+            <i class="fas fa-save me-1"></i> <span class="btn-text">Actualizar</span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+

@@ -1,27 +1,60 @@
-<!-- Modal Eliminar Distrito -->
-<div class="modal fade modal-danger" id="eliminarDistritoModal" tabindex="-1" aria-labelledby="eliminarDistritoModalLabel" aria-hidden="true">
+<!-- Modal: Eliminar Distrito -->
+<div class="modal fade" id="eliminarDistritoModal" tabindex="-1" aria-labelledby="eliminarDistritoModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header text-white">
-        <h5 class="modal-title fw-bold" id="eliminarDistritoModalLabel">
-          <i class="fas fa-triangle-exclamation me-2"></i> Confirmar Eliminación
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="eliminarDistritoModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i>Eliminar Distrito
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-
-      <form method="post" id="eliminarDistritoForm" action="">
+      <form id="formEliminarDistrito" method="POST">
         {% csrf_token %}
+        <input type="hidden" id="eliminar_distrito_id" name="distrito_id">
+        
         <div class="modal-body">
-          <p class="fs-5 mb-2">¿Estás seguro que deseas eliminar el Distrito <strong id="DistritoNombreEliminar"></strong>?</p>
-          <p class="text-danger fw-semibold mb-0 text-center"><strong>Esta acción no se puede deshacer.</strong></p>
+          <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="fas fa-exclamation-circle fa-2x me-3"></i>
+            <div>
+              <strong>¿Está seguro que desea eliminar este distrito?</strong>
+              <p class="mb-0 mt-2">Esta acción no se puede deshacer.</p>
+            </div>
+          </div>
+
+          <div class="card border-danger">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2 text-muted">Distrito a eliminar:</h6>
+              <p class="card-text mb-1">
+                <strong>Nombre:</strong> <span id="eliminar_nombre_display" class="text-danger"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Código:</strong> <span id="eliminar_codigo_display"></span>
+              </p>
+              <p class="card-text mb-0">
+                <strong>Departamento:</strong> <span id="eliminar_departamento_display"></span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Alerta de errores -->
+          <div class="alert alert-danger d-none mt-3" id="alert_eliminar_error" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="mensaje_eliminar_error"></span>
+          </div>
+
+          <!-- Información sobre colonias asociadas -->
+          <div class="alert alert-info d-none mt-3" id="alert_colonias_info" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            <span id="mensaje_colonias_info"></span>
+          </div>
         </div>
 
-        <div class="modal-footer border-0 justify-content-between">
-          <button type="button" class=" btn btn-outline-warning" data-bs-dismiss="modal">
-            <i class="fas fa-xmark me-1"></i> Cancelar
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-outline-danger">
-            <i class="fas fa-trash-alt me-1"></i> Eliminar
+          <button type="submit" class="btn btn-danger" id="btnEliminarDistrito">
+            <i class="fas fa-trash me-1"></i>Eliminar Distrito
           </button>
         </div>
       </form>
@@ -30,15 +63,124 @@
 </div>
 
 <script>
-  // Modal Eliminar Distrito
-  const eliminarDistritoModal = document.getElementById('eliminarDistritoModal');
-  eliminarDistritoModal.addEventListener('show.bs.modal', function (event) {
-      const button = event.relatedTarget;
-      const distritoId = button.getAttribute('data-distritoid');
-      const distritoNombre = button.getAttribute('data-distritonombre');
+document.addEventListener('DOMContentLoaded', function() {
+  const formEliminar = document.getElementById('formEliminarDistrito');
+  const btnEliminar = document.getElementById('btnEliminarDistrito');
+  const modalEliminar = document.getElementById('eliminarDistritoModal');
 
-      const form = eliminarDistritoModal.querySelector('#eliminarDistritoForm');
-      form.action = `{% url 'gerencia:eliminar_distrito' 0 %}`.replace('0', distritoId);
-      document.getElementById('DistritoNombreEliminar').textContent = distritoNombre;
+  // Cargar datos del distrito al abrir el modal
+  document.querySelectorAll('.eliminar-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.id;
+      const nombre = this.dataset.nombre;
+      const codigo = this.dataset.codigo || 'N/A';
+      const departamento = this.dataset.departamento || 'N/A';
+      const colonias = this.dataset.colonias || 0;
+
+      document.getElementById('eliminar_distrito_id').value = id;
+      document.getElementById('eliminar_nombre_display').textContent = nombre;
+      document.getElementById('eliminar_codigo_display').textContent = codigo;
+      document.getElementById('eliminar_departamento_display').textContent = departamento;
+
+      // Limpiar errores previos
+      document.getElementById('alert_eliminar_error').classList.add('d-none');
+      document.getElementById('alert_colonias_info').classList.add('d-none');
+
+      // Mostrar info de colonias si las hay
+      if (colonias && parseInt(colonias) > 0) {
+        const alertColonias = document.getElementById('alert_colonias_info');
+        document.getElementById('mensaje_colonias_info').textContent = 
+          `Este distrito tiene ${colonias} colonia(s) asociada(s). No podrá eliminarse hasta que se reasignen.`;
+        alertColonias.classList.remove('d-none');
+        btnEliminar.disabled = true;
+      } else {
+        btnEliminar.disabled = false;
+      }
+    });
   });
+
+  // Limpiar formulario cuando se cierra el modal
+  modalEliminar.addEventListener('hidden.bs.modal', function() {
+    formEliminar.reset();
+    document.getElementById('alert_eliminar_error').classList.add('d-none');
+    document.getElementById('alert_colonias_info').classList.add('d-none');
+    btnEliminar.disabled = false;
+  });
+
+  // Envío del formulario
+  formEliminar.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const distritoId = document.getElementById('eliminar_distrito_id').value;
+    const distritoNombre = document.getElementById('eliminar_nombre_display').textContent;
+    
+    // Confirmación adicional con SweetAlert
+    Swal.fire({
+      title: '¿Está completamente seguro?',
+      text: `El distrito "${distritoNombre}" será eliminado permanentemente`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        eliminarDistrito(distritoId);
+      }
+    });
+  });
+
+  function eliminarDistrito(distritoId) {
+    const formData = new FormData(formEliminar);
+    
+    btnEliminar.disabled = true;
+    btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Eliminando...';
+
+    fetch(`/gerencia/distritos/eliminar/${distritoId}/`, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Cerrar modal
+        bootstrap.Modal.getInstance(modalEliminar).hide();
+        
+        // Mostrar mensaje de éxito
+        Swal.fire({
+          icon: 'success',
+          title: '¡Eliminado!',
+          text: data.message || 'Distrito eliminado correctamente',
+          timer: 4000,
+          showConfirmButton: false
+        }).then(() => {
+          location.reload();
+        });
+      } else {
+        // Mostrar error
+        const alertError = document.getElementById('alert_eliminar_error');
+        document.getElementById('mensaje_eliminar_error').textContent = 
+          data.message || 'No se puede eliminar el distrito. Puede tener colonias asociadas.';
+        alertError.classList.remove('d-none');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Ocurrió un error al eliminar el distrito'
+      });
+    })
+    .finally(() => {
+      btnEliminar.disabled = false;
+      btnEliminar.innerHTML = '<i class="fas fa-trash me-1"></i>Eliminar Distrito';
+    });
+  }
+});
 </script>

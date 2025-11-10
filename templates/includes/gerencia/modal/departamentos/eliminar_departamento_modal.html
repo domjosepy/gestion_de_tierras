@@ -1,27 +1,28 @@
-<!-- Modal Eliminar Departamento -->
 <div class="modal fade modal-danger" id="eliminarDeptoModal" tabindex="-1" aria-labelledby="eliminarDeptoModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header text-white">
-        <h5 class="modal-title fw-bold" id="eliminarDeptoModalLabel">
-          <i class="fas fa-triangle-exclamation me-2"></i> Confirmar Eliminación
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <form method="post" id="eliminarDeptoForm" action="">
+    <div class="modal-content">
+      <form id="eliminarDeptoForm" method="post">
         {% csrf_token %}
-        <div class="modal-body">
-          <p class="fs-5 mb-2">¿Estás seguro que deseas eliminar el Departamento <strong id="DeptoNombreEliminar"></strong>?</p>
-          <p class="text-danger fw-semibold mb-0 text-center"><strong>Esta acción no se puede deshacer.</strong></p>
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>Eliminar Departamento
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
 
-        <div class="modal-footer border-0 justify-content-between">
-          <button type="button" class=" btn btn-outline-warning" data-bs-dismiss="modal">
-            <i class="fas fa-xmark me-1"></i> Cancelar
-          </button>
+        <div class="modal-body">
+          <input type="hidden" id="eliminarDeptoId" name="departamento_id">
+          <p class="mb-0">
+            ¿Seguro que deseas eliminar el departamento 
+            <strong id="eliminarDeptoNombre" class="text-danger"></strong>?
+          </p>
+          <div id="eliminarDeptoError" class="text-danger small mt-2"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button type="submit" class="btn btn-outline-danger">
-            <i class="fas fa-trash-alt me-1"></i> Eliminar
+            <i class="fa-solid fa-trash me-2"></i>Eliminar
           </button>
         </div>
       </form>
@@ -30,15 +31,36 @@
 </div>
 
 <script>
-  // Modal Eliminar Departamento
-      const eliminarDeptoModal = document.getElementById('eliminarDeptoModal');
-      eliminarDeptoModal.addEventListener('show.bs.modal', function (event) {
-          const button = event.relatedTarget;
-          const departamentoId = button.getAttribute('data-departamentoid');
-          const departamentoNombre = button.getAttribute('data-departamentonombre');
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEliminar = document.getElementById('eliminarDeptoModal');
+  const form = document.getElementById('eliminarDeptoForm');
+  const nombreSpan = document.getElementById('eliminarDeptoNombre');
+  const errorDiv = document.getElementById('eliminarDeptoError');
 
-          const form = eliminarDeptoModal.querySelector('#eliminarDeptoForm');
-          form.action = `{% url 'gerencia:eliminar_departamento' 0 %}`.replace('0', departamentoId);
-          document.getElementById('DeptoNombreEliminar').textContent = departamentoNombre;
-      });
+  modalEliminar.addEventListener('show.bs.modal', event => {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    const nombre = button.getAttribute('data-nombre');
+    form.action = `/gerencia/departamentos/eliminar/${id}/`;
+    nombreSpan.textContent = nombre;
+    errorDiv.textContent = '';
+  });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const res = await fetch(form.action, {
+      method: 'POST',
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+      body: formData
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      location.reload();
+    } else {
+      errorDiv.textContent = data.message || 'No se pudo eliminar el departamento.';
+    }
+  });
+});
 </script>

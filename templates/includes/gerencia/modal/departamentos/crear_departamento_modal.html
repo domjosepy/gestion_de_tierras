@@ -1,37 +1,53 @@
-<!-- Modal Crear Departamento -->
-<div class="modal fade modal-primary" id="crearDeptoModal" tabindex="-1" aria-labelledby="crearDeptoModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <form method="post" action="{% url 'gerencia:crear_departamento' %}">
-      {% csrf_token %}
+ <!-- Modal Crear -->
+  <div class="modal fade modal-primary" id="crearDeptoModal" tabindex="-1" aria-labelledby="crearDeptoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-        <!-- Encabezado -->
-        <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="crearDeptoModalLabel">
-            <i class="fas fa-plus-circle me-2"></i> Crear Nuevo Departamento
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-
-        <!-- Cuerpo -->
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="nombre" class="form-label">Nombre del Departamento</label>
-            <input type="text" class="form-control" id="nombre" name="nombre" required>
+        <form id="crearDeptoForm" method="post" action="{% url 'gerencia:crear_departamento' %}">
+          {% csrf_token %}
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-2"></i>Crear Departamento</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
- 
-        </div>
-
-        <!-- Footer -->
-        <div class="modal-footer justify-content-between">
-          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
-            <i class="fas fa-times me-1"></i> Cancelar
-          </button>
-          <button type="submit" class="btn btn-outline-primary">
-            <i class="fas fa-save me-1"></i> Guardar
-          </button>
-        </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="codigo" class="form-label">Código del Departamento</label>
+              <input type="text" name="codigo" id="codigo" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label for="nombre" class="form-label">Nombre del Departamento</label>
+              <input type="text" name="nombre" id="nombre" class="form-control" required>
+            </div>
+            <div id="crearDeptoError" class="text-danger small"></div>
+          </div>
+          <div class="modal-footer justify-content-between">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-outline-primary">Guardar</button>
+          </div>
+        </form>
       </div>
-    </form>
+    </div>
   </div>
-</div>
 
+  <!-- Script para manejar el formulario -->
+  <script>
+     //  Crear Departamento vía AJAX
+      const form = document.getElementById('crearDeptoForm');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        const res = await fetch(form.action, {
+          method: 'POST',
+          headers: {'X-Requested-With': 'XMLHttpRequest'},
+          body: formData
+        });
+        const data = await res.json();
+        const errorDiv = document.getElementById('crearDeptoError');
+        if (data.success) {
+          location.reload();
+        } else {
+          errorDiv.textContent = data.message;
+        }
+      });
+      
+    
+ </script>

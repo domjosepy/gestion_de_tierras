@@ -7,7 +7,6 @@ if (window.simpleDatatables) {
 }
 function initTables() {
     if (!window.simpleDatatables) {
-        console.warn("⚠️ simple-datatables no está disponible.");
         return;
     }
 
@@ -18,7 +17,6 @@ function initTables() {
                 try {
                     instance.destroy();
                 } catch (e) {
-                    console.warn('Error destruyendo DataTable:', e);
                 }
             }
         });
@@ -52,10 +50,9 @@ function initTables() {
             tabla.setAttribute("data-initialized", "true");
             window.dataTableInstances = window.dataTableInstances || [];
             window.dataTableInstances.push(datatable);
-            
-            console.log(`✅ Tabla inicializada: ${tablaId}`);
+
         } catch (error) {
-            console.error(`❌ Error inicializando tabla:`, error);
+           
         }
     });
 }
@@ -74,8 +71,7 @@ function reinicializarDropdowns(tablaId) {
         // Crear nueva instancia
         new bootstrap.Dropdown(toggle);
     });
-    
-    console.log(`🔄 Dropdowns reinicializados para tabla: ${tablaId}`);
+
 }
 
 // Inicializar al cargar la página

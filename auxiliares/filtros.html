@@ -1,3 +1,6 @@
+EDITAR Departamento
+<form id="editarDeptoForm" class="needs-validation" novalidate action="{% url 'gerencia:editar_departamento' departamento.id %}" method="post">
+Final de EDITAR Departamento
 <!-- Filtros para Distritos y departamentos -->
     <div class="card shadow mb-4">
         <div class="card-body">
@@ -73,3 +76,47 @@
             </form>
         </div>
     </div>
+
+
+    def crear_departamento(request):
+    form = DepartamentoForm(request.POST)
+    if form.is_valid():
+        # Buscar el menor número faltante antes de guardar
+        codigos_existentes = set(Departamento.objects.values_list('codigo', flat=True))
+        codigo = 1
+        while codigo in codigos_existentes:
+            codigo += 1
+        departamento = form.save(commit=False)
+        departamento.codigo = codigo
+        departamento.save()
+
+        messages.success(request, f'Departamento "{departamento.nombre}" creado exitosamente!')
+        notificar_a_admins(
+            mensaje=f'Se ha creado un nuevo Departamento: "{departamento.nombre}".',
+            tipo="INFO",
+            exclude_user=request.user,
+            link=reverse("gerencia:listar_departamentos")
+        )
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': f'Departamento "{departamento.nombre}" creado exitosamente!',
+                'departamento': {
+                    'id': departamento.id,
+                    'codigo': departamento.codigo,
+                    'nombre': departamento.nombre,
+                    'distritos': 0
+                }
+            })
+
+        # Normal
+        messages.success(request, f'Departamento "{departamento.nombre}" creado exitosamente!')
+        return redirect('gerencia:listar_departamentos')
+    
+    # Errores
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+    
+    messages.error(request, 'Error al crear el departamento.')
+    return redirect('gerencia:listar_departamentos')

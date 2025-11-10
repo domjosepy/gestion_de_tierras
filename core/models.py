@@ -47,7 +47,7 @@ class Distrito(models.Model):
     departamento = models.ForeignKey(
         Departamento, on_delete=models.PROTECT, related_name="distritos"
     )
-    codigo = models.PositiveIntegerField(blank=True, null=True, unique=True)
+    codigo = models.PositiveIntegerField(blank=True, null=True, unique=False) # No es único globalmente !!antes unique=True
 
     class Meta:
         unique_together = ("nombre", "departamento")

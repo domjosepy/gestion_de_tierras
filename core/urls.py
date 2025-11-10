@@ -6,20 +6,6 @@ app_name = "core"
 urlpatterns = [
     # DEPARTAMENTOS - GERENCIA
 
-
-
-    # DISTRITOS - GERENCIA
-    # path("distritos/", views.DistritoListView, name="distritos_list"),
-    # path("distritos/nuevo/", views.DistritoCreateView, name="distritos_create"),
-    # path("distritos/<int:pk>/editar/", views.DistritoUpdateView , name="distritos_edit"),
-    # path("distritos/<int:pk>/eliminar/", views.DistritoDeleteView , name="distritos_delete"),
-
-    # COLONIAS - GERENCIA
-    # path("colonias/", views.ColoniaListView, name="colonias_list"),
-    # path("colonias/nuevo/", views.ColoniaCreateView, name="colonias_create"),
-    # path("colonias/<int:pk>/editar/", views.ColoniaUpdateView, name="colonias_edit"),
-    # path("colonias/<int:pk>/eliminar/", views.ColoniaDeleteView, name="colonias_delete"),
-
     # AREAS - ADMINISTRADOR / GERENCIA
     # path("areas/", views.AreaListView, name="areas_list"),
     # path("areas/nuevo/", views.AreaCreateView, name="areas_create"),
