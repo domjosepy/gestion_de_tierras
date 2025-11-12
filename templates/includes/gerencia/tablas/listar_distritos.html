@@ -13,7 +13,7 @@
       <div class="card-body">
         {% csrf_token %}
         <div class="table-container">
-          <table class="beautiful-table" id="deptoTable" width="100%" cellspacing="0">
+          <table class="beautiful-table" id="TablaDistritos" width="100%" cellspacing="0">
             <thead class="table-light">
               <tr>
                 <th class="text-center">#</th>
@@ -113,17 +113,16 @@
   {% include 'includes/gerencia/modal/distritos/crear_colonia_desde_distrito_modal.html' %}
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // 🔧 DataTable
-  const dataTable = new simpleDatatables.DataTable('#deptoTable', {
-    perPage: 10,
-    labels: { 
-      placeholder: "Buscar...",
-      perPage: "Registros por página",
-      noRows: "No se encontraron Distritos registrados",
-      info: "Mostrando {start} a {end} de {rows} Distritos"
-    }
-  });
+  document.addEventListener('DOMContentLoaded', function() {
+      new simpleDatatables.DataTable('#TablaDistritos', {
+          perPage: 10,
+          labels: {
+              placeholder: "Buscar...",
+              perPage: "Registros por página",
+              noRows: "No se encontraron Distritos registrados",
+              info: "Mostrando {start} a {end} de {rows} Distritos"
+          }
+      });
 
   // ========================================
   // MODAL EDITAR DISTRITO
@@ -134,26 +133,39 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.editar-distrito-btn');
     if (btn) {
-      console.log('Botón editar clickeado', btn.dataset); // Debug
+     // console.log('Botón editar clickeado', btn.dataset); // Debug
       
-      const id = btn.dataset.id;
+      const id = btn.dataset.id; 
       const nombre = btn.dataset.nombre;
       const codigo = btn.dataset.codigo;
       const departamento = btn.dataset.departamento;
 
-      document.getElementById('editar_distrito_id').value = id;
-      document.getElementById('editar_nombre').value = nombre;
-      document.getElementById('editar_codigo').value = codigo;
-      document.getElementById('editar_departamento').value = departamento;
+      const inputId = document.getElementById('editar_distrito_id');
+      const inputNombre = document.getElementById('editar_nombre');
+      const inputCodigo = document.getElementById('editar_codigo');
+      const selectDepartamento = document.getElementById('editar_departamento');
+
+      if (inputId) inputId.value = id;
+      if (inputNombre) inputNombre.value = nombre;
+      if (inputCodigo) inputCodigo.value = codigo;
+      if (selectDepartamento) selectDepartamento.value = departamento;
 
       // Limpiar errores previos
       const formEditar = document.getElementById('formEditarDistrito');
-      formEditar.classList.remove('was-validated');
+      if (formEditar) {
+        formEditar.classList.remove('was-validated');
+      }
+      
       document.querySelectorAll('[id^="error_editar_"]').forEach(el => {
         el.textContent = '';
-        el.previousElementSibling?.classList.remove('is-invalid');
+        const input = el.previousElementSibling;
+        if (input) input.classList.remove('is-invalid');
       });
-      document.getElementById('alert_editar_error').classList.add('d-none');
+      
+      const alertEditarError = document.getElementById('alert_editar_error');
+      if (alertEditarError) {
+        alertEditarError.classList.add('d-none');
+      }
     }
   });
 
@@ -163,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.eliminar-distrito-btn');
     if (btn) {
-      console.log('Botón eliminar clickeado', btn.dataset); // Debug
+     // console.log('Botón eliminar clickeado', btn.dataset); // Debug
       
       const id = btn.dataset.id;
       const nombre = btn.dataset.nombre;
@@ -171,26 +183,41 @@ document.addEventListener('DOMContentLoaded', function() {
       const departamento = btn.dataset.departamento || 'N/A';
       const colonias = btn.dataset.colonias || 0;
 
-      document.getElementById('eliminar_distrito_id').value = id;
-      document.getElementById('eliminar_nombre_display').textContent = nombre;
-      document.getElementById('eliminar_codigo_display').textContent = codigo;
-      document.getElementById('eliminar_departamento_display').textContent = departamento;
+      const inputId = document.getElementById('eliminar_distrito_id');
+      const displayNombre = document.getElementById('eliminar_nombre_display');
+      const displayCodigo = document.getElementById('eliminar_codigo_display');
+      const displayDepartamento = document.getElementById('eliminar_departamento_display');
+
+      if (inputId) inputId.value = id;
+      if (displayNombre) displayNombre.textContent = nombre;
+      if (displayCodigo) displayCodigo.textContent = codigo;
+      if (displayDepartamento) displayDepartamento.textContent = departamento;
 
       // Limpiar errores previos
-      document.getElementById('alert_eliminar_error').classList.add('d-none');
-      document.getElementById('alert_colonias_info').classList.add('d-none');
+      const alertEliminarError = document.getElementById('alert_eliminar_error');
+      if (alertEliminarError) {
+        alertEliminarError.classList.add('d-none');
+      }
+      
+      const alertColoniasInfo = document.getElementById('alert_colonias_info');
+      if (alertColoniasInfo) {
+        alertColoniasInfo.classList.add('d-none');
+      }
 
       const btnEliminar = document.getElementById('btnEliminarDistrito');
       
       // Mostrar info de colonias si las hay
       if (colonias && parseInt(colonias) > 0) {
-        const alertColonias = document.getElementById('alert_colonias_info');
-        document.getElementById('mensaje_colonias_info').textContent = 
-          `Este distrito tiene ${colonias} colonia(s) asociada(s). No podrá eliminarse hasta que se reasignen.`;
-        alertColonias.classList.remove('d-none');
-        btnEliminar.disabled = true;
+        if (alertColoniasInfo) {
+          const mensajeColonias = document.getElementById('mensaje_colonias_info');
+          if (mensajeColonias) {
+            mensajeColonias.textContent = `Este distrito tiene ${colonias} colonia(s) asociada(s). No podrá eliminarse hasta que se reasignen.`;
+          }
+          alertColoniasInfo.classList.remove('d-none');
+        }
+        if (btnEliminar) btnEliminar.disabled = true;
       } else {
-        btnEliminar.disabled = false;
+        if (btnEliminar) btnEliminar.disabled = false;
       }
     }
   });
@@ -206,22 +233,34 @@ document.addEventListener('DOMContentLoaded', function() {
       const distritoId = btn.dataset.id;
       const distritoNombre = btn.dataset.nombre;
 
-      document.getElementById('distrito_asignado').value = distritoId;
-      document.getElementById('info_distrito_nombre').textContent = distritoNombre;
+      const inputDistrito = document.getElementById('distrito_asignado');
+      const displayNombre = document.getElementById('info_distrito_nombre');
+
+      if (inputDistrito) inputDistrito.value = distritoId;
+      if (displayNombre) displayNombre.textContent = distritoNombre;
 
       // Limpiar formulario
       const formColonia = document.getElementById('formCrearColoniaDistrito');
-      formColonia.reset();
-      formColonia.classList.remove('was-validated');
-      document.getElementById('distrito_asignado').value = distritoId; // Restaurar después del reset
-      document.getElementById('colonia_estado').value = 'activo';
+      if (formColonia) {
+        formColonia.reset();
+        formColonia.classList.remove('was-validated');
+        // Restaurar valores después del reset
+        if (inputDistrito) inputDistrito.value = distritoId;
+        const selectEstado = document.getElementById('colonia_estado');
+        if (selectEstado) selectEstado.value = 'activo';
+      }
       
       // Limpiar errores
       document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
         el.textContent = '';
-        el.previousElementSibling?.classList.remove('is-invalid');
+        const input = el.previousElementSibling;
+        if (input) input.classList.remove('is-invalid');
       });
-      document.getElementById('alert_colonia_error').classList.add('d-none');
+      
+      const alertColoniaError = document.getElementById('alert_colonia_error');
+      if (alertColoniaError) {
+        alertColoniaError.classList.add('d-none');
+      }
     }
   });
 
@@ -233,13 +272,21 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modalEditar) {
     modalEditar.addEventListener('hidden.bs.modal', function() {
       const formEditar = document.getElementById('formEditarDistrito');
-      formEditar.reset();
-      formEditar.classList.remove('was-validated');
+      if (formEditar) {
+        formEditar.reset();
+        formEditar.classList.remove('was-validated');
+      }
+      
       document.querySelectorAll('[id^="error_editar_"]').forEach(el => {
         el.textContent = '';
-        el.previousElementSibling?.classList.remove('is-invalid');
+        const input = el.previousElementSibling;
+        if (input) input.classList.remove('is-invalid');
       });
-      document.getElementById('alert_editar_error').classList.add('d-none');
+      
+      const alertEditarError = document.getElementById('alert_editar_error');
+      if (alertEditarError) {
+        alertEditarError.classList.add('d-none');
+      }
     });
   }
 
@@ -248,10 +295,24 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modalEliminar) {
     modalEliminar.addEventListener('hidden.bs.modal', function() {
       const formEliminar = document.getElementById('formEliminarDistrito');
-      formEliminar.reset();
-      document.getElementById('alert_eliminar_error').classList.add('d-none');
-      document.getElementById('alert_colonias_info').classList.add('d-none');
-      document.getElementById('btnEliminarDistrito').disabled = false;
+      if (formEliminar) {
+        formEliminar.reset();
+      }
+      
+      const alertEliminarError = document.getElementById('alert_eliminar_error');
+      if (alertEliminarError) {
+        alertEliminarError.classList.add('d-none');
+      }
+      
+      const alertColoniasInfo = document.getElementById('alert_colonias_info');
+      if (alertColoniasInfo) {
+        alertColoniasInfo.classList.add('d-none');
+      }
+      
+      const btnEliminar = document.getElementById('btnEliminarDistrito');
+      if (btnEliminar) {
+        btnEliminar.disabled = false;
+      }
     });
   }
 
@@ -260,13 +321,21 @@ document.addEventListener('DOMContentLoaded', function() {
   if (modalColonia) {
     modalColonia.addEventListener('hidden.bs.modal', function() {
       const formColonia = document.getElementById('formCrearColoniaDistrito');
-      formColonia.reset();
-      formColonia.classList.remove('was-validated');
+      if (formColonia) {
+        formColonia.reset();
+        formColonia.classList.remove('was-validated');
+      }
+      
       document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
         el.textContent = '';
-        el.previousElementSibling?.classList.remove('is-invalid');
+        const input = el.previousElementSibling;
+        if (input) input.classList.remove('is-invalid');
       });
-      document.getElementById('alert_colonia_error').classList.add('d-none');
+      
+      const alertColoniaError = document.getElementById('alert_colonia_error');
+      if (alertColoniaError) {
+        alertColoniaError.classList.add('d-none');
+      }
     });
   }
 });

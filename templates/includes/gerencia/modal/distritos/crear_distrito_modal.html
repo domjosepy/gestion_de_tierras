@@ -64,11 +64,11 @@
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-primary" id="btnCrearDistrito">
+          <button type="submit" class="btn btn-outline-success" id="btnCrearDistrito">
             <i class="fas fa-save me-1"></i>Crear Distrito
           </button>
         </div>
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
           icon: 'success',
           title: '¡Éxito!',
           text: data.message || 'Distrito creado correctamente',
-          timer: 5000,
+          timer: 4000,
           showConfirmButton: false
         }).then(() => {
           location.reload();

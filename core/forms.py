@@ -101,7 +101,7 @@ class DistritoForm(forms.ModelForm):
         if not departamento:
             raise forms.ValidationError("Debe seleccionar un departamento.")
 
-        # 🔹 Verificar nombre único por departamento
+        #Verificar nombre único por departamento
         if nombre and departamento:
             existe_nombre = Distrito.objects.filter(
                 nombre__iexact=nombre.strip(),
@@ -110,7 +110,7 @@ class DistritoForm(forms.ModelForm):
             if existe_nombre:
                 self.add_error('nombre', f'Ya existe un distrito llamado "{nombre}" en el departamento "{departamento}".')
 
-        # 🔹 Verificar código único por departamento
+        #Verificar código único por departamento
         if codigo and departamento:
             existe_codigo = Distrito.objects.filter(
                 codigo=codigo,
