@@ -12,7 +12,7 @@
 
         <div class="modal-body">
           <input type="hidden" id="eliminarDeptoId" name="departamento_id">
-          <p class="mb-0">
+          <p class="mb-0 text-center">
             ¿Seguro que deseas eliminar el departamento 
             <strong id="eliminarDeptoNombre" class="text-danger"></strong>?
           </p>
@@ -29,38 +29,38 @@
     </div>
   </div>
 </div>
-
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const modalEliminar = document.getElementById('eliminarDeptoModal');
-  const form = document.getElementById('eliminarDeptoForm');
-  const nombreSpan = document.getElementById('eliminarDeptoNombre');
-  const errorDiv = document.getElementById('eliminarDeptoError');
+document.addEventListener("DOMContentLoaded", () => {
+    const modalEliminar = document.getElementById("eliminarDeptoModal");
+    const form = document.getElementById("eliminarDeptoForm");
+    const errorDiv = document.getElementById("eliminarDeptoError");
 
-  modalEliminar.addEventListener('show.bs.modal', event => {
-    const button = event.relatedTarget;
-    const id = button.getAttribute('data-id');
-    const nombre = button.getAttribute('data-nombre');
-    form.action = `/gerencia/departamentos/eliminar/${id}/`;
-    nombreSpan.textContent = nombre;
-    errorDiv.textContent = '';
-  });
+    modalEliminar.addEventListener("show.bs.modal", ev => {
+        const btn = ev.relatedTarget;
 
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    const formData = new FormData(form);
-    const res = await fetch(form.action, {
-      method: 'POST',
-      headers: {'X-Requested-With': 'XMLHttpRequest'},
-      body: formData
+        form.action = `/gerencia/departamentos/eliminar/${btn.dataset.id}/`;
+        document.getElementById("eliminarDeptoNombre").textContent = btn.dataset.nombre;
+        errorDiv.textContent = "";
     });
-    const data = await res.json();
 
-    if (data.success) {
-      location.reload();
-    } else {
-      errorDiv.textContent = data.message || 'No se pudo eliminar el departamento.';
-    }
-  });
+    form.addEventListener("submit", async e => {
+        e.preventDefault();
+
+        const res = await fetch(form.action, {
+            method: "POST",
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            body: new FormData(form)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            bootstrap.Modal.getInstance(modalEliminar).hide();
+            location.reload();
+        } else {
+            errorDiv.textContent = data.message;
+        }
+    });
 });
 </script>
+

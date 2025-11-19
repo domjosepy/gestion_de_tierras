@@ -53,10 +53,9 @@ def crear_departamento(request):
             exclude_user=request.user,
             link=reverse("gerencia:listar_departamentos")
         )
-
+        messages.success(request, f'El Departamento "{departamento.nombre}" fue creado!')
         data = {
             'success': True,
-            'message': f'Departamento "{departamento.nombre}" creado correctamente.',
             'departamento': {
                 'id': departamento.id,
                 'nombre': departamento.nombre
@@ -94,13 +93,13 @@ def editar_departamento(request, departamento_id):
                 exclude_user=request.user
             )
             msg = "Departamento modificado."
-            messages.success(request, f'Departamento "{departamento.nombre}" modificado exitosamente!')
+            messages.info(request, f'El Departamento "{departamento.nombre}" fue modificado!')
             if is_ajax:
                 return JsonResponse({'success': True, 'message': msg})
             messages.success(request, msg)
         else:
             msg = " ".join([err for errs in form.errors.values() for err in errs])
-            if is_ajax:
+            if is_ajax: 
                 return JsonResponse({'success': False, 'message': msg}, status=400)
             messages.error(request, msg)
         return redirect('gerencia:listar_departamentos')
@@ -116,6 +115,7 @@ def eliminar_departamento(request, departamento_id):
 
     if departamento.distritos.exists():
         msg = "No se puede eliminar: el Departamento tiene Distritos asociados."
+       
         if is_ajax:
             return JsonResponse({'success': False, 'message': msg}, status=400)
         messages.error(request, msg)
@@ -123,10 +123,10 @@ def eliminar_departamento(request, departamento_id):
 
     departamento.delete()
     msg = "Departamento eliminado correctamente."
-    messages.success(request, f'Departamento "{departamento.nombre}" eliminado exitosamente!')
+    messages.info(request, f'El Departamento "{departamento.nombre}" fue eliminado!')
     if is_ajax:
         return JsonResponse({'success': True, 'message': msg})
-    messages.success(request, msg)
+    messages.info(request, msg)
     return redirect('gerencia:listar_departamentos')
 
 
@@ -159,16 +159,9 @@ def crear_distrito(request):
 
     if form.is_valid():
         distrito = form.save()
-        
+        messages.success(request, f'El Distrito "{distrito.nombre}" fue creado!')
         data = {
             'success': True,
-            'message': f'Distrito "{distrito.nombre}" creado correctamente.',
-            'distrito': {
-                'id': distrito.id,
-                'nombre': distrito.nombre,
-                'codigo': distrito.codigo,
-                'departamento': distrito.departamento.nombre
-            }
         }
 
         if is_ajax:
@@ -177,9 +170,8 @@ def crear_distrito(request):
         messages.success(request, data['message'])
         return redirect('gerencia:listar_distritos')
 
-    # Si hay errores de validación
+    # Manejo de errores
     if is_ajax:
-        # Devolver errores en formato JSON
         errores = {}
         for field, errors in form.errors.items():
             errores[field] = [str(error) for error in errors]
@@ -189,10 +181,9 @@ def crear_distrito(request):
             'errors': errores
         }, status=400)
     
-    # Si no es AJAX, mostrar errores como mensajes
-    for field, errors in form.errors.items():
-        for error in errors:
-            messages.error(request, f'{field}: {error}')
+    # Si no es AJAX
+    for error in form.errors.values():
+        messages.error(request, error)
     
     return redirect('gerencia:listar_distritos')
 
@@ -209,7 +200,7 @@ def editar_distrito(request, pk):
         
         data = {
             'success': True,
-            'message': f'Distrito "{distrito.nombre}" actualizado correctamente.'
+            'message': f'El Distrito "{distrito.nombre}" fue modificado.'
         }
 
         if is_ajax:
@@ -218,29 +209,20 @@ def editar_distrito(request, pk):
         messages.success(request, data['message'])
         return redirect('gerencia:listar_distritos')
 
-    # Si hay errores de validación
+    # Manejo de errores
     if is_ajax:
-        # Devolver errores en formato JSON
         errores = {}
         for field, errors in form.errors.items():
             errores[field] = [str(error) for error in errors]
-        
-        # Si hay errores de validación cruzada (__all__)
-        if '__all__' in errores:
-            return JsonResponse({
-                'success': False,
-                'message': ' '.join(errores['__all__'])
-            }, status=400)
         
         return JsonResponse({
             'success': False,
             'errors': errores
         }, status=400)
     
-    # Si no es AJAX, mostrar errores como mensajes
-    for field, errors in form.errors.items():
-        for error in errors:
-            messages.error(request, f'{field}: {error}')
+    # Si no es AJAX
+    for error in form.errors.values():
+        messages.error(request, error)
     
     return redirect('gerencia:listar_distritos')
 
@@ -253,7 +235,6 @@ def eliminar_distrito(request, pk):
 
     # Verificar si tiene colonias asociadas
     if distrito.colonias.exists():
-        messages.danger(request, "No se puede eliminar: el Distrito tiene Colonias asociadas.")
         msg = f'No se puede eliminar el distrito "{distrito.nombre}" porque tiene {distrito.colonias.count()} colonia(s) asociada(s).'
         
         if is_ajax:
@@ -267,8 +248,8 @@ def eliminar_distrito(request, pk):
 
     nombre_distrito = distrito.nombre
     distrito.delete()
-    messages.success(request, f'Distrito "{nombre_distrito}" eliminado exitosamente!')
-    msg = f'Distrito "{nombre_distrito}" eliminado correctamente.'
+    
+    msg = f'El Distrito "{nombre_distrito}" fue eliminado.'
     
     if is_ajax:
         return JsonResponse({

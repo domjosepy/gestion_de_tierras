@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load widget_tweaks %}
-{% block title %}Gerencia{% endblock %}
+{% block title %}Gerencia - Distritos{% endblock %}
 {% block content %}
   <div class="container fade-in py-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -11,7 +10,6 @@
     </div>
     <div class="card shadow-sm border-0 rounded-4">
       <div class="card-body">
-        {% csrf_token %}
         <div class="table-container">
           <table class="beautiful-table" id="TablaDistritos" width="100%" cellspacing="0">
             <thead class="table-light">
@@ -21,10 +19,14 @@
                 <th class="text-center">Código</th>
                 <th class="text-center">Distrito</th>
                 <th class="text-center">Colonias Asignadas</th>
-                <th class="text-center">Acciones
-                  <button class="btn btn-sm btn-primary bg-primary" title="Agregar Distrito" data-bs-toggle="modal" data-bs-target="#crearDistritoModal">
+                <th class="text-center">
+                  Acciones
+                  <button class="btn btn-sm btn-primary" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#crearDistritoModal"
+                          title="Agregar Distrito">
                     <i class="fas fa-plus"></i>
-                    <i class="fas fa-map"> </i>
+                    <i class="fas fa-map"></i>
                   </button>
                 </th>
               </tr>
@@ -45,7 +47,6 @@
                     {{ dist.colonias.count }} colonia{{ dist.colonias.count|pluralize }}
                   </span>
                 </td>
-
                 <td class="text-center">
                   <!-- Botón Editar -->
                   <button class="btn btn-warning btn-sm me-1 editar-distrito-btn"
@@ -55,7 +56,7 @@
                           data-departamento="{{ dist.departamento.id }}"
                           data-bs-toggle="modal"
                           data-bs-target="#editarDistritoModal"
-                          type="button">
+                          title="Editar">
                     <i class="fas fa-edit"></i>
                   </button>
 
@@ -69,14 +70,13 @@
                             data-colonias="{{ dist.colonias.count }}"
                             data-bs-toggle="modal"
                             data-bs-target="#eliminarDistritoModal"
-                            type="button">
+                            title="Eliminar">
                       <i class="fas fa-trash"></i>
                     </button>
                   {% else %}
                     <button class="btn btn-sm btn-outline-danger" 
                             title="No se puede eliminar un distrito con colonias asignadas" 
-                            disabled
-                            type="button">
+                            disabled>
                       <i class="fa-solid fa-trash"></i>
                     </button>
                   {% endif %}
@@ -87,8 +87,7 @@
                           data-bs-toggle="modal"
                           data-bs-target="#crearColoniaDesdeDistritoModal"
                           data-id="{{ dist.id }}"
-                          data-nombre="{{ dist.nombre }}"
-                          type="button">
+                          data-nombre="{{ dist.nombre }}">
                     <i class="fas fa-plus"></i>
                     <i class="fas fa-tractor"></i>
                   </button>
@@ -106,239 +105,24 @@
     </div>  
   </div>
 
-  <!-- Modales Distrito -->
+  <!-- Modales -->
   {% include 'includes/gerencia/modal/distritos/crear_distrito_modal.html' %}
   {% include 'includes/gerencia/modal/distritos/editar_distrito_modal.html' %}
   {% include 'includes/gerencia/modal/distritos/eliminar_distrito_modal.html' %}
   {% include 'includes/gerencia/modal/distritos/crear_colonia_desde_distrito_modal.html' %}
 
-<script>
+  <script>
   document.addEventListener('DOMContentLoaded', function() {
-      new simpleDatatables.DataTable('#TablaDistritos', {
-          perPage: 10,
-          labels: {
-              placeholder: "Buscar...",
-              perPage: "Registros por página",
-              noRows: "No se encontraron Distritos registrados",
-              info: "Mostrando {start} a {end} de {rows} Distritos"
-          }
-      });
-
-  // ========================================
-  // MODAL EDITAR DISTRITO
-  // ========================================
-  const modalEditar = document.getElementById('editarDistritoModal');
-  
-  // Usar delegación de eventos en el documento
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.editar-distrito-btn');
-    if (btn) {
-     // console.log('Botón editar clickeado', btn.dataset); // Debug
-      
-      const id = btn.dataset.id; 
-      const nombre = btn.dataset.nombre;
-      const codigo = btn.dataset.codigo;
-      const departamento = btn.dataset.departamento;
-
-      const inputId = document.getElementById('editar_distrito_id');
-      const inputNombre = document.getElementById('editar_nombre');
-      const inputCodigo = document.getElementById('editar_codigo');
-      const selectDepartamento = document.getElementById('editar_departamento');
-
-      if (inputId) inputId.value = id;
-      if (inputNombre) inputNombre.value = nombre;
-      if (inputCodigo) inputCodigo.value = codigo;
-      if (selectDepartamento) selectDepartamento.value = departamento;
-
-      // Limpiar errores previos
-      const formEditar = document.getElementById('formEditarDistrito');
-      if (formEditar) {
-        formEditar.classList.remove('was-validated');
-      }
-      
-      document.querySelectorAll('[id^="error_editar_"]').forEach(el => {
-        el.textContent = '';
-        const input = el.previousElementSibling;
-        if (input) input.classList.remove('is-invalid');
-      });
-      
-      const alertEditarError = document.getElementById('alert_editar_error');
-      if (alertEditarError) {
-        alertEditarError.classList.add('d-none');
-      }
-    }
-  });
-
-  // ========================================
-  // MODAL ELIMINAR DISTRITO
-  // ========================================
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.eliminar-distrito-btn');
-    if (btn) {
-     // console.log('Botón eliminar clickeado', btn.dataset); // Debug
-      
-      const id = btn.dataset.id;
-      const nombre = btn.dataset.nombre;
-      const codigo = btn.dataset.codigo || 'N/A';
-      const departamento = btn.dataset.departamento || 'N/A';
-      const colonias = btn.dataset.colonias || 0;
-
-      const inputId = document.getElementById('eliminar_distrito_id');
-      const displayNombre = document.getElementById('eliminar_nombre_display');
-      const displayCodigo = document.getElementById('eliminar_codigo_display');
-      const displayDepartamento = document.getElementById('eliminar_departamento_display');
-
-      if (inputId) inputId.value = id;
-      if (displayNombre) displayNombre.textContent = nombre;
-      if (displayCodigo) displayCodigo.textContent = codigo;
-      if (displayDepartamento) displayDepartamento.textContent = departamento;
-
-      // Limpiar errores previos
-      const alertEliminarError = document.getElementById('alert_eliminar_error');
-      if (alertEliminarError) {
-        alertEliminarError.classList.add('d-none');
-      }
-      
-      const alertColoniasInfo = document.getElementById('alert_colonias_info');
-      if (alertColoniasInfo) {
-        alertColoniasInfo.classList.add('d-none');
-      }
-
-      const btnEliminar = document.getElementById('btnEliminarDistrito');
-      
-      // Mostrar info de colonias si las hay
-      if (colonias && parseInt(colonias) > 0) {
-        if (alertColoniasInfo) {
-          const mensajeColonias = document.getElementById('mensaje_colonias_info');
-          if (mensajeColonias) {
-            mensajeColonias.textContent = `Este distrito tiene ${colonias} colonia(s) asociada(s). No podrá eliminarse hasta que se reasignen.`;
-          }
-          alertColoniasInfo.classList.remove('d-none');
-        }
-        if (btnEliminar) btnEliminar.disabled = true;
-      } else {
-        if (btnEliminar) btnEliminar.disabled = false;
-      }
-    }
-  });
-
-  // ========================================
-  // MODAL CREAR COLONIA DESDE DISTRITO
-  // ========================================
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.crear-colonia-btn');
-    if (btn) {
-      console.log('Botón crear colonia clickeado', btn.dataset); // Debug
-      
-      const distritoId = btn.dataset.id;
-      const distritoNombre = btn.dataset.nombre;
-
-      const inputDistrito = document.getElementById('distrito_asignado');
-      const displayNombre = document.getElementById('info_distrito_nombre');
-
-      if (inputDistrito) inputDistrito.value = distritoId;
-      if (displayNombre) displayNombre.textContent = distritoNombre;
-
-      // Limpiar formulario
-      const formColonia = document.getElementById('formCrearColoniaDistrito');
-      if (formColonia) {
-        formColonia.reset();
-        formColonia.classList.remove('was-validated');
-        // Restaurar valores después del reset
-        if (inputDistrito) inputDistrito.value = distritoId;
-        const selectEstado = document.getElementById('colonia_estado');
-        if (selectEstado) selectEstado.value = 'activo';
-      }
-      
-      // Limpiar errores
-      document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
-        el.textContent = '';
-        const input = el.previousElementSibling;
-        if (input) input.classList.remove('is-invalid');
-      });
-      
-      const alertColoniaError = document.getElementById('alert_colonia_error');
-      if (alertColoniaError) {
-        alertColoniaError.classList.add('d-none');
-      }
-    }
-  });
-
-  // ========================================
-  // LIMPIAR MODALES AL CERRAR
-  // ========================================
-  
-  // Limpiar modal editar
-  if (modalEditar) {
-    modalEditar.addEventListener('hidden.bs.modal', function() {
-      const formEditar = document.getElementById('formEditarDistrito');
-      if (formEditar) {
-        formEditar.reset();
-        formEditar.classList.remove('was-validated');
-      }
-      
-      document.querySelectorAll('[id^="error_editar_"]').forEach(el => {
-        el.textContent = '';
-        const input = el.previousElementSibling;
-        if (input) input.classList.remove('is-invalid');
-      });
-      
-      const alertEditarError = document.getElementById('alert_editar_error');
-      if (alertEditarError) {
-        alertEditarError.classList.add('d-none');
+    // Inicializar DataTable
+    new simpleDatatables.DataTable('#TablaDistritos', {
+      perPage: 10,
+      labels: {
+        placeholder: "Buscar...",
+        perPage: "Registros por página",
+        noRows: "No se encontraron Distritos registrados",
+        info: "Mostrando {start} a {end} de {rows} Distritos"
       }
     });
-  }
-
-  // Limpiar modal eliminar
-  const modalEliminar = document.getElementById('eliminarDistritoModal');
-  if (modalEliminar) {
-    modalEliminar.addEventListener('hidden.bs.modal', function() {
-      const formEliminar = document.getElementById('formEliminarDistrito');
-      if (formEliminar) {
-        formEliminar.reset();
-      }
-      
-      const alertEliminarError = document.getElementById('alert_eliminar_error');
-      if (alertEliminarError) {
-        alertEliminarError.classList.add('d-none');
-      }
-      
-      const alertColoniasInfo = document.getElementById('alert_colonias_info');
-      if (alertColoniasInfo) {
-        alertColoniasInfo.classList.add('d-none');
-      }
-      
-      const btnEliminar = document.getElementById('btnEliminarDistrito');
-      if (btnEliminar) {
-        btnEliminar.disabled = false;
-      }
-    });
-  }
-
-  // Limpiar modal crear colonia
-  const modalColonia = document.getElementById('crearColoniaDesdeDistritoModal');
-  if (modalColonia) {
-    modalColonia.addEventListener('hidden.bs.modal', function() {
-      const formColonia = document.getElementById('formCrearColoniaDistrito');
-      if (formColonia) {
-        formColonia.reset();
-        formColonia.classList.remove('was-validated');
-      }
-      
-      document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
-        el.textContent = '';
-        const input = el.previousElementSibling;
-        if (input) input.classList.remove('is-invalid');
-      });
-      
-      const alertColoniaError = document.getElementById('alert_colonia_error');
-      if (alertColoniaError) {
-        alertColoniaError.classList.add('d-none');
-      }
-    });
-  }
-});
-</script>
-
+  });
+  </script>
 {% endblock %}

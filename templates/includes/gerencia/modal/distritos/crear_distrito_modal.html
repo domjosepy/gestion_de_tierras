@@ -1,12 +1,12 @@
 <!-- Modal: Crear Distrito -->
-<div class="modal fade" id="crearDistritoModal" tabindex="-1" aria-labelledby="crearDistritoModalLabel" aria-hidden="true">
+<div class="modal fade" id="crearDistritoModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="crearDistritoModalLabel">
+        <h5 class="modal-title">
           <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Distrito
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <form id="formCrearDistrito" method="POST" action="{% url 'gerencia:crear_distrito' %}">
         {% csrf_token %}
@@ -19,10 +19,11 @@
             <select class="form-select" id="crear_departamento" name="departamento" required>
               <option value="">-- Seleccione un Departamento --</option>
               {% for depto in departamentos %}
-                <option value="{{ depto.id }}">{{ depto.codigo }}. {{ depto.nombre }}</option>
+                <option value="{{ depto.id }}"> {{ depto.nombre }}</option>
               {% endfor %}
             </select>
-            <div class="invalid-feedback" id="error_crear_departamento"></div>
+            <div class="invalid-feedback"></div>
+            <small class="text-muted">Seleccione el departamento al que pertenece el distrito</small>
           </div>
 
           <!-- Nombre -->
@@ -34,10 +35,9 @@
                    class="form-control" 
                    id="crear_nombre" 
                    name="nombre" 
-                   placeholder="Ej: San Lorenzo"
                    maxlength="200"
                    required>
-            <div class="invalid-feedback" id="error_crear_nombre"></div>
+            <div class="invalid-feedback"></div>
             <small class="text-muted">Solo letras y espacios, mínimo 3 caracteres</small>
           </div>
 
@@ -49,18 +49,11 @@
             <input type="number" 
                    class="form-control" 
                    id="crear_codigo" 
-                   name="codigo" 
-                   placeholder="Ej: 1"
+                   name="codigo"                    
                    min="1"
                    required>
-            <div class="invalid-feedback" id="error_crear_codigo"></div>
+            <div class="invalid-feedback"></div>
             <small class="text-muted">Debe ser único dentro del departamento</small>
-          </div>
-
-          <!-- Alerta de errores generales -->
-          <div class="alert alert-danger d-none" id="alert_crear_error" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <span id="mensaje_crear_error"></span>
           </div>
         </div>
 
@@ -68,7 +61,7 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-outline-success" id="btnCrearDistrito">
+          <button type="submit" class="btn btn-outline-success">
             <i class="fas fa-save me-1"></i>Crear Distrito
           </button>
         </div>
@@ -78,111 +71,58 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const formCrear = document.getElementById('formCrearDistrito');
-  const btnCrear = document.getElementById('btnCrearDistrito');
-  const modalCrear = document.getElementById('crearDistritoModal');
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('crearDistritoModal');
+    const form = document.getElementById('formCrearDistrito');
 
-  // Limpiar formulario cuando se cierra el modal
-  modalCrear.addEventListener('hidden.bs.modal', function() {
-    formCrear.reset();
-    formCrear.classList.remove('was-validated');
-    document.querySelectorAll('[id^="error_crear_"]').forEach(el => {
-      el.textContent = '';
-      el.previousElementSibling?.classList.remove('is-invalid');
+    // Limpiar formulario al cerrar modal
+    modal.addEventListener('hidden.bs.modal', function() {
+      form.reset();
+      limpiarErrores(form);
     });
-    document.getElementById('alert_crear_error').classList.add('d-none');
-  });
 
-  // Envío del formulario
-  formCrear.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // Validación HTML5
-    if (!formCrear.checkValidity()) {
-      formCrear.classList.add('was-validated');
-      return;
-    }
-
-    const formData = new FormData(formCrear);
-    btnCrear.disabled = true;
-    btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
-
-    fetch(formCrear.action, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    // Enviar formulario
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      if (!form.checkValidity()) {
+        form.classList.add('was-validated');
+        return;
       }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // Cerrar modal
-        bootstrap.Modal.getInstance(modalCrear).hide();
-        
-        // Mostrar mensaje de éxito
-        Swal.fire({
-          icon: 'success',
-          title: '¡Éxito!',
-          text: data.message || 'Distrito creado correctamente',
-          timer: 4000,
-          showConfirmButton: false
-        }).then(() => {
-          location.reload();
-        });
-      } else {
-        // Mostrar errores de validación
-        mostrarErroresCrear(data.errors);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Ocurrió un error al crear el distrito'
-      });
-    })
-    .finally(() => {
-      btnCrear.disabled = false;
-      btnCrear.innerHTML = '<i class="fas fa-save me-1"></i>Crear Distrito';
-    });
-  });
 
-  function mostrarErroresCrear(errors) {
-    // Limpiar errores previos
-    document.querySelectorAll('[id^="error_crear_"]').forEach(el => {
-      el.textContent = '';
-      el.previousElementSibling?.classList.remove('is-invalid');
-    });
-    document.getElementById('alert_crear_error').classList.add('d-none');
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const btnTextoOriginal = btnSubmit.innerHTML;
+      
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
 
-    if (typeof errors === 'object') {
-      // Errores por campo
-      for (const [campo, mensajes] of Object.entries(errors)) {
-        const errorDiv = document.getElementById(`error_crear_${campo}`);
-        const input = document.getElementById(`crear_${campo}`);
-        
-        if (errorDiv && input) {
-          errorDiv.textContent = mensajes.join(', ');
-          input.classList.add('is-invalid');
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
         }
-      }
-
-      // Mostrar error general si existe __all__
-      if (errors.__all__) {
-        const alertError = document.getElementById('alert_crear_error');
-        document.getElementById('mensaje_crear_error').textContent = errors.__all__.join(', ');
-        alertError.classList.remove('d-none');
-      }
-    } else {
-      // Error general
-      const alertError = document.getElementById('alert_crear_error');
-      document.getElementById('mensaje_crear_error').textContent = errors || 'Error al crear el distrito';
-      alertError.classList.remove('d-none');
-    }
-  }
-});
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modal).hide();
+          setTimeout(() => location.reload(), 1500);
+          mostrarToast('success', data.message);
+        } else {
+          mostrarErroresEnCampos(form, data.errors);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        mostrarToast('error', 'Ocurrió un error al crear el distrito');
+      })
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = btnTextoOriginal;
+      });
+    });
+  });
 </script>

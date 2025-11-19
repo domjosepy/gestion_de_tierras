@@ -16,7 +16,8 @@ class Departamento(models.Model):
     class Meta:
         verbose_name = "Departamento"
         verbose_name_plural = "Departamentos"
-        ordering = ["nombre"]
+        ordering = ["codigo", "nombre"]
+        
 
     def save(self, *args, **kwargs):
         if not self.codigo:

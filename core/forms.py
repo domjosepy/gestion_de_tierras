@@ -12,9 +12,9 @@ def validar_nombre_letras(nombre):
     Permite letras, espacios y tildes.
     Rechaza números y símbolos especiales.
     """
-    patron = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$"
+    patron = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s']+$"
     if not re.match(patron, nombre):
-        raise ValidationError("El nombre solo puede contener letras y espacios.")
+        raise ValidationError("El nombre solo puede contener letras, espacios y apóstrofes.")
     return nombre.strip().upper()
     # Capitaliza toda la palabra
 
@@ -48,6 +48,9 @@ class DepartamentoForm(forms.ModelForm):
     #=============================
     def clean_nombre(self):
         nombre = validar_nombre_letras(self.cleaned_data.get('nombre', ''))
+        if len(nombre) < 3:
+            raise ValidationError("El nombre debe tener al menos 3 caracteres.")
+        
         if Departamento.objects.filter(nombre__iexact=nombre).exclude(id=self.instance.id).exists():
             raise ValidationError(f'El Departamento "{nombre}" ya existe.')
         return nombre
@@ -70,17 +73,18 @@ class DistritoForm(forms.ModelForm):
         model = Distrito
         fields = ['nombre', 'codigo', 'departamento']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del Distrito'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control','pattern': "[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\\s']+", 'placeholder': 'Nombre del Distrito'}),
             'codigo': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Código único dentro del departamento'}),
             'departamento': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean_nombre(self):
-        nombre = validar_nombre_letras(self.cleaned_data.get('nombre', ''))
+        nombre = self.cleaned_data.get('nombre', '').strip().upper()
         if len(nombre) < 3:
             raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
-        if not nombre.replace(' ', '').isalpha():
-            raise forms.ValidationError("El nombre solo puede contener letras y espacios.")
+        patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
+        if not re.match(patron, nombre):
+            raise forms.ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
         return nombre
 
     def clean_codigo(self):
@@ -145,15 +149,16 @@ class ColoniaForm(forms.ModelForm):
         }
 
     def clean_nombre(self):
-        nombre = validar_nombre_letras(self.cleaned_data.get('nombre', ''))
+        nombre = self.cleaned_data.get('nombre', '').strip().upper()
         if len(nombre) < 3:
             raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
-        if not nombre.replace(' ', '').isalpha():
-            raise forms.ValidationError("El nombre solo puede contener letras y espacios.")
+        patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
+        if not re.match(patron, nombre):
+            raise forms.ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
         if Colonia.objects.filter(nombre__iexact=nombre).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError(f'La Colonia "{nombre}" ya existe.')
+                raise forms.ValidationError(f'La Colonia "{nombre}" ya existe.')
         return nombre
-    
+        
     def clean_codigo(self):
         codigo = validar_codigo_numerico(self.cleaned_data.get('codigo'))
         if Colonia.objects.filter(codigo=codigo).exclude(id=self.instance.id).exists():

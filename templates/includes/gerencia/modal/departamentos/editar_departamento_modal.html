@@ -14,13 +14,13 @@
           <input type="hidden" id="editarDeptoId" name="departamento_id">
 
           <div class="mb-3">
-            <label for="editarDeptoCodigo" class="form-label">Código</label>
+            <label for="editarDeptoCodigo" class="form-label fw-bold">Código</label>
             <input type="text" id="editarDeptoCodigo" name="codigo" class="form-control" required>
           </div>
 
           <div class="mb-3">
-            <label for="editarDeptoNombre" class="form-label">Nombre</label>
-            <input type="text" id="editarDeptoNombre" name="nombre" class="form-control" required>
+            <label for="editarDeptoNombre" class="form-label fw-bold">Nombre</label>
+            <input type="text" id="editarDeptoNombre" name="nombre" class="form-control" required oninput="soloTexto(this)">
           </div>
 
           <div id="editarDeptoError" class="text-danger small"></div>
@@ -28,7 +28,8 @@
 
         <div class="modal-footer justify-content-between">
           
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar</button>
           <button type="submit" class="btn btn-outline-warning">
             <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios
           </button>
@@ -39,39 +40,39 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const modalEditar = document.getElementById('editarDeptoModal');
-  const form = document.getElementById('editarDeptoForm');
-  const errorDiv = document.getElementById('editarDeptoError');
+  document.addEventListener("DOMContentLoaded", () => {
+      const modalEditar = document.getElementById("editarDeptoModal");
+      const form = document.getElementById("editarDeptoForm");
+      const errorDiv = document.getElementById("editarDeptoError");
 
-  modalEditar.addEventListener('show.bs.modal', event => {
-    const button = event.relatedTarget;
-    const id = button.getAttribute('data-id');
-    const codigo = button.getAttribute('data-codigo');
-    const nombre = button.getAttribute('data-nombre');
-    
-    form.action = `/gerencia/departamentos/editar/${id}/`;
-    document.getElementById('editarDeptoId').value = id;
-    document.getElementById('editarDeptoCodigo').value = codigo;
-    document.getElementById('editarDeptoNombre').value = nombre;
-    errorDiv.textContent = '';
+      modalEditar.addEventListener("show.bs.modal", ev => {
+          const btn = ev.relatedTarget;
+
+          form.action = `/gerencia/departamentos/editar/${btn.dataset.id}/`;
+          document.getElementById("editarDeptoCodigo").value = btn.dataset.codigo;
+          document.getElementById("editarDeptoNombre").value = btn.dataset.nombre;
+          errorDiv.textContent = "";
+      });
+
+      form.addEventListener("submit", async e => {
+          e.preventDefault();
+
+          const res = await fetch(form.action, {
+              method: "POST",
+              headers: { "X-Requested-With": "XMLHttpRequest" },
+              body: new FormData(form)
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+              bootstrap.Modal.getInstance(modalEditar).hide();
+              location.reload();
+
+          } else {
+              errorDiv.textContent = data.message;
+              mostrarToast(data.message, "Error en inserción");
+          }
+      });
   });
-
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    const formData = new FormData(form);
-    const res = await fetch(form.action, {
-      method: 'POST',
-      headers: {'X-Requested-With': 'XMLHttpRequest'},
-      body: formData
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      location.reload();
-    } else {
-      errorDiv.textContent = data.message || 'Error al guardar los cambios.';
-    }
-  });
-});
 </script>
