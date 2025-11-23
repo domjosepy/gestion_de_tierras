@@ -162,6 +162,7 @@
   transition: margin-left 0.3s ease;
   margin-left: var(--sidebar-width);
   max-height: calc(100vh - [altura-header]);
+  padding-bottom: 60px; /* espacio para el footer */
 }
 
 body.sb-sidenav-toggled #content-wrapper {
@@ -589,11 +590,17 @@ body.login-container {
 }
 
 .sticky-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 1020;
-  background-image: var(--bs-gradient);
-  background: var(--header-gradient);
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width); /* Inicia con sidebar expandido */
+    right: 0;
+    height: 60px;
+    background: var(--header-gradient);
+    z-index: 1020;
+    transition: left var(--transition-speed); /* Agregar transición */
+}
+body.sb-sidenav-toggled .sticky-footer {
+    left: var(--sidebar-collapsed-width); /* Ajusta cuando el sidebar está colapsado */
 }
 
 /* ============================== */
@@ -656,22 +663,61 @@ body.sb-sidenav-toggled .sidebar-brand-text {
 html, body {
   /* Seguí permitiendo el scroll vertical */
   height: 100%;
+  margin: 0;
   overflow-y: auto !important;
   overflow-x: hidden !important;
 
   /* ----- OCULTAR LA BARRA ----- */
   /* Firefox */
   scrollbar-width: none;
-
+  
   /* Internet Explorer / Edge Legacy */
   -ms-overflow-style: none;
 }
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1; /* empuja el footer hacia abajo */
+}
+
+footer {
+    background: var(--header-gradient);
+}
+.main-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+.content {
+    flex: 1;
+}
 #content-wrapper {
     min-height: calc(100vh - 60px); /* resta alto de footer */
+    padding-bottom: 60px; /* Espacio para el footer fijo */
 }
 .sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width); /* para que no pise el sidebar */
+    right: 0;
     height: 60px;
+    background: var(--header-gradient);
+    z-index: 1030;
 }
+
+body.sb-sidenav-toggled .sticky-footer {
+    left: var(--sidebar-collapsed-width); /* Ajusta cuando el sidebar está colapsado */
+}
+.content-wrapper {
+    padding-bottom: 60px; /* Igual a la altura del footer */
+}
+.main-content {
+    padding-bottom: 60px; /* Igual a la altura del footer */
+}
+
 
 /* Chrome, Safari, Opera y derivados (Blink/WebKit) */
 html::-webkit-scrollbar,
@@ -899,6 +945,9 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
     font-size: 1.3rem;
   }
 }
+
+
+
 /* ============================== */
 /* MEDIA QUERIES - 768px BREAKPOINT */
 /* ============================== */
@@ -964,6 +1013,13 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
   .sb-sidenav-toggled #content-wrapper {
     margin-left: 0 !important;
   }
+   .sticky-footer {
+        left: 0;
+    }
+    
+    body.sb-sidenav-toggled .sticky-footer {
+        left: 0;
+    }
 }
 
 /* Eliminar el otro media query de 991.98px */
@@ -1084,6 +1140,7 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
 @media (max-width: 768px) {
   #content-wrapper {
     margin-left: 0;
+    padding-bottom: 60px; /* espacio para el footer */
   }
   
    body:not(.sb-sidenav-toggled) .sidebar {
@@ -1622,11 +1679,6 @@ table.dataTable td .dropdown-item:hover {
   color: #fff;
 }
 
-.table-responsive-custom {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border-radius: var(--border-radius);
-}
 
 .color-btn {
     width: 50px !important;

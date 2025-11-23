@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestión de Departamentos{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+          <i class="fas fa-map-marker-alt me-3"></i>Gestión de Departamentos</h1>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="deptoTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr >
+                            <th class="text-center">Código</th>
+                            <th class="text-center">Departamento</th>
+                            <th class="text-center">Distritos Asociados</th>
+                            <th class="text-center">Acciones
+                              <button class="btn btn-sm btn-success bg-success" title="Agregar Departamento" data-bs-toggle="modal" data-bs-target="#crearDeptoModal">
+                                  <i class="fas fa-plus"></i>
+                                  <i class="fas fa-map-marker-alt"> </i>
+                              </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for departamento in departamentos %}
+                        <tr class="text-center" data-departamento-id="{{ departamento.id }}">
+                            <td class="text-alert">{{ departamento.codigo }}</td>
+                            <td class="text-uppercase">{{ departamento.nombre }}</td>
+                            <td>
+                                <span class="badge {% if departamento.distritos.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                                    <i class="fas fa-city me-1"></i>
+                                    {{ departamento.distritos.count }} distrito{{ departamento.distritos.count|pluralize }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <!-- Botón editar -->
+                                <button 
+                                    class="btn btn-sm me-1 btn-warning editar-btn" 
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editarDeptoModal"
+                                    data-departamentoid="{{ departamento.id }}"
+                                    data-departamentocodigo="{{ departamento.codigo }}"
+                                    data-departamentonombre="{{ departamento.nombre }}"
+                                    data-bs-toggle="tooltip"
+                                    title="Editar Departamento">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <!-- Botón eliminar -->
+                                {% if not departamento.distritos.exists %}
+                                <button 
+                                    class="btn btn-sm me-1 btn-danger eliminar-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#eliminarDeptoModal"
+                                    data-departamentoid="{{ departamento.id }}"
+                                    data-departamentonombre="{{ departamento.nombre }}"
+                                    data-bs-toggle="tooltip"
+                                    title="Eliminar Departamento">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button> 
+                                {% else %}
+                                <button class="btn btn-sm btn-danger me-1" disabled 
+                                        data-bs-toggle="tooltip" 
+                                        title="No se puede eliminar: Departamento en uso">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% endif %}
+                                
+                                <!-- Botón Agregar Distrito -->
+                                <button class="btn btn-sm btn-success" 
+                                        title="Agregar Distrito" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#crearDistritoDesdeDeptoModal"
+                                        data-departamentoid="{{ departamento.id }}"
+                                        data-departamentonombre="{{ departamento.nombre }}">
+                                    <i class="fas fa-plus"></i>
+                                    <i class="fas fa-city"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr >
+                            <td colspan="4" class="text-center">No hay Departamentos registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales -->
+{% include 'includes/gerencia/modal/departamentos/crear_departamento_modal.html' %}
+{% include 'includes/gerencia/modal/departamentos/editar_departamento_modal.html' %}
+{% include 'includes/gerencia/modal/departamentos/eliminar_departamento_modal.html' %}
+{% include 'includes/gerencia/modal/departamentos/crear_distrito_desde_depto_modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 🔧 DataTable
+        const dataTable = new simpleDatatables.DataTable('#deptoTable', {
+            perPage: 10,
+            labels: { 
+                placeholder: "Buscar...",
+                perPage: "Registros por página",
+                noRows: "No se encontraron Departamentos registrados",
+                info: "Mostrando {start} a {end} de {rows} Departamentos"
+            }
+        });
+
+        // 🔔 Función Toast Global (fuera modal)
+        function showToast(message, type = 'success') {
+            // Asume tu ToastManager o usa Bootstrap Toast
+            if (typeof ToastManager !== 'undefined') {
+                ToastManager.create(message, type);
+            } else {
+                // Fallback Bootstrap Toast
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+                toast.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+                document.body.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                toast.addEventListener('hidden.bs.toast', () => toast.remove());
+            }
+        }
+
+        // 📋 FUNCIÓN GENÉRICA: Submit con Validación + AJAX
+        function handleModalSubmit(e, modalId, onSuccess) {
+            e.preventDefault();
+            const form = e.target;
+            const alertDiv = form.querySelector('.alert');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const icon = submitBtn.querySelector('i');
+            
+
+            // 1. VALIDACIÓN CLIENT (como en crear_usuario)
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
+            
+            // 2. Loading
+            const originalText = btnText.textContent;
+            const originalIcon = icon.outerHTML;
+            submitBtn.disabled = true;
+            icon.className = 'fas fa-spinner fa-spin me-1';
+            btnText.textContent = 'Guardando...';
+
+            // 3. AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // SUCCESS: Toast FUERA + Close + Callback tabla
+                    showToast(data.message, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById(modalId)).hide();
+                    form.reset();
+                    form.classList.remove('was-validated');
+                    if (onSuccess) onSuccess(data.departamento);
+                } else {
+                    // ERROR: MOSTRAR DENTRO MODAL
+                    alertDiv.textContent = data.message;
+                    alertDiv.classList.remove('d-none', 'alert-success').add('alert-danger');
+                }
+            })
+            .catch(err => {
+                alertDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+                alertDiv.classList.remove('d-none').add('alert-danger');
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                icon.outerHTML = originalIcon;
+                btnText.textContent = originalText;
+            });
+        }
+
+        // 🚀 CREAR: Insertar fila
+        document.getElementById('crearDeptoForm').addEventListener('submit', (e) => 
+            handleModalSubmit(e, 'crearDeptoModal', (depto) => {
+                const tbody = document.querySelector('#deptoTable tbody');
+                const newRow = `
+                    <tr class="text-center" data-departamento-id="${depto.id}">
+                        <td>${depto.codigo}</td>
+                        <td class="text-uppercase">${depto.nombre}</td>
+                        <td><span class="badge bg-secondary rounded-pill"><i class="fas fa-city me-1"></i> 0 distritos</span></td>
+                        <td>
+                            <button class="btn btn-sm me-1 btn-warning editar-btn" data-bs-toggle="modal" data-bs-target="#editarDeptoModal" 
+                                    data-departamentoid="${depto.id}" data-departamentocodigo="${depto.codigo}" data-departamentonombre="${depto.nombre}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm me-1 btn-danger eliminar-btn" data-bs-toggle="modal" data-bs-target="#eliminarDeptoModal" 
+                                    data-departamentoid="${depto.id}" data-departamentonombre="${depto.nombre}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success crear-distrito-btn" data-bs-toggle="modal" data-bs-target="#crearDistritoDesdeDeptoModal"
+                                    data-departamentoid="${depto.id}" data-departamentonombre="${depto.nombre}">
+                                <i class="fas fa-plus fa-city"></i>
+                                <i class="fas fa-city"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+                tbody.insertAdjacentHTML('afterbegin', newRow);  // Al inicio para nuevo
+                dataTable.refresh();  // Refresh DataTable
+                
+            })
+        );
+
+        // ✨ **NUEVO: MODAL EDIT - SET ACTION DINÁMICO** ⭐
+        document.getElementById('editarDeptoModal').addEventListener('show.bs.modal', function(event) {
+            const btn = event.relatedTarget;
+            const id = btn.dataset.departamentoid;
+            const codigo = btn.dataset.departamentocodigo;
+            const nombre = btn.dataset.departamentonombre;
+            
+            // **FIX #1: SET ACTION**
+            const form = document.getElementById('editarDeptoForm');
+            form.action = `/gerencia/departamentos/editar/${id}/`;  // 👈 PLURAL
+            
+            // Populate
+            form.querySelector('#departamentoCodigo').value = codigo;
+            form.querySelector('#departamentoNombre').value = nombre;
+            
+            // Clear alert
+            const alertDiv = document.getElementById('editarDeptoAlert');
+            alertDiv.classList.add('d-none');
+        });
+
+        // ✏️ EDITAR: Actualizar fila
+        document.getElementById('editarDeptoForm').addEventListener('submit', (e) => 
+            handleModalSubmit(e, 'editarDeptoModal', (depto) => {
+                const row = document.querySelector(`tr[data-departamento-id="${depto.id}"]`);
+                if (row) {
+                    row.querySelector('td:nth-child(1)').textContent = depto.codigo;
+                    row.querySelector('td:nth-child(2)').textContent = depto.nombre;
+                    row.querySelector('.editar-btn').dataset.departamentocodigo = depto.codigo;
+                    row.querySelector('.editar-btn').dataset.departamentonombre = depto.nombre;
+                    dataTable.refresh();
+                }
+            })
+        );
+
+        // 🗑️ **FIX DELETE: URL PLURAL + CLEAR ONCLICK** ⭐
+        document.getElementById('eliminarDeptoModal').addEventListener('show.bs.modal', function(event) {
+            const btn = event.relatedTarget;
+            const id = btn.dataset.departamentoid;
+            const nombre = btn.dataset.departamentonombre;
+            
+            document.getElementById('DeptoNombreEliminar').textContent = nombre;
+            
+            // **FIX: Clear prev onclick**
+            const confirmBtn = document.getElementById('confirmEliminarDepto');
+            confirmBtn.onclick = null;  // Limpia
+            
+            // **NEW ONCLICK**
+            confirmBtn.onclick = () => {
+                const modal = bootstrap.Modal.getInstance(this);
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Eliminando...';
+                
+                fetch(`/gerencia/departamentos/eliminar/${id}/`, {  // 👈 PLURAL!
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    modal.hide();
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        document.querySelector(`tr[data-departamento-id="${id}"]`).remove();
+                        dataTable.refresh();
+                    } else {
+                        showToast(data.message, 'danger');
+                    }
+                })
+                .catch(() => showToast('Error conexión', 'danger'))
+                .finally(() => {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Eliminar';
+                });
+            };
+        });
+        
+        // 🎯 Event Listeners Modales (populate)
+        // Editar: ya lo tienes, OK
+        // Otros: OK
+
+        // 🧹 Tooltips
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+    });
+</script>
+{% endblock %}

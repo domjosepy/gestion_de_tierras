@@ -1,90 +1,278 @@
-<!-- Modal Crear Colonia desde Distrito -->
-<div class="modal fade modal-success" id="crearColoniaDesdeDistritoModal" tabindex="-1" aria-labelledby="crearColoniaDesdeDistritoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <form method="post" action="{% url 'gerencia:crear_colonia' %}">
-      {% csrf_token %}
-      <div class="modal-content">
-        <!-- Encabezado -->
-        <div class="modal-header bg-success text-white">
-          <h5 class="modal-title" id="crearColoniaDesdeDistritoModalLabel">
-            <i class="fas fa-tree-city me-2"></i> Crear Colonia para Distrito
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-
-        <!-- Cuerpo -->
+<!-- Modal: Crear Colonia desde Distrito -->
+<div class="modal fade" id="crearColoniaDesdeDistritoModal" tabindex="-1" aria-labelledby="crearColoniaDesdeDistritoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="crearColoniaDesdeDistritoModalLabel">
+          <i class="fas fa-tractor me-2"></i>Crear Nueva Colonia
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formCrearColoniaDistrito" method="POST" action="{% url 'gerencia:crear_colonia' %}">
+        {% csrf_token %}
+        <input type="hidden" id="distrito_asignado" name="distritos">
+        
         <div class="modal-body">
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="distritoSeleccionado" class="form-label">Distrito</label>
-              <input type="text" class="form-control" id="distritoSeleccionado" readonly>
-              <input type="hidden" id="distritoId" name="distritos">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="nombreColonia" class="form-label">Nombre de la Colonia</label>
-              <input type="text" class="form-control" id="nombreColonia" name="nombre" required>
+          <!-- Info del distrito -->
+          <div class="alert alert-info d-flex align-items-center mb-3" role="alert">
+            <i class="fas fa-info-circle fa-2x me-3"></i>
+            <div>
+              <strong>Distrito seleccionado:</strong>
+              <p class="mb-0" id="info_distrito_nombre"></p>
             </div>
           </div>
-          
+
           <div class="row">
+            <!-- Nombre -->
+            <div class="col-md-12 mb-3">
+              <label for="colonia_nombre" class="form-label fw-bold">
+                <i class="fas fa-signature me-1"></i>Nombre de la Colonia <span class="text-danger">*</span>
+              </label>
+              <input type="text" 
+                     class="form-control" 
+                     id="colonia_nombre" 
+                     name="nombre" 
+                     placeholder="Ej: Colonia San Pedro"
+                     maxlength="250"
+                     required>
+              <div class="invalid-feedback" id="error_colonia_nombre"></div>
+              <small class="text-muted">Solo letras y espacios, mínimo 3 caracteres</small>
+            </div>
+
+            <!-- Código -->
             <div class="col-md-6 mb-3">
-              <label for="estadoColonia" class="form-label">Estado</label>
-              <select class="form-control" id="estadoColonia" name="estado" required>
-                <option value="activo">Activo</option>
+              <label for="colonia_codigo" class="form-label fw-bold">
+                <i class="fas fa-hashtag me-1"></i>Código
+              </label>
+              <input type="number" 
+                     class="form-control" 
+                     id="colonia_codigo" 
+                     name="codigo" 
+                     placeholder="Se asignará automáticamente"
+                     min="1"
+                     readonly>
+              <small class="text-muted">El código se asigna automáticamente</small>
+            </div>
+
+            <!-- Estado -->
+            <div class="col-md-6 mb-3">
+              <label for="colonia_estado" class="form-label fw-bold">
+                <i class="fas fa-toggle-on me-1"></i>Estado
+              </label>
+              <select class="form-select" id="colonia_estado" name="estado">
+                <option value="activo" selected>Activo</option>
                 <option value="inactivo">Inactivo</option>
               </select>
             </div>
+
+            <!-- Finca Matriz -->
             <div class="col-md-6 mb-3">
-              <label for="codigoColonia" class="form-label">Código</label>
-              <input type="number" class="form-control" id="codigoColonia" name="codigo" required>
+              <label for="colonia_finca" class="form-label fw-bold">
+                <i class="fas fa-file-alt me-1"></i>Finca Matriz
+              </label>
+              <input type="text" 
+                     class="form-control" 
+                     id="colonia_finca" 
+                     name="finca_matriz" 
+                     placeholder="Número de finca"
+                     maxlength="100">
+              <small class="text-muted">Opcional</small>
+            </div>
+
+            <!-- Padrón Matriz -->
+            <div class="col-md-6 mb-3">
+              <label for="colonia_padron" class="form-label fw-bold">
+                <i class="fas fa-file-alt me-1"></i>Padrón Matriz
+              </label>
+              <input type="text" 
+                     class="form-control" 
+                     id="colonia_padron" 
+                     name="padron_matriz" 
+                     placeholder="Número de padrón"
+                     maxlength="100">
+              <small class="text-muted">Opcional</small>
             </div>
           </div>
-          
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label for="fincaMatriz" class="form-label">Finca Matriz</label>
-              <input type="text" class="form-control" id="fincaMatriz" name="finca_matriz">
-            </div>
-            <div class="col-md-6 mb-3">
-              <label for="padronMatriz" class="form-label">Padrón Matriz</label>
-              <input type="text" class="form-control" id="padronMatriz" name="padron_matriz">
-            </div>
+
+          <!-- Alerta de errores generales -->
+          <div class="alert alert-danger d-none" id="alert_colonia_error" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="mensaje_colonia_error"></span>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="modal-footer justify-content-between">
-          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
-            <i class="fas fa-times me-1"></i> Cancelar
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-outline-success">
-            <i class="fas fa-save me-1"></i> Crear Colonia
+          <button type="submit" class="btn btn-primary" id="btnCrearColoniaDistrito">
+            <i class="fas fa-save me-1"></i>Crear Colonia
           </button>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const crearColoniaDesdeDistritoModal = document.getElementById('crearColoniaDesdeDistritoModal');
-  
-  crearColoniaDesdeDistritoModal.addEventListener('show.bs.modal', function(event) {
-    const button = event.relatedTarget;
-    const distritoId = button.getAttribute('data-distritoid');
-    const distritoNombre = button.getAttribute('data-distritonombre');
-    
-    // Llenar los campos del modal
-    document.getElementById('distritoSeleccionado').value = distritoNombre;
-    document.getElementById('distritoId').value = distritoId;
-    
-    // Limpiar y enfocar el campo de nombre
-    const nombreInput = document.getElementById('nombreColonia');
-    nombreInput.value = '';
-    setTimeout(() => nombreInput.focus(), 500);
-    
-    
+  const formColonia = document.getElementById('formCrearColoniaDistrito');
+  const btnCrearColonia = document.getElementById('btnCrearColoniaDistrito');
+  const modalColonia = document.getElementById('crearColoniaDesdeDistritoModal');
+
+  // Cargar datos del distrito al abrir el modal
+  document.querySelectorAll('[data-bs-target="#crearColoniaDesdeDistritoModal"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const distritoId = this.dataset.id;
+      const distritoNombre = this.dataset.nombre;
+
+      document.getElementById('distrito_asignado').value = distritoId;
+      document.getElementById('info_distrito_nombre').textContent = distritoNombre;
+
+      // Limpiar formulario
+      formColonia.reset();
+      formColonia.classList.remove('was-validated');
+      document.getElementById('distrito_asignado').value = distritoId; // Restaurar después del reset
+      document.getElementById('colonia_estado').value = 'activo';
+      
+      // Limpiar errores
+      document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
+        el.textContent = '';
+        el.previousElementSibling?.classList.remove('is-invalid');
+      });
+      document.getElementById('alert_colonia_error').classList.add('d-none');
+    });
   });
+
+  // Limpiar formulario cuando se cierra el modal
+  modalColonia.addEventListener('hidden.bs.modal', function() {
+    formColonia.reset();
+    formColonia.classList.remove('was-validated');
+    document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
+      el.textContent = '';
+      el.previousElementSibling?.classList.remove('is-invalid');
+    });
+    document.getElementById('alert_colonia_error').classList.add('d-none');
+  });
+
+  // Validación en tiempo real del nombre (solo letras)
+  document.getElementById('colonia_nombre').addEventListener('input', function(e) {
+    const valor = e.target.value;
+    const soloLetras = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]*$/;
+    
+    if (!soloLetras.test(valor)) {
+      e.target.value = valor.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    }
+  });
+
+  // Envío del formulario
+  formColonia.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validación HTML5
+    if (!formColonia.checkValidity()) {
+      formColonia.classList.add('was-validated');
+      return;
+    }
+
+    // Validación adicional del nombre
+    const nombre = document.getElementById('colonia_nombre').value.trim();
+    if (nombre.length < 3) {
+      document.getElementById('error_colonia_nombre').textContent = 'El nombre debe tener al menos 3 caracteres';
+      document.getElementById('colonia_nombre').classList.add('is-invalid');
+      return;
+    }
+
+    const formData = new FormData(formColonia);
+    btnCrearColonia.disabled = true;
+    btnCrearColonia.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
+
+    fetch(formColonia.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+      }
+    })
+    .then(response => {
+      if (response.ok) {
+        return response.json().catch(() => {
+          // Si no es JSON, considerarlo exitoso
+          return { success: true };
+        });
+      }
+      return response.json().then(data => {
+        throw { success: false, ...data };
+      });
+    })
+    .then(data => {
+      // Cerrar modal
+      bootstrap.Modal.getInstance(modalColonia).hide();
+      
+      // Mostrar mensaje de éxito
+      Swal.fire({
+        icon: 'success',
+        title: '¡Éxito!',
+        text: 'Colonia creada correctamente y asociada al distrito',
+        timer: 4000,
+        showConfirmButton: false
+      }).then(() => {
+        location.reload();
+      });
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      
+      if (error.errors || error.message) {
+        mostrarErroresColonia(error.errors || error.message);
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Ocurrió un error al crear la colonia'
+        });
+      }
+    })
+    .finally(() => {
+      btnCrearColonia.disabled = false;
+      btnCrearColonia.innerHTML = '<i class="fas fa-save me-1"></i>Crear Colonia';
+    });
+  });
+
+  function mostrarErroresColonia(errors) {
+    // Limpiar errores previos
+    document.querySelectorAll('[id^="error_colonia_"]').forEach(el => {
+      el.textContent = '';
+      el.previousElementSibling?.classList.remove('is-invalid');
+    });
+    document.getElementById('alert_colonia_error').classList.add('d-none');
+
+    if (typeof errors === 'object') {
+      // Errores por campo
+      for (const [campo, mensajes] of Object.entries(errors)) {
+        const errorDiv = document.getElementById(`error_colonia_${campo}`);
+        const input = document.getElementById(`colonia_${campo}`);
+        
+        if (errorDiv && input) {
+          const mensajeError = Array.isArray(mensajes) ? mensajes.join(', ') : mensajes;
+          errorDiv.textContent = mensajeError;
+          input.classList.add('is-invalid');
+        }
+      }
+
+      // Mostrar error general si existe __all__
+      if (errors.__all__) {
+        const alertError = document.getElementById('alert_colonia_error');
+        document.getElementById('mensaje_colonia_error').textContent = errors.__all__.join(', ');
+        alertError.classList.remove('d-none');
+      }
+    } else {
+      // Error general
+      const alertError = document.getElementById('alert_colonia_error');
+      document.getElementById('mensaje_colonia_error').textContent = errors || 'Error al crear la colonia';
+      alertError.classList.remove('d-none');
+    }
+  }
 });
 </script>

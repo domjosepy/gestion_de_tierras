@@ -621,5 +621,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+function soloTexto(input) {
+  // Permite solo letras (mayúsculas y minúsculas) y espacios
+  input.value = input.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s']/g, '');
+}
 // Hacer ToastManager disponible globalmente
 window.ToastManager = ToastManager;

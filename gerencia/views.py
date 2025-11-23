@@ -40,22 +40,3 @@ class ColoniaListView(LoginRequiredMixin, ListView):
             qs = qs.filter(distritos__id=distrito)
         return qs.distinct()
 
-# Crear colonia
-class ColoniaCreateView(LoginRequiredMixin, CreateView):
-    model = Colonia
-    form_class = ColoniaForm
-    template_name = "gerencia/colonia_form.html"
-    success_url = reverse_lazy("gerencia:colonias_list")
-
-# Editar colonia
-class ColoniaUpdateView(LoginRequiredMixin, UpdateView):
-    model = Colonia
-    form_class = ColoniaForm
-    template_name = "gerencia/colonia_form.html"
-    success_url = reverse_lazy("gerencia:colonias_list")
-
-# Eliminar colonia
-class ColoniaDeleteView(LoginRequiredMixin, DeleteView):
-    model = Colonia
-    template_name = "gerencia/colonia_confirm_delete.html"
-    success_url = reverse_lazy("gerencia:colonias_list")

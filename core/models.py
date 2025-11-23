@@ -16,7 +16,8 @@ class Departamento(models.Model):
     class Meta:
         verbose_name = "Departamento"
         verbose_name_plural = "Departamentos"
-        ordering = ["nombre"]
+        ordering = ["codigo", "nombre"]
+        
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -47,7 +48,7 @@ class Distrito(models.Model):
     departamento = models.ForeignKey(
         Departamento, on_delete=models.PROTECT, related_name="distritos"
     )
-    codigo = models.PositiveIntegerField(blank=True, null=True, unique=True)
+    codigo = models.PositiveIntegerField(blank=True, null=True, unique=False) # No es único globalmente !!antes unique=True
 
     class Meta:
         unique_together = ("nombre", "departamento")

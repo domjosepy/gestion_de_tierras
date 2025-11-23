@@ -1,127 +1,128 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Gestión de Distritos{% endblock %}
-
+{% block title %}Gerencia - Distritos{% endblock %}
 {% block content %}
-<div class="container-fluid fade-in">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-city me-3"></i>Gestión de Distritos
-        </h1>
+  <div class="container fade-in py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="text-success fw-bold mb-0">
+        <i class="fas fa-map me-3"></i>Distritos
+      </h2>
     </div>
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body">
+        <div class="table-container">
+          <table class="beautiful-table" id="TablaDistritos" width="100%" cellspacing="0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Departamento</th>
+                <th class="text-center">Código</th>
+                <th class="text-center">Distrito</th>
+                <th class="text-center">Colonias Asignadas</th>
+                <th class="text-center">
+                  Acciones
+                  <button class="btn btn-sm btn-primary" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#crearDistritoModal"
+                          title="Agregar Distrito">
+                    <i class="fas fa-plus"></i>
+                    <i class="fas fa-map"></i>
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dist in distritos %}
+              <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">
+                  <strong>{{dist.departamento.codigo}}. </strong>
+                  {{ dist.departamento.nombre }}
+                </td>
+                <td class="text-center">{{ dist.codigo }}</td>
+                <td class="text-center">{{ dist.nombre }}</td>
+                <td class="text-center">
+                  <span class="badge {% if dist.colonias.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                    <i class="fas fa-city me-1"></i>
+                    {{ dist.colonias.count }} colonia{{ dist.colonias.count|pluralize }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <!-- Botón Editar -->
+                  <button class="btn btn-warning btn-sm me-1 editar-distrito-btn"
+                          data-id="{{ dist.id }}"
+                          data-nombre="{{ dist.nombre }}"
+                          data-codigo="{{ dist.codigo }}"
+                          data-departamento="{{ dist.departamento.id }}"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editarDistritoModal"
+                          title="Editar">
+                    <i class="fas fa-edit"></i>
+                  </button>
 
-    
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="distritoTable" width="100%" cellspacing="0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center">Departamento</th>
-                            <th class="text-center">Código</th>
-                            <th class="text-center">Distrito</th>
-                            <th class="text-center">Colonias Asociadas</th>
-                            <th class="text-center">Acciones
-                                <button class="btn btn-sm btn-primary bg-primary" title="Agregar Distrito" 
-                                        data-bs-toggle="modal" data-bs-target="#crearDistritoModal">
-                                    <i class="fas fa-plus"></i>
-                                    <i class="fas fa-city"></i>
-                                </button>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for distrito in distritos %}
-                        <tr class="text-center">
-                            <td class="text-uppercase">
-                                <strong>{{ distrito.departamento.codigo }}.</strong> {{ distrito.departamento.nombre }}
-                            </td>
-                            <td>{{ distrito.codigo }}</td>
-                            <td class="text-uppercase">{{ distrito.nombre }}</td>
-                            <td>
-                                <span class="badge {% if distrito.colonias.count > 0 %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
-                                    <i class="fas fa-tree-city me-1"></i>
-                                    {{ distrito.colonias.count }} colonia{{ distrito.colonias.count|pluralize }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <!-- Botón editar -->
-                                <button class="btn btn-sm me-1 btn-warning" 
-                                        data-bs-toggle="modal" data-bs-target="#editarDistritoModal"
-                                        data-distritoid="{{ distrito.id }}"
-                                        data-distritocodigo="{{ distrito.codigo }}"
-                                        data-distritonombre="{{ distrito.nombre }}"
-                                        data-distritodepartamento="{{ distrito.departamento.id }}"
-                                        title="Editar Distrito">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+                  <!-- Botón Eliminar -->
+                  {% if not dist.colonias.exists %}
+                    <button class="btn btn-danger btn-sm eliminar-distrito-btn"
+                            data-id="{{ dist.id }}"
+                            data-nombre="{{ dist.nombre }}"
+                            data-codigo="{{ dist.codigo }}"
+                            data-departamento="{{ dist.departamento.nombre }}"
+                            data-colonias="{{ dist.colonias.count }}"
+                            data-bs-toggle="modal"
+                            data-bs-target="#eliminarDistritoModal"
+                            title="Eliminar">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-danger" 
+                            title="No se puede eliminar un distrito con colonias asignadas" 
+                            disabled>
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  {% endif %}
 
-                                <!-- Botón eliminar -->
-                                {% if not distrito.colonias.exists %}
-                                <button class="btn btn-sm me-1 btn-danger"
-                                        data-bs-toggle="modal" data-bs-target="#eliminarDistritoModal"
-                                        data-distritoid="{{ distrito.id }}"
-                                        data-distritonombre="{{ distrito.nombre }}"
-                                        title="Eliminar Distrito">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% else %}
-                                <button class="btn btn-sm btn-danger me-1" disabled
-                                        title="No se puede eliminar: Distrito en uso">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% endif %}
-                                
-                                <!-- Botón Agregar Colonia -->
-                                <button class="btn btn-sm btn-success" 
-                                        title="Agregar Colonia" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#crearColoniaDesdeDistritoModal"
-                                        data-distritoid="{{ distrito.id }}"
-                                        data-distritonombre="{{ distrito.nombre }}">
-                                    <i class="fas fa-plus"></i>
-                                    <i class="fas fa-tree-city"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center">No hay Distritos registrados</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                  <!-- Botón Agregar Colonia -->
+                  <button class="btn btn-sm btn-primary crear-colonia-btn"  
+                          title="Agregar Colonia"
+                          data-bs-toggle="modal"
+                          data-bs-target="#crearColoniaDesdeDistritoModal"
+                          data-id="{{ dist.id }}"
+                          data-nombre="{{ dist.nombre }}">
+                    <i class="fas fa-plus"></i>
+                    <i class="fas fa-tractor"></i>
+                  </button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">No hay Distritos registrados.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-    </div>
-</div>
+      </div>
+    </div>  
+  </div>
 
-<!-- Modales -->
-{% include 'includes/gerencia/modal/distritos/crear_distrito_modal.html' %}
-{% include 'includes/gerencia/modal/distritos/editar_distrito_modal.html' %}
-{% include 'includes/gerencia/modal/distritos/eliminar_distrito_modal.html' %}  
-{% include 'includes/gerencia/modal/distritos/crear_colonia_desde_distrito_modal.html' %}
+  <!-- Modales -->
+  {% include 'includes/gerencia/modal/distritos/crear_distrito_modal.html' %}
+  {% include 'includes/gerencia/modal/distritos/editar_distrito_modal.html' %}
+  {% include 'includes/gerencia/modal/distritos/eliminar_distrito_modal.html' %}
+  {% include 'includes/gerencia/modal/distritos/crear_colonia_desde_distrito_modal.html' %}
 
-{% endblock %}
-
-{% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    new simpleDatatables.DataTable('#distritoTable', {
-        perPage: 10,
-        labels: {
-            placeholder: "Buscar...",
-            perPage: "Registros por página",
-            noRows: "No se encontraron Distritos registrados",
-            info: "Mostrando {start} a {end} de {rows} Distritos"
-        }
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTable
+    new simpleDatatables.DataTable('#TablaDistritos', {
+      perPage: 10,
+      labels: {
+        placeholder: "Buscar...",
+        perPage: "Registros por página",
+        noRows: "No se encontraron Distritos registrados",
+        info: "Mostrando {start} a {end} de {rows} Distritos"
+      }
     });
-
-    // Inicializar tooltips
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-        new bootstrap.Tooltip(el);
-    });
-});
-</script>
+  });
+  </script>
 {% endblock %}
