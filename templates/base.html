@@ -65,7 +65,7 @@
                     </div>
 
                     <!-- Contenido principal -->
-                    <main class="fade-in">
+                    <main class="container-fluid">
                         {% block content %}{% endblock %}
                     </main>
                 </div>
@@ -102,26 +102,26 @@
     <!-- INICIALIZACIÓN DE TOASTS DE DJANGO (con ToastManager) -->
     <script>
         function mostrarToast(mensaje, tipo="success") {
-        const toastContainer = document.getElementById("toastContainer");
+            const toastContainer = document.getElementById("toastContainer");
 
-        const toast = document.createElement("div");
-        toast.className = `toast align-items-center text-white bg-${tipo} border-0`;
-        toast.role = "alert";
-        toast.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${mensaje}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>`;
+            const toast = document.createElement("div");
+            toast.className = `toast align-items-center text-white bg-${tipo} border-0`;
+            toast.role = "alert";
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${mensaje}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>`;
 
-        toastContainer.appendChild(toast);
+            toastContainer.appendChild(toast);
 
-        const bsToast = new bootstrap.Toast(toast);
-        bsToast.show();
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
 
-        setTimeout(() => toast.remove(), 5000);
-}
+            setTimeout(() => toast.remove(), 5000);
+        }
         document.addEventListener('DOMContentLoaded', function () {
             if (window.ToastManager) {
                 ToastManager.initExistingToasts();

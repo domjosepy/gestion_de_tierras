@@ -162,6 +162,7 @@
   transition: margin-left 0.3s ease;
   margin-left: var(--sidebar-width);
   max-height: calc(100vh - [altura-header]);
+  padding-bottom: 60px; /* espacio para el footer */
 }
 
 body.sb-sidenav-toggled #content-wrapper {
@@ -669,9 +670,21 @@ html, body {
   /* ----- OCULTAR LA BARRA ----- */
   /* Firefox */
   scrollbar-width: none;
-
+  
   /* Internet Explorer / Edge Legacy */
   -ms-overflow-style: none;
+}
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1; /* empuja el footer hacia abajo */
+}
+
+footer {
+    background: var(--header-gradient);
 }
 .main-wrapper {
     display: flex;
@@ -686,12 +699,25 @@ html, body {
     padding-bottom: 60px; /* Espacio para el footer fijo */
 }
 .sticky-footer {
+    position: fixed;
+    bottom: 0;
+    left: var(--sidebar-width); /* para que no pise el sidebar */
+    right: 0;
     height: 60px;
     background: var(--header-gradient);
+    z-index: 1030;
+}
+
+body.sb-sidenav-toggled .sticky-footer {
+    left: var(--sidebar-collapsed-width); /* Ajusta cuando el sidebar está colapsado */
 }
 .content-wrapper {
     padding-bottom: 60px; /* Igual a la altura del footer */
 }
+.main-content {
+    padding-bottom: 60px; /* Igual a la altura del footer */
+}
+
 
 /* Chrome, Safari, Opera y derivados (Blink/WebKit) */
 html::-webkit-scrollbar,
@@ -1114,6 +1140,7 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
 @media (max-width: 768px) {
   #content-wrapper {
     margin-left: 0;
+    padding-bottom: 60px; /* espacio para el footer */
   }
   
    body:not(.sb-sidenav-toggled) .sidebar {
