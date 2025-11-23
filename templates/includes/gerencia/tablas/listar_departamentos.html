@@ -1,126 +1,111 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
-
-{% block title %}Gestión de Departamentos{% endblock %}
-
+{% load widget_tweaks %}
+{% block title %}Gerencia{% endblock %}
 {% block content %}
-<div class="container-fluid fade-in">
-    <div class="d-sm-flex align-items-center mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-          <i class="fas fa-map-marker-alt me-3"></i>Gestión de Departamentos</h1>
+  <div class="container fade-in py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="text-primary fw-bold mb-0">
+        <i class="fas fa-map-marker-alt me-3"></i>Departamentos
+      </h2>
     </div>
 
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="deptoTable" width="100%" cellspacing="0">
-                    <thead class="table-light">
-                        <tr >
-                            <th class="text-center">Código</th>
-                            <th class="text-center">Departamento</th>
-                            <th class="text-center">Distritos Asociados</th>
-                            <th class="text-center">Acciones
-                              <button class="btn btn-sm btn-success bg-success" title="Agregar Departamento" data-bs-toggle="modal" data-bs-target="#crearDeptoModal">
-                                  <i class="fas fa-plus"> <i class="fas fa-map-marker-alt"> </i></i> 
-                              </button>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for departamento in departamentos %}
-                        <tr class="text-center">
-                            <td class="text-alert">{{ departamento.codigo }}</td>
-                            <td class="text-uppercase">{{ departamento.nombre }}</td>
-                            <td>
-                                <span class="badge {% if departamento.distritos.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+    <!-- Tabla -->
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body">
+        <div class="table-container">
+          <table class="beautiful-table" id="deptoTable" width="100%" cellspacing="0">
+            <thead class="table-light">
+              <tr>
+                <th class="text-center">Código</th>
+                <th class="text-center">Nombre</th>
+                <th class="text-center">Distritos Asignados</th>
+                <th class="text-center">Acciones
+                  <button class="btn btn-sm btn-primary" title="Agregar Departamento" data-bs-toggle="modal" data-bs-target="#crearDeptoModal">
+                                  <i class="fas fa-plus"></i>
+                                  <i class="fas fa-map-marker-alt"> </i>
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for depto in departamentos %}
+              <tr> 
+                <td class="text-center">{{ depto.codigo }}</td>
+                <td class="text-center">{{ depto.nombre }}</td>
+                <td class="text-center">
+                  <span class="badge {% if depto.distritos.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
                                     <i class="fas fa-city me-1"></i>
-                                    {{ departamento.distritos.count }} distrito{{ departamento.distritos.count|pluralize }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <!-- Botón editar -->
-                                <button 
-                                    class="btn btn-sm me-1 btn-warning" 
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editarDeptoModal"
-                                    data-departamentoid="{{ departamento.id }}"
-                                    data-departamentocodigo="{{ departamento.codigo }}"
-                                    data-departamentonombre="{{ departamento.nombre }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Editar Departamento">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-
-                                <!-- Botón eliminar -->
-                                {% if not departamento.distritos.exists %}
-                                <button 
-                                    class="btn btn-sm me-1 btn-danger"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#eliminarDeptoModal"
-                                    data-departamentoid="{{ departamento.id }}"
-                                    data-departamentonombre="{{ departamento.nombre }}"
-                                    data-bs-toggle="tooltip"
-                                    title="Eliminar Departamento">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button> 
-                                {% else %}
-                                <button class="btn btn-sm btn-danger me-1" disabled 
-                                        data-bs-toggle="tooltip" 
-                                        title="No se puede eliminar: Departamento en uso">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% endif %}
-                                
-                                <!-- Botón Agregar Distrito -->
-                                <button class="btn btn-sm btn-success" 
-                                        title="Agregar Distrito" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#crearDistritoDesdeDeptoModal"
-                                        data-departamentoid="{{ departamento.id }}"
-                                        data-departamentonombre="{{ departamento.nombre }}">
-                                    <i class="fas fa-plus"></i>
-                                    <i class="fas fa-city"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center">No hay Departamentos registrados</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                    {{ depto.distritos.count }} distrito{{ depto.distritos.count|pluralize }}
+                  </span>
+                </td>
+                <td class="text-center">
+                  <!-- Botón editar -->
+                  <button class="btn btn-sm btn-warning" title="Editar Departamento"
+                          data-bs-toggle="modal"
+                          data-bs-target="#editarDeptoModal"
+                          data-id="{{ depto.id }}"
+                          data-codigo="{{ depto.codigo }}"
+                          data-nombre="{{ depto.nombre }}">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </button>
+                  <!-- Botón eliminar -->
+                  {% if not depto.distritos.exists %}
+                    <button class="btn btn-sm btn-danger" title="Eliminar Departamento"
+                            data-bs-toggle="modal"
+                            data-bs-target="#eliminarDeptoModal"
+                            data-id="{{ depto.id }}"
+                            data-nombre="{{ depto.nombre }}">
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  {% else %}
+                    <button class="btn btn-sm btn-outline-danger" title="No se puede eliminar un departamento con distritos asignados" disabled>
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  {% endif %}
+                  <!-- Botón agregar distrito al departamento -->
+                  <button class="btn btn-sm btn-primary"  title="Agregar Distrito"
+                          data-bs-toggle="modal"
+                          data-bs-target="#crearDistritoDesdeDeptoModal"
+                          data-id="{{ depto.id }}"
+                          data-nombre="{{ depto.nombre }}">
+                    <i class="fas fa-plus"></i>
+                    <i class="fas fa-map"></i>
+                  </button>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">No hay departamentos registrados.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<!-- Modales -->
-{% include 'includes/gerencia/modal/departamentos/crear_departamento_modal.html' %}
-{% include 'includes/gerencia/modal/departamentos/editar_departamento_modal.html' %}
-{% include 'includes/gerencia/modal/departamentos/eliminar_departamento_modal.html' %}
-{% include 'includes/gerencia/modal/departamentos/crear_distrito_desde_depto_modal.html' %}
+ 
 
-{% endblock %}
+  <!-- Modales CREAR / Editar / Eliminar -->
+  {% include 'includes/gerencia/modal/departamentos/crear_departamento_modal.html' %}
+  {% include 'includes/gerencia/modal/departamentos/editar_departamento_modal.html' %}
+  {% include 'includes/gerencia/modal/departamentos/eliminar_departamento_modal.html' %}
+  {% include 'includes/gerencia/modal/departamentos/crear_distrito_desde_depto_modal.html' %}
 
-{% block scripts %}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-      new simpleDatatables.DataTable('#deptoTable', {
-          perPage: 10,
-          labels: {
-              placeholder: "Buscar...",
-              perPage: "Registros por página",
-              noRows: "No se encontraron Departamentos registrados",
-              info: "Mostrando {start} a {end} de {rows} Departamentos"
-          }
-      });
-   
-  });
-
-  // Inicializar tooltips para los botones de acción en la tabla
-  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-      new bootstrap.Tooltip(el);
-  });
-</script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 🔧 DataTable
+        const dataTable = new simpleDatatables.DataTable('#deptoTable', {
+            perPage: 10,
+            labels: { 
+                placeholder: "Buscar...",
+                perPage: "Registros por página",
+                noRows: "No se encontraron Departamentos registrados",
+                info: "Mostrando {start} a {end} de {rows} Departamentos"
+            }
+        });
+    });
+  </script>
 {% endblock %}

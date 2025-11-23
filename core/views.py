@@ -1,19 +1,28 @@
+# Standard library imports
+import re
+
+# Django imports
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import IntegrityError
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse, reverse_lazy
-from django.db.models import Q
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.utils.decorators import method_decorator
+from django.views.generic import ListView, CreateView
+
+# Local imports
+from .forms import DepartamentoForm, DistritoForm, ColoniaForm
 from .models import Departamento, Distrito, Colonia
-from .forms import ColoniaForm, DistritoForm
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
 from core.notificaciones.utils import notificar_a_admins
+
 
 # ======================================
 # Vistas para Departamentos
 # =======================================
-
-
 
 class DepartamentoListView(LoginRequiredMixin, ListView):
     model = Departamento
@@ -21,82 +30,105 @@ class DepartamentoListView(LoginRequiredMixin, ListView):
     context_object_name = 'departamentos'
 
     def get_queryset(self):
-        # Optimizar consulta contando distritos
+        # Prefetch optimiza distritos
         return Departamento.objects.prefetch_related('distritos').all()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['departamentos'] = Departamento.objects.all()
+        context['form'] = DepartamentoForm()
         return context
 
-class DepartamentoCreateView(LoginRequiredMixin, CreateView):
-    model = Departamento
-    fields = ['nombre']
-    template_name = 'includes/gerencia/modal/departamentos/crear_departamento_modal.html'
 
-    def get_success_url(self):
-        # Redirige a la página anterior si existe, si no a listar_departamentos
-        return self.request.META.get('HTTP_REFERER', str(reverse_lazy('gerencia:listar_departamentos')))
+@require_POST
 
-    def form_valid(self, form):
-        # Buscar el menor número faltante (antes de guardar)
-        codigos_existentes = set(
-            Departamento.objects.values_list('codigo', flat=True))
-        codigo = 1
-        while codigo in codigos_existentes:
-            codigo += 1
-        form.instance.codigo = codigo  # asignar el primer número libre
+def crear_departamento(request):
+    form = DepartamentoForm(request.POST)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-        response = super().form_valid(form)
-
-        messages.success(
-            self.request, f'Departamento "{self.object.nombre}" creado exitosamente!'
-        )
-
-        # Notifica a los administradores sobre el nuevo departamento creado
+    if form.is_valid():
+        departamento = form.save()
         notificar_a_admins(
-            mensaje=f'Se ha creado un nuevo Departamento: "{self.object.nombre}".',
+            mensaje=f'Se ha creado un nuevo Departamento: "{departamento.nombre}".',
             tipo="INFO",
-            exclude_user=self.request.user,  # si el creador es admin no se notifica a sí mismo
-            # Enlace directo al listado
+            exclude_user=request.user,
             link=reverse("gerencia:listar_departamentos")
         )
+        messages.success(request, f'El Departamento "{departamento.nombre}" fue creado!')
+        data = {
+            'success': True,
+            'departamento': {
+                'id': departamento.id,
+                'nombre': departamento.nombre
+            }
+        }
 
-        return response
+        if is_ajax:
+            return JsonResponse(data)
+        messages.success(request, data['message'])
+        return redirect('gerencia:listar_departamentos')
 
-    def form_invalid(self, form):
-        messages.error(
-            self.request,
-            'Error al crear el departamento. Por favor revise los datos.'
-        )
-        return super().form_invalid(form)
+    # Si hay errores de validación
+    errores = form.errors.get_json_data()
+    mensajes = [error['message'] for campo in errores.values() for error in campo]
+    data = {'success': False, 'message': ' '.join(mensajes)}
+
+    if is_ajax:
+        return JsonResponse(data, status=400)
+    messages.error(request, data['message'])
+    return redirect('gerencia:listar_departamentos')
 
 
 def editar_departamento(request, departamento_id):
+    """Edita un departamento existente."""
     departamento = get_object_or_404(Departamento, id=departamento_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if request.method == 'POST':
-        departamento.codigo = request.POST.get('codigo')
-        departamento.nombre = request.POST.get('nombre')
-        departamento.save()
-        messages.success(request, "Departamento actualizado correctamente.")
-        notificar_a_admins(
-            mensaje=f'El Departamento "{departamento.nombre}" fue editado.',
-            tipo="WARNING",
-            exclude_user=request.user
-        )
+        form = DepartamentoForm(request.POST, instance=departamento)
+        if form.is_valid():
+            form.save()
+            notificar_a_admins(
+                mensaje=f'El Departamento "{departamento.nombre}" fue editado.',
+                tipo="WARNING",
+                exclude_user=request.user
+            )
+            msg = "Departamento modificado."
+            messages.info(request, f'El Departamento "{departamento.nombre}" fue modificado!')
+            if is_ajax:
+                return JsonResponse({'success': True, 'message': msg})
+            messages.success(request, msg)
+        else:
+            msg = " ".join([err for errs in form.errors.values() for err in errs])
+            if is_ajax: 
+                return JsonResponse({'success': False, 'message': msg}, status=400)
+            messages.error(request, msg)
         return redirect('gerencia:listar_departamentos')
+
     return redirect('gerencia:listar_departamentos')
 
 
+@require_POST
 def eliminar_departamento(request, departamento_id):
+    """Elimina un departamento si no tiene distritos asociados."""
     departamento = get_object_or_404(Departamento, id=departamento_id)
-    if departamento.distritos.exists():  # Verifica si el departamento está asignado a algún distrito
-        messages.error(
-            request, "Este Departamento está asignado a uno o más Distritos y no puede ser eliminado.")
-    else:
-        departamento.delete()
-        messages.success(request, "Departamento eliminado correctamente.")
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if departamento.distritos.exists():
+        msg = "No se puede eliminar: el Departamento tiene Distritos asociados."
+       
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': msg}, status=400)
+        messages.error(request, msg)
+        return redirect('gerencia:listar_departamentos')
+
+    departamento.delete()
+    msg = "Departamento eliminado correctamente."
+    messages.info(request, f'El Departamento "{departamento.nombre}" fue eliminado!')
+    if is_ajax:
+        return JsonResponse({'success': True, 'message': msg})
+    messages.info(request, msg)
     return redirect('gerencia:listar_departamentos')
+
 
 
 # ======================================
@@ -107,116 +139,125 @@ def eliminar_departamento(request, departamento_id):
 # VISTAS para DISTRITOS
 # ======================================
 
+def listar_distritos(request):
+    """Lista todos los distritos con sus departamentos"""
+    distritos = Distrito.objects.select_related('departamento').all().order_by('nombre')
+    departamentos = Departamento.objects.all()
+    form = DistritoForm()
+    return render(
+        request,
+        'includes/gerencia/tablas/listar_distritos.html',
+        {'distritos': distritos, 'departamentos': departamentos, 'form': form}
+    )
 
-class DistritoListView(LoginRequiredMixin, ListView):
-    model = Distrito
-    paginate_by = 25
-    template_name = 'includes/gerencia/tablas/listar_distritos.html'
-    context_object_name = 'distritos'
 
-    def get_queryset(self):
-        # Optimizar consultas relacionadas
-        qs = Distrito.objects.select_related('departamento').prefetch_related('colonias')
+@require_POST
+def crear_distrito(request):
+    """Crea un nuevo distrito"""
+    form = DistritoForm(request.POST)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-        # Filtros existentes...
-        departamento_id = self.request.GET.get('departamento')
-        q = self.request.GET.get('q')
+    if form.is_valid():
+        distrito = form.save()
+        messages.success(request, f'El Distrito "{distrito.nombre}" fue creado!')
+        data = {
+            'success': True,
+        }
 
-        if departamento_id:
-            qs = qs.filter(departamento_id=departamento_id)
-        if q:
-            qs = qs.filter(
-                Q(nombre__icontains=q) |
-                Q(departamento__nombre__icontains=q)
-            )
-        return qs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['departamentos'] = Departamento.objects.all()
-        return context
-
-class DistritoCreateView(LoginRequiredMixin, CreateView):
-    model = Distrito
-    fields = ['nombre', 'departamento']
-    template_name = 'includes/gerencia/modal/distritos/crear_distrito_modal.html'
-
-    def get_success_url(self):
-        return reverse_lazy('gerencia:listar_distritos')
-
-    def form_valid(self, form):
-        # Buscar el menor número faltante (antes de guardar)
-        codigos_existentes = set(
-            Distrito.objects.values_list('codigo', flat=True))
-        codigo = 1
-        while codigo in codigos_existentes:
-            codigo += 1
-        form.instance.codigo = codigo  # asignar el primer número libre
-
-        response = super().form_valid(form)
-
-        try:
-            response = super().form_valid(form)
-            messages.success(
-                self.request, 
-                f'Distrito "{self.object.nombre}" creado exitosamente!'
-            )
-            
-            return response
-        except Exception as e:
-            
-            messages.error(self.request, f"Error al crear distrito: {e}")
-            return self.form_invalid(form)
-
-    def form_invalid(self, form):
+        if is_ajax:
+            return JsonResponse(data)
         
-        messages.error(
-            self.request,
-            'Error al crear el distrito. Por favor revise los datos.'
-        )
-        return super().form_invalid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['departamentos'] = Departamento.objects.all()
-        return context
-
-def editar_distrito(request, distrito_id):
-    distrito = get_object_or_404(Distrito, id=distrito_id)
-    if request.method == 'POST':
-        form = DistritoForm(request.POST, instance=distrito)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Distrito actualizado correctamente.")
-            
-            # Para AJAX
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Distrito actualizado correctamente.'
-                })
-        else:
-            messages.error(request, "Error al actualizar el distrito.")
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'errors': form.errors
-                }, status=400)
-        
-        # Redirección normal para requests no-AJAX
+        messages.success(request, data['message'])
         return redirect('gerencia:listar_distritos')
+
+    # Manejo de errores
+    if is_ajax:
+        errores = {}
+        for field, errors in form.errors.items():
+            errores[field] = [str(error) for error in errors]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errores
+        }, status=400)
+    
+    # Si no es AJAX
+    for error in form.errors.values():
+        messages.error(request, error)
+    
     return redirect('gerencia:listar_distritos')
 
-def eliminar_distrito(request, distrito_id):
-    distrito = get_object_or_404(Distrito, id=distrito_id)
+
+@require_POST
+def editar_distrito(request, pk):
+    """Edita un distrito existente"""
+    distrito = get_object_or_404(Distrito, pk=pk)
+    form = DistritoForm(request.POST, instance=distrito)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if form.is_valid():
+        distrito = form.save()
+        
+        data = {
+            'success': True,
+            'message': f'El Distrito "{distrito.nombre}" fue modificado.'
+        }
+
+        if is_ajax:
+            return JsonResponse(data)
+        
+        messages.success(request, data['message'])
+        return redirect('gerencia:listar_distritos')
+
+    # Manejo de errores
+    if is_ajax:
+        errores = {}
+        for field, errors in form.errors.items():
+            errores[field] = [str(error) for error in errors]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errores
+        }, status=400)
+    
+    # Si no es AJAX
+    for error in form.errors.values():
+        messages.error(request, error)
+    
+    return redirect('gerencia:listar_distritos')
+
+
+@require_POST
+def eliminar_distrito(request, pk):
+    """Elimina un distrito si no tiene colonias asociadas"""
+    distrito = get_object_or_404(Distrito, pk=pk)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Verificar si tiene colonias asociadas
     if distrito.colonias.exists():
-        messages.error(
-            request,
-            "Este Distrito está asignado a una o más Colonias y no puede ser eliminado."
-        )
-    else:
-        distrito.delete()
-        messages.success(request, "Distrito eliminado correctamente.")
+        msg = f'No se puede eliminar el distrito "{distrito.nombre}" porque tiene {distrito.colonias.count()} colonia(s) asociada(s).'
+        
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'message': msg
+            }, status=400)
+        
+        messages.error(request, msg)
+        return redirect('gerencia:listar_distritos')
+
+    nombre_distrito = distrito.nombre
+    distrito.delete()
+    
+    msg = f'El Distrito "{nombre_distrito}" fue eliminado.'
+    
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': msg
+        })
+    
+    messages.success(request, msg)
     return redirect('gerencia:listar_distritos')
 
 # ======================================
@@ -228,6 +269,7 @@ class ColoniaListView(LoginRequiredMixin, ListView):
     paginate_by = 25
     template_name = 'includes/gerencia/tablas/listar_colonias.html'
     context_object_name = 'colonias'
+    form_class = ColoniaForm
 
     def get_queryset(self):
         # Optimizar consultas relacionadas

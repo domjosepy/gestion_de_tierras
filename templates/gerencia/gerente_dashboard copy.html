@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel de Gerencia{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-line text-primary me-2"></i> Panel de Gerencia
+        </h1>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row g-3">
+        <!-- Departamentos -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-primary shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Departamentos</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_departamentos }}</div>
+                    </div>
+                    <i class="fas fa-map-marker-alt fa-2x text-primary-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distritos -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-warning shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">Distritos</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_distritos }}</div>
+                    </div>
+                    <i class="fas fa-city fa-2x text-warning-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonias -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Colonias</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_colonias }}</div>
+                    </div>
+                    <i class="fas fa-tree-city fa-2x text-success-300"></i>
+                </div>
+            </div>
+        </div> 
+        <!-- Relevadas Colonias -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Colonias Relevadas</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_relevadas }}</div>
+                    </div>
+                    <i class="fa-solid fa-house-flag fa-2x text-success-300"></i>
+                </div>
+            </div>
+        </div>      
+    </div>
+</div>
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h5 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-tree-city text-primary me-2"></i> Colonias Registradas
+        </h5>
+    </div>
+
+    <!-- Pestañas simplificadas y tabla reutilizable -->
+    <div class="card shadow mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+
+            <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="colonias_todas-tab" data-bs-toggle="tab" data-bs-target="#colonias_todas" type="button" role="tab" aria-controls="colonias_todas" aria-selected="true">
+                    <i class="fa-solid fa-tree-city me-1"></i> Todos
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="colonias_proceso-tab" data-bs-toggle="tab" data-bs-target="#colonias_proceso" type="button" role="tab" aria-controls="colonias_proceso" aria-selected="false">
+                    <i class="fa-solid fa-hourglass-half me-1"></i> En Proceso
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="colonias_pendientes-tab" data-bs-toggle="tab" data-bs-target="#colonias_pendientes" type="button" role="tab" aria-controls="colonias_pendientes" aria-selected="false">
+                    <i class="fa-solid fa-hourglass-start me-1"></i> Sin Relevamiento
+                    </button>
+                </li>
+            </ul>
+           
+            <!-- Botones exportación -->
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-colonias" title="Exportar CSV">
+                    <i class="fas fa-file-csv"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-colonias" title="Exportar Excel">
+                    <i class="fas fa-file-excel"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-colonias" title="Imprimir">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+
+
+        <div class="card-body">
+            <div class="tab-content" id="usersTabsContent">
+                <div class="tab-pane table-responsive fade show active" id="todos" role="tabpanel" aria-labelledby="todos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_todos columnas=columnas mostrar_acciones=True tabla_id="todos" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="proceso" role="tabpanel" aria-labelledby="proceso-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_pendientes columnas=columnas mostrar_acciones=True tabla_id="pendientes" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="pendientes" role="tabpanel" aria-labelledby="pendientes-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_activos columnas=columnas mostrar_acciones=True tabla_id="activos" %}
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+<div class="container-fluid mt-4 fade-in">
+    
+    <!-- Estado de Solicitudes -->
+    <div class="row g-3 mt-2">
+        <!-- Totales -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-primary shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-primary text-uppercase mb-1">Solicitudes Totales</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ total_solicitudes }}</div>
+                    </div>
+                    <i class="fas fa-folder-open fa-2x text-primary-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pendientes -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-warning shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">Solicitudes Pendientes</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_pendientes.count }}</div>
+                    </div>
+                    <i class="fas fa-hourglass-half fa-2x text-warning-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activas -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-success text-uppercase mb-1">Solicitudes Activas</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_activas.count }}</div>
+                    </div>
+                    <i class="fa-solid fa-clipboard-check fa-2x text text-success-300"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inactivas -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-secondary shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-secondary text-uppercase mb-1">Solicitudes Inactivas</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_inactivas.count }}</div>
+                    </div>
+                    <i class="fas fa-folder-minus fa-2x text-secondary-300"></i>
+                </div>
+            </div>
+        </div>
+
+        
+        <!-- En proceso -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-start-info shadow h-100 py-2">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Solicitudes en Proceso</div>
+                        <div class="h5 mb-0 fw-bold text-gray-800">{{ solicitudes_en_proceso.count }}</div>
+                    </div>
+                    <i class="fas fa-spinner fa-spin fa-2x text-info-300"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h5 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-line text-primary me-2"></i> Solicitudes Registradas
+        </h5>
+    </div>
+
+    <!-- Pestañas simplificadas y tabla reutilizable -->
+    <div class="card shadow mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+
+            <ul class="nav nav-tabs card-header-tabs" id="usersTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="solicitudes_todas-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_todas" type="button" role="tab" aria-controls="solicitudes_todas" aria-selected="true">
+                <i class="fa-solid fa-users me-1"></i> Todos
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_proceso-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_proceso" type="button" role="tab" aria-controls="solicitudes_proceso" aria-selected="false">
+                <i class="fa-solid fa-hourglass-half me-1"></i> En Proceso
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_pendientes-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_pendientes" type="button" role="tab" aria-controls="solicitudes_pendientes" aria-selected="false">
+                <i class="fa-solid fa-hourglass-start me-1"></i> Pendientes
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_activos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_activos" type="button" role="tab" aria-controls="solicitudes_activos" aria-selected="false">
+                <i class="fa-solid fa-user-check me-1"></i> Activos
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="solicitudes_inactivos-tab" data-bs-toggle="tab" data-bs-target="#solicitudes_inactivos" type="button" role="tab" aria-controls="solicitudes_inactivos" aria-selected="false">
+                <i class="fa-solid fa-user-xmark me-1"></i> Inactivos
+                </button>
+            </li>
+            </ul>
+           
+            <!-- Botones exportación -->
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-solicitudes" title="Exportar CSV">
+                    <i class="fas fa-file-csv"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-solicitudes" title="Exportar Excel">
+                    <i class="fas fa-file-excel"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-solicitudes" title="Imprimir">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+
+
+        <div class="card-body">
+            <div class="tab-content" id="usersTabsContent">
+                <div class="tab-pane table-responsive fade show active" id="todos" role="tabpanel" aria-labelledby="todos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_todos columnas=columnas mostrar_acciones=True tabla_id="todos" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="pendientes" role="tabpanel" aria-labelledby="pendientes-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_pendientes columnas=columnas mostrar_acciones=True tabla_id="pendientes" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="activos" role="tabpanel" aria-labelledby="activos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_activos columnas=columnas mostrar_acciones=True tabla_id="activos" %}
+                </div>
+                <div class="tab-pane table-responsive fade" id="inactivos" role="tabpanel" aria-labelledby="inactivos-tab">
+                    {% include "includes/administrador/tablas/_tabla_usuarios.html" with usuarios=usuarios_inactivos columnas=columnas mostrar_acciones=True tabla_id="inactivos" %}
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    {% include "includes/administrador/graficos/graficos_dashboard.html" %}
+</div>
+
+<!-- Modal para Asignar/Editar Rol -->
+{% include 'includes/administrador/modal/roles/asignar_rol_modal.html' %}
+
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- Guardar mensaje para mostrar después de recarga ---
+    function saveToastForReload(message, type = 'info') {
+        console.log('Guardando toast:', message, type);
+        try {
+            sessionStorage.setItem('toastMessage', message);
+            sessionStorage.setItem('toastType', type);
+            console.log('Toast guardado en sessionStorage:', message, type);
+            
+            // Verificación inmediata
+            const savedMessage = sessionStorage.getItem('toastMessage');
+            const savedType = sessionStorage.getItem('toastType');
+            console.log('Verificación - Mensaje guardado:', savedMessage);
+            console.log('Verificación - Tipo guardado:', savedType);
+            
+        } catch (e) {
+            console.error('Error guardando toast en sessionStorage:', e);
+        }
+    }
+
+    // --- Cargar table.js ---
+    setTimeout(() => {
+        if (typeof initTables === 'function') {
+            initTables();
+        } else {
+            console.warn('initTables no está disponible');
+            const script = document.createElement('script');
+            script.src = "{% static 'js/table.js' %}";
+            script.onload = function() {
+                if (typeof initTables === 'function') {
+                    initTables();
+                }
+            };
+            document.head.appendChild(script);
+        }
+    }, 100);
+
+    // --- Manejo del modal Asignar Rol ---
+    const asignarRolModal = document.getElementById('asignarRolModal');
+    if (asignarRolModal) {
+        asignarRolModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+            
+            const userId = button.getAttribute('data-userid');
+            const username = button.getAttribute('data-username');
+            const userEmail = button.getAttribute('data-useremail');
+            const rolId = button.getAttribute('data-rolid');
+
+            document.getElementById('usernameDisplay').textContent = username;
+            document.getElementById('userEmailDisplay').textContent = userEmail || 'No tiene email';
+            document.getElementById('userIdInput').value = userId;
+
+            const rolSelect = document.getElementById('rolSelect');
+            if (rolSelect) {
+                rolSelect.value = rolId || "";
+            }
+        });
+
+        asignarRolModal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('rolSelect').value = "";
+        });
+    }
+
+    // --- Delegación de eventos para cambio de estado ---
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-cambiar-estado') || 
+            e.target.closest('.btn-cambiar-estado')) {
+            e.preventDefault();
+            
+            const link = e.target.classList.contains('btn-cambiar-estado') ? 
+                         e.target : e.target.closest('.btn-cambiar-estado');
+            
+            const userId = link.getAttribute('data-userid');
+            const currentState = link.getAttribute('data-currentstate');
+            const nuevoEstado = currentState === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
+            
+            fetch("{% url 'cambiar_estado_usuario' %}", {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ user_id: userId, estado: nuevoEstado })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    saveToastForReload(data.message, 'success');
+                    // 🔥 DELAY ANTES DE RECARGAR
+                    setTimeout(() => location.reload(), 100);
+                } else {
+                    if (window.ToastManager) {
+                        ToastManager.create(data.message || 'Error al cambiar estado', 'error', { delay: 4000 });
+                    } else {
+                        alert(data.message || 'Error al cambiar estado');
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                if (window.ToastManager) {
+                    ToastManager.create('Error de red: ' + err.message, 'error', { delay: 4000 });
+                } else {
+                    alert('Error de red: ' + err.message);
+                }
+            });
+        }
+    });
+
+    // --- AJAX para asignar rol ---
+    const formAsignarRol = document.getElementById("formAsignarRol");
+    if (formAsignarRol) {
+        formAsignarRol.addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            const userId = document.getElementById("userIdInput").value;
+            const rolId = document.getElementById("rolSelect").value;
+            const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch("{% url 'asignar_rol' %}", {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": csrftoken,
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ user_id: userId, rol_id: rolId })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en la respuesta del servidor');
+                return response.json();
+            })
+            .then((data) => {
+                if (data.success) {
+                    saveToastForReload(data.message, "success");
+                    
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("asignarRolModal"));
+                    if (modal) modal.hide();
+                    
+                    // 🔥 DELAY ANTES DE RECARGAR
+                    setTimeout(() => location.reload(), 100);
+                } else {
+                    if (window.ToastManager) {
+                        ToastManager.create(data.message, "error", { delay: 4000 });
+                    } else {
+                        alert(data.message);
+                    }
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                if (window.ToastManager) {
+                    ToastManager.create("Error de red: " + error.message, "error", { delay: 4000 });
+                } else {
+                    alert("Error de red: " + error.message);
+                }
+            });
+        });
+    }
+
+    // --- Resto de tu código (dropdowns, exportaciones, etc.) ---
+    function initDropdowns() {
+        const activeTabPane = document.querySelector("#usersTabsContent .tab-pane.active");
+        if (activeTabPane) {
+            activeTabPane.querySelectorAll('.dropdown-toggle').forEach(el => {
+                if (!bootstrap.Dropdown.getInstance(el)) {
+                    new bootstrap.Dropdown(el);
+                }
+            });
+        }
+    }
+
+    initDropdowns();
+    document.querySelectorAll('#usersTabs button[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', initDropdowns);
+    });
+
+    // --- Exportaciones ---
+    function getActiveTable() {
+        const activeTab = document.querySelector("#usersTabsContent .tab-pane.active");
+        return activeTab ? activeTab.querySelector("table") : null;
+    }
+
+    document.getElementById("exportCsvBtn-usuarios").addEventListener("click", function() {
+        const tabla = getActiveTable();
+        if (!tabla) return;
+        let csv = [];
+        for (let row of tabla.rows) {
+            let cols = [];
+            for (let cell of row.cells) {
+                cols.push('"' + cell.innerText.replace(/"/g, '""') + '"');
+            }
+            csv.push(cols.join(","));
+        }
+        const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "usuarios.csv";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("exportExcelBtn-usuarios").addEventListener("click", function() {
+        const tabla = getActiveTable();
+        if (!tabla) return;
+        let wb = XLSX.utils.table_to_book(tabla, { sheet: "Usuarios" });
+        XLSX.writeFile(wb, "usuarios.xlsx");
+    });
+
+    document.getElementById("exportPrintBtn-usuarios").addEventListener("click", function() {
+        const tabla = getActiveTable();
+        if (!tabla) return;
+        let win = window.open("", "", "height=700,width=900");
+        win.document.write("<html><head><title>Imprimir Usuarios</title>");
+        win.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
+        win.document.write("</head><body>");
+        win.document.write(tabla.outerHTML);
+        win.document.write("</body></html>");
+        win.document.close();
+        win.print();
+    });
+
+    document.addEventListener("shown.bs.tab", function(e) {
+        if (typeof initTables === 'function') {
+            setTimeout(initTables, 50);
+        }
+    });
+
+});
+</script>
+{% endblock %}

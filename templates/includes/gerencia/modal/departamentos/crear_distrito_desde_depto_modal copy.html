@@ -38,10 +38,10 @@
               <i class="fas fa-signature me-1"></i>Nombre del Distrito
             </label>
             <input type="text" class="form-control" id="distrito_nombre"
-                   name="nombre" required maxlength="200">
+                   name="nombre" required maxlength="200" oninput="soloTexto(this)">
             <div class="invalid-feedback"></div>
           </div>
-          <div id="crearDistritoError" class="text-danger small"></div>
+
         </div>
 
         <div class="modal-footer justify-content-between">
@@ -62,7 +62,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const errorDiv = document.getElementById("crearDistritoError");
 
   // -------------------------
   // Función general AJAX
@@ -99,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
           bootstrap.Modal.getInstance(modal).hide();
           location.reload();
         } else {
-         errorDiv.textContent = data.message;
+          mostrarErroresEnCampos(form, data.errors);
         }
       })
       .catch(() => mostrarToast('error','Error al guardar'))
@@ -110,10 +109,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  const modal = document.getElementById('crearDistritoDesdeDeptoModal');
-  const form = document.getElementById('formCrearDistritoDesdeDepto');
+  const modal2 = document.getElementById('crearDistritoDesdeDeptoModal');
+  const form2 = document.getElementById('formCrearDistritoDesdeDepto');
 
-  modal.addEventListener('show.bs.modal', function(e) {
+  modal2.addEventListener('show.bs.modal', function(e) {
     const btn = e.relatedTarget;
 
     document.getElementById('depto_id').value = btn.dataset.id;
@@ -123,8 +122,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('distrito_nombre').value = '';
   });
 
-  modal.addEventListener('hidden.bs.modal', () => { form.reset(); limpiarErrores(form); });
-  manejarEnvioAJAX(form, 'crearDistritoDesdeDeptoModal');
+  modal2.addEventListener('hidden.bs.modal', () => { form2.reset(); limpiarErrores(form2); });
+  manejarEnvioAJAX(form2, 'crearDistritoDesdeDeptoModal');
 
 });
 </script>
