@@ -16,7 +16,16 @@ def validar_nombre_letras(nombre):
     if not re.match(patron, nombre):
         raise ValidationError("El nombre solo puede contener letras, espacios y apóstrofes.")
     return nombre.strip().upper()
-    # Capitaliza toda la palabra
+
+def validar_nombre_general(nombre):
+    """
+    Permite letras, números, espacios y tildes.
+    Para Distrito y Colonia.
+    """
+    patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
+    if not re.match(patron, nombre):
+        raise ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
+    return nombre.strip().upper()
 
 def validar_codigo_numerico(codigo):
     """
@@ -25,6 +34,7 @@ def validar_codigo_numerico(codigo):
     if codigo is None or codigo < 0:
         raise ValidationError("El código debe ser un número positivo.")
     return codigo
+
 
 # ===============================
 # FORMULARIO: DEPARTAMENTO
@@ -43,26 +53,18 @@ class DepartamentoForm(forms.ModelForm):
                 'placeholder': 'Ej: 01'
             }),
         }
-    #=============================
-    # VALIDACIÓN NOMBRE ÚNICO
-    #=============================
+
     def clean_nombre(self):
         nombre = validar_nombre_letras(self.cleaned_data.get('nombre', ''))
-        if len(nombre) < 3:
-            raise ValidationError("El nombre debe tener al menos 3 caracteres.")
-        
         if Departamento.objects.filter(nombre__iexact=nombre).exclude(id=self.instance.id).exists():
             raise ValidationError(f'El Departamento "{nombre}" ya existe.')
         return nombre
-    #=============================
-    # VALIDACION CODIGO ÚNICO
-    #=============================
+
     def clean_codigo(self):
         codigo = validar_codigo_numerico(self.cleaned_data.get('codigo'))
         if Departamento.objects.filter(codigo=codigo).exclude(id=self.instance.id).exists():
             raise ValidationError(f'El código "{codigo}" ya está asignado a otro departamento.')
         return codigo
-    
 
 
 # ===============================
@@ -73,7 +75,7 @@ class DistritoForm(forms.ModelForm):
         model = Distrito
         fields = ['nombre', 'codigo', 'departamento']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control','pattern': "[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\\s']+", 'placeholder': 'Nombre del Distrito'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del Distrito'}),
             'codigo': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Código único dentro del departamento'}),
             'departamento': forms.Select(attrs={'class': 'form-select'}),
         }
@@ -82,15 +84,26 @@ class DistritoForm(forms.ModelForm):
         nombre = self.cleaned_data.get('nombre', '').strip().upper()
         if len(nombre) < 3:
             raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
-        patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
-        if not re.match(patron, nombre):
-            raise forms.ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
         return nombre
 
     def clean_codigo(self):
-        codigo = validar_codigo_numerico(self.cleaned_data.get('codigo'))
+        codigo = self.cleaned_data.get('codigo')
+        departamento = self.cleaned_data.get('departamento')
+
         if codigo is None or codigo < 1:
             raise forms.ValidationError("El código debe ser un número positivo.")
+
+        # 🔑 Validación: único solo dentro del mismo departamento
+        if codigo and departamento:
+            existe_codigo = Distrito.objects.filter(
+                codigo=codigo,
+                departamento=departamento
+            ).exclude(id=self.instance.id).exists()
+
+            if existe_codigo:
+                raise forms.ValidationError(
+                    f'El código {codigo} ya está asignado en el departamento "{departamento}".'
+                )
         return codigo
 
     def clean(self):
@@ -105,7 +118,7 @@ class DistritoForm(forms.ModelForm):
         if not departamento:
             raise forms.ValidationError("Debe seleccionar un departamento.")
 
-        #Verificar nombre único por departamento
+        # Verificar nombre único por departamento
         if nombre and departamento:
             existe_nombre = Distrito.objects.filter(
                 nombre__iexact=nombre.strip(),
@@ -114,7 +127,7 @@ class DistritoForm(forms.ModelForm):
             if existe_nombre:
                 self.add_error('nombre', f'Ya existe un distrito llamado "{nombre}" en el departamento "{departamento}".')
 
-        #Verificar código único por departamento
+        # Verificar código único por departamento
         if codigo and departamento:
             existe_codigo = Distrito.objects.filter(
                 codigo=codigo,
@@ -124,7 +137,6 @@ class DistritoForm(forms.ModelForm):
                 self.add_error('codigo', f'El código {codigo} ya está asignado en el departamento "{departamento}".')
 
         return cleaned_data
-
 
 
 # =============================
@@ -149,16 +161,13 @@ class ColoniaForm(forms.ModelForm):
         }
 
     def clean_nombre(self):
-        nombre = self.cleaned_data.get('nombre', '').strip().upper()
+        nombre = validar_nombre_general(self.cleaned_data.get('nombre', ''))
         if len(nombre) < 3:
             raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
-        patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
-        if not re.match(patron, nombre):
-            raise forms.ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
         if Colonia.objects.filter(nombre__iexact=nombre).exclude(id=self.instance.id).exists():
-                raise forms.ValidationError(f'La Colonia "{nombre}" ya existe.')
+            raise forms.ValidationError(f'La Colonia "{nombre}" ya existe.')
         return nombre
-        
+    
     def clean_codigo(self):
         codigo = validar_codigo_numerico(self.cleaned_data.get('codigo'))
         if Colonia.objects.filter(codigo=codigo).exclude(id=self.instance.id).exists():

@@ -1,0 +1,96 @@
+/* Reset básico para consistencia (buena práctica) */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box; /* Evita que padding afecte el ancho total */
+    font-family: Arial, sans-serif; /* Fuente legible y común */
+}
+
+/* Estilos base para la tabla: Hermosa y legible */
+.beautiful-table {
+    width: 100%; /* Ocupa todo el ancho disponible */
+    border-collapse: collapse; /* Une bordes para un look limpio */
+    margin: 20px 0; /* Espacio alrededor */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra sutil para profundidad */
+    border-radius: 8px; /* Bordes redondeados para modernidad */
+    overflow: hidden; /* Evita que contenidos desborden */
+    table-layout: auto; /* Calcula anchos basados en contenido, no fijos */
+}
+
+/* Encabezados: Fondo oscuro, texto blanco para contraste (UX: alto contraste) */
+.beautiful-table thead th {
+    color: rgb(2, 2, 2);
+    text-align: left;
+    padding: 12px 15px;
+    font-weight: bold;
+    background-color: #a0f4f7; /* Hover: Gris más oscuro para interactividad */
+}
+
+/* Celdas del cuerpo: Alternar colores para legibilidad (zebra stripes) */
+.beautiful-table tbody tr:nth-child(even) {
+    background-color: #d7d7d759; /* Gris claro para filas pares */
+}
+
+.beautiful-table tbody tr {
+    transition: background-color 0.3s ease; /* Transición suave para hover */
+}
+
+.beautiful-table tbody tr:hover {
+    background-color: #a0f4f7; /* Hover: Gris más oscuro para interactividad */
+}
+
+/* Celdas generales: Bordes, padding */
+.beautiful-table th, .beautiful-table td {
+    border: 1px solid #ddd; /* Bordes grises suaves */
+    padding: 10px 15px;
+    width: auto; /* Ajusta el ancho según el contenido */
+    min-width: 50px; /* Mínimo para evitar columnas demasiado estrechas (UX: legibilidad) */
+    max-width: 300px; /* Límite máximo para textos largos (evita tablas infinitamente anchas) */
+    word-wrap: break-word; /* Rompe palabras largas en líneas nuevas (UX: previene desbordes) */
+    white-space: normal; /* Permite saltos de línea naturales, útil para contenidos variables */
+}
+
+/* Ejemplo: Ajuste específico por columna (si quieres priorizar ciertas) */
+.beautiful-table th:nth-child(1), .beautiful-table td:nth-child(1) { /* Columna ID */
+    width: auto; /* Se ajusta a números cortos */
+    min-width: 30px; /* Más estrecha, ya que IDs son breves */
+}
+
+.beautiful-table th:nth-child(2), .beautiful-table td:nth-child(2) { /* Columna Nombre */
+    width: auto; /* Se expande para nombres largos */
+    max-width: 400px; /* Límite para censos con nombres extensos */
+}
+
+/* Botones en acciones: Estilo simple, inspirado en Bootstrap */
+.btn-edit {
+    background-color: #2196F3; /* Azul para editar */
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-edit:hover {
+    background-color: #1976D2; /* Oscurece en hover */
+}
+
+/* Responsividad: Para pantallas menores a 768px (tablets/móviles) */
+@media screen and (max-width: 768px) {
+    .table-container {
+        overflow-x: auto; /* Agrega scroll horizontal si la tabla es ancha */
+    }
+    
+    .beautiful-table {
+        min-width: 600px; /* Fuerza un ancho mínimo para scroll */
+        table-layout: auto; /* Mantiene el ajuste por contenido en móviles */
+    }
+    
+    /* Ajustes para UX en móvil: Fuentes más pequeñas, padding reducido */
+    .beautiful-table th, .beautiful-table td {
+        padding: 8px 10px;
+        font-size: 14px;
+        max-width: 200px; /* Reduce máximo en móviles para mejor UX */
+    }
+}

@@ -28,7 +28,7 @@
               <i class="fas fa-hashtag me-1"></i>Código
             </label>
             <input type="number" class="form-control" id="distrito_codigo" 
-                   name="codigo" min="1" required>
+                   name="codigo" min="1">
             <div class="invalid-feedback"></div>
           </div>
 
@@ -38,10 +38,12 @@
               <i class="fas fa-signature me-1"></i>Nombre del Distrito
             </label>
             <input type="text" class="form-control" id="distrito_nombre"
-                   name="nombre" required maxlength="200">
+                   name="nombre" maxlength="200">
             <div class="invalid-feedback"></div>
           </div>
-          <div id="crearDistritoError" class="text-danger small"></div>
+          
+          <!-- Div para errores generales -->
+          <i class="fas fa-exclamation-triangle me-1 text-warning"></i><div id="crearDistritoError" class="text-danger text-center small mb-3"></div>
         </div>
 
         <div class="modal-footer justify-content-between">
@@ -61,70 +63,86 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const errorDiv = document.getElementById("crearDistritoError");
+  document.addEventListener('DOMContentLoaded', function() {
+      const errorDiv = document.getElementById("crearDistritoError");
 
-  // -------------------------
-  // Función general AJAX
-  // -------------------------
-  function manejarEnvioAJAX(form, modalID) {
-
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-
-      if (!form.checkValidity()) {
-        form.classList.add('was-validated');
-        return;
+      function limpiarErrores(form) {
+          form.querySelectorAll('.is-invalid').forEach(input => {
+              input.classList.remove('is-invalid');
+          });
+          form.querySelectorAll('.invalid-feedback').forEach(div => {
+              div.textContent = '';
+          });
+          errorDiv.textContent = '';
       }
 
-      const formData = new FormData(form);
-      const modal = document.getElementById(modalID);
-      const btnSubmit = form.querySelector('button[type="submit"]');
-      const oldText = btnSubmit.innerHTML;
+      function manejarEnvioAJAX(form, modalID) {
+          form.addEventListener('submit', function(e) {
+              e.preventDefault();
+              limpiarErrores(form);
 
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+              const formData = new FormData(form);
+              const modal = document.getElementById(modalID);
+              const btnSubmit = form.querySelector('button[type="submit"]');
+              const oldText = btnSubmit.innerHTML;
 
-      fetch(form.action, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-        }
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          bootstrap.Modal.getInstance(modal).hide();
-          location.reload();
-        } else {
-         errorDiv.textContent = data.message;
-        }
-      })
-      .catch(() => mostrarToast('error','Error al guardar'))
-      .finally(() => {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = oldText;
+              btnSubmit.disabled = true;
+              btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+
+              fetch(form.action, {
+                  method: 'POST',
+                  body: formData,
+                  headers: {
+                      'X-Requested-With': 'XMLHttpRequest',
+                      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                  }
+              })
+              .then(r => r.json())
+              .then(data => {
+                  if (data.success) {
+                      bootstrap.Modal.getInstance(modal).hide();
+                      location.reload();
+                  } else {
+                      if (data.errors) {
+                          // Mostrar errores por campo
+                          for (const [field, messages] of Object.entries(data.errors)) {
+                              const input = form.querySelector('[name="' + field + '"]');
+                              const feedback = input ? input.nextElementSibling : null;
+                              if (input && feedback) {
+                                  input.classList.add('is-invalid');
+                                  feedback.textContent = messages.join(' ');
+                              }
+                          }
+                      } else if (data.message) {
+                          errorDiv.textContent = data.message;
+                      }
+                  }
+              })
+              .catch(() => mostrarToast('error','Error al guardar'))
+              .finally(() => {
+                  btnSubmit.disabled = false;
+                  btnSubmit.innerHTML = oldText;
+              });
+          });
+      }
+
+      const modal = document.getElementById('crearDistritoDesdeDeptoModal');
+      const form = document.getElementById('formCrearDistritoDesdeDepto');
+
+      modal.addEventListener('show.bs.modal', function(e) {
+          const btn = e.relatedTarget;
+          document.getElementById('depto_id').value = btn.dataset.id;
+          document.getElementById('depto_nombre').value = btn.dataset.nombre;
+          document.getElementById('distrito_codigo').value = '';
+          document.getElementById('distrito_nombre').value = '';
       });
-    });
-  }
 
-  const modal = document.getElementById('crearDistritoDesdeDeptoModal');
-  const form = document.getElementById('formCrearDistritoDesdeDepto');
+      modal.addEventListener('hidden.bs.modal', () => {
+          form.reset();
+          limpiarErrores(form);
+          form.classList.remove('was-validated');
+      });
 
-  modal.addEventListener('show.bs.modal', function(e) {
-    const btn = e.relatedTarget;
-
-    document.getElementById('depto_id').value = btn.dataset.id;
-    document.getElementById('depto_nombre').value = btn.dataset.nombre;
-
-    document.getElementById('distrito_codigo').value = '';
-    document.getElementById('distrito_nombre').value = '';
+      manejarEnvioAJAX(form, 'crearDistritoDesdeDeptoModal');
   });
-
-  modal.addEventListener('hidden.bs.modal', () => { form.reset(); limpiarErrores(form); });
-  manejarEnvioAJAX(form, 'crearDistritoDesdeDeptoModal');
-
-});
 </script>
