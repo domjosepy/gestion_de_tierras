@@ -12,9 +12,9 @@ def validar_nombre_letras(nombre):
     Permite letras, espacios y tildes.
     Rechaza números y símbolos especiales.
     """
-    patron = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s']+$"
+    patron = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$"
     if not re.match(patron, nombre):
-        raise ValidationError("El nombre solo puede contener letras, espacios y apóstrofes.")
+        raise ValidationError("El nombre solo puede contener letras, espacios.")
     return nombre.strip().upper()
 
 def validar_nombre_general(nombre):
@@ -53,17 +53,45 @@ class DepartamentoForm(forms.ModelForm):
                 'placeholder': 'Ej: 01'
             }),
         }
+        error_messages = {
+            'nombre': {
+                'required': "El nombre del departamento es obligatorio.",
+            },
+            'codigo': {
+                'required': "El código del departamento es obligatorio.",
+            },
+        }
 
     def clean_nombre(self):
-        nombre = validar_nombre_letras(self.cleaned_data.get('nombre', ''))
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        
+        if not nombre:
+            raise ValidationError("El nombre del departamento es obligatorio.")
+        
+        # Validar que tenga al menos 3 caracteres
+        if len(nombre) < 3:
+            raise ValidationError("El nombre debe tener al menos 3 caracteres.")
+        
+        # Validar que solo contenga letras, espacios.
+        nombre = validar_nombre_letras(nombre)
+        
+        # Validar unicidad
         if Departamento.objects.filter(nombre__iexact=nombre).exclude(id=self.instance.id).exists():
             raise ValidationError(f'El Departamento "{nombre}" ya existe.')
+        
         return nombre
 
     def clean_codigo(self):
-        codigo = validar_codigo_numerico(self.cleaned_data.get('codigo'))
+        codigo = self.cleaned_data.get('codigo')
+        
+        if codigo is None:
+            raise ValidationError("El código es obligatorio.")
+            
+        codigo = validar_codigo_numerico(codigo)
+        
         if Departamento.objects.filter(codigo=codigo).exclude(id=self.instance.id).exists():
             raise ValidationError(f'El código "{codigo}" ya está asignado a otro departamento.')
+        
         return codigo
 
 
@@ -93,7 +121,7 @@ class DistritoForm(forms.ModelForm):
         if codigo is None or codigo < 1:
             raise forms.ValidationError("El código debe ser un número positivo.")
 
-        # 🔑 Validación: único solo dentro del mismo departamento
+        # Validación: único solo dentro del mismo departamento
         if codigo and departamento:
             existe_codigo = Distrito.objects.filter(
                 codigo=codigo,

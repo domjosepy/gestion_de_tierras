@@ -14,23 +14,32 @@
           <input type="hidden" id="editarDeptoId" name="departamento_id">
 
           <div class="mb-3">
-            <label for="editarDeptoCodigo" class="form-label fw-bold">Código</label>
-            <input type="text" id="editarDeptoCodigo" name="codigo" class="form-control" required>
+            <label for="editarDeptoCodigo" class="form-label fw-bold">
+              <i class="fas fa-hashtag me-1"></i>Código
+            </label>
+            <input type="number" id="editarDeptoCodigo" name="codigo" class="form-control" 
+                   min="1">
+            <div class="invalid-feedback"></div>
           </div>
 
           <div class="mb-3">
-            <label for="editarDeptoNombre" class="form-label fw-bold">Nombre</label>
-            <input type="text" id="editarDeptoNombre" name="nombre" class="form-control" required oninput="soloTexto(this)">
+            <label for="editarDeptoNombre" class="form-label fw-bold">
+              <i class="fas fa-signature me-1"></i>Nombre
+            </label>
+            <input type="text" id="editarDeptoNombre" name="nombre" class="form-control" 
+                   minlength="3" oninput="soloTexto(this)"
+                   title="El nombre debe tener al menos 3 caracteres">
+            <div class="invalid-feedback"></div>
           </div>
 
-          <div id="editarDeptoError" class="text-danger small"></div>
+          <div id="editarDeptoError" class="text-danger small mb-3"></div>
         </div>
 
         <div class="modal-footer justify-content-between">
-          
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            <i class="fas fa-times me-1"></i>Cancelar</button>
-          <button type="submit" class="btn btn-outline-warning">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
             <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios
           </button>
         </div>
@@ -40,39 +49,80 @@
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-      const modalEditar = document.getElementById("editarDeptoModal");
-      const form = document.getElementById("editarDeptoForm");
-      const errorDiv = document.getElementById("editarDeptoError");
+document.addEventListener("DOMContentLoaded", () => {
+    const modalEditar = document.getElementById("editarDeptoModal");
+    const form = document.getElementById("editarDeptoForm");
+    const errorDiv = document.getElementById("editarDeptoError");
 
-      modalEditar.addEventListener("show.bs.modal", ev => {
-          const btn = ev.relatedTarget;
+    function limpiarErrores(form) {
+        form.querySelectorAll('.is-invalid').forEach(input => {
+            input.classList.remove('is-invalid');
+        });
+        form.querySelectorAll('.invalid-feedback').forEach(div => {
+            div.textContent = '';
+        });
+        errorDiv.textContent = '';
+    }
 
-          form.action = `/gerencia/departamentos/editar/${btn.dataset.id}/`;
-          document.getElementById("editarDeptoCodigo").value = btn.dataset.codigo;
-          document.getElementById("editarDeptoNombre").value = btn.dataset.nombre;
-          errorDiv.textContent = "";
-      });
+    modalEditar.addEventListener("show.bs.modal", ev => {
+        const btn = ev.relatedTarget;
 
-      form.addEventListener("submit", async e => {
-          e.preventDefault();
+        form.action = `/gerencia/departamentos/editar/${btn.dataset.id}/`;
+        document.getElementById("editarDeptoCodigo").value = btn.dataset.codigo;
+        document.getElementById("editarDeptoNombre").value = btn.dataset.nombre;
+        limpiarErrores(form);
+    });
 
-          const res = await fetch(form.action, {
-              method: "POST",
-              headers: { "X-Requested-With": "XMLHttpRequest" },
-              body: new FormData(form)
-          });
+    modalEditar.addEventListener("hidden.bs.modal", () => {
+        form.reset();
+        limpiarErrores(form);
+    });
 
-          const data = await res.json();
+    form.addEventListener("submit", async e => {
+        e.preventDefault();
+        limpiarErrores(form);
 
-          if (data.success) {
-              bootstrap.Modal.getInstance(modalEditar).hide();
-              location.reload();
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const oldText = btnSubmit.innerHTML;
 
-          } else {
-              errorDiv.textContent = data.message;
-              mostrarToast(data.message, "Error en inserción");
-          }
-      });
-  });
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+
+        try {
+            const res = await fetch(form.action, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                body: new FormData(form)
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                bootstrap.Modal.getInstance(modalEditar).hide();
+                mostrarToast('success', data.message || 'Departamento actualizado correctamente');
+                location.reload();
+            } else {
+                if (data.errors) {
+                    // Mostrar errores por campo
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        const input = form.querySelector('[name="' + field + '"]');
+                        const feedback = input ? input.nextElementSibling : null;
+                        if (input && feedback) {
+                            input.classList.add('is-invalid');
+                            feedback.textContent = messages.join(' ');
+                        }
+                    }
+                } else if (data.message) {
+                    errorDiv.textContent = data.message;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
+        }
+    });
+});
 </script>

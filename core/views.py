@@ -40,7 +40,6 @@ class DepartamentoListView(LoginRequiredMixin, ListView):
 
 
 @require_POST
-
 def crear_departamento(request):
     form = DepartamentoForm(request.POST)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -67,43 +66,49 @@ def crear_departamento(request):
         messages.success(request, data['message'])
         return redirect('gerencia:listar_departamentos')
 
-    # Si hay errores de validación
-    errores = form.errors.get_json_data()
-    mensajes = [error['message'] for campo in errores.values() for error in campo]
-    data = {'success': False, 'message': ' '.join(mensajes)}
-
+    # Si hay errores de validación - DEVOLVER FORMATO CON errors
     if is_ajax:
-        return JsonResponse(data, status=400)
-    messages.error(request, data['message'])
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [error for error in error_list]
+        return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+    # Si no es AJAX
+    for error in form.errors.values():
+        messages.error(request, error)
     return redirect('gerencia:listar_departamentos')
 
-
+@require_POST
 def editar_departamento(request, departamento_id):
     """Edita un departamento existente."""
     departamento = get_object_or_404(Departamento, id=departamento_id)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-    if request.method == 'POST':
-        form = DepartamentoForm(request.POST, instance=departamento)
-        if form.is_valid():
-            form.save()
-            notificar_a_admins(
-                mensaje=f'El Departamento "{departamento.nombre}" fue editado.',
-                tipo="WARNING",
-                exclude_user=request.user
-            )
-            msg = "Departamento modificado."
-            messages.info(request, f'El Departamento "{departamento.nombre}" fue modificado!')
-            if is_ajax:
-                return JsonResponse({'success': True, 'message': msg})
-            messages.success(request, msg)
-        else:
-            msg = " ".join([err for errs in form.errors.values() for err in errs])
-            if is_ajax: 
-                return JsonResponse({'success': False, 'message': msg}, status=400)
-            messages.error(request, msg)
-        return redirect('gerencia:listar_departamentos')
-
+    form = DepartamentoForm(request.POST, instance=departamento)
+    if form.is_valid():
+        form.save()
+        notificar_a_admins(
+            mensaje=f'El Departamento "{departamento.nombre}" fue editado.',
+            tipo="WARNING",
+            exclude_user=request.user
+        )
+        msg = f'El Departamento "{departamento.nombre}" fue modificado!'
+        messages.info(request, msg)
+        if is_ajax:
+            return JsonResponse({'success': True, 'message': msg})
+        messages.success(request, msg)
+    else:
+        # Manejo de errores en formato consistente
+        if is_ajax:
+            errors = {}
+            for field, error_list in form.errors.items():
+                errors[field] = [error for error in error_list]
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+        
+        # Si no es AJAX
+        for error in form.errors.values():
+            messages.error(request, error)
+    
     return redirect('gerencia:listar_departamentos')
 
 

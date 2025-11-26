@@ -5,23 +5,17 @@
 
       <div class="modal-header bg-success text-white">
         <h5 class="modal-title">
-          <i class="fas fa-plus-circle me-2"></i>Crear Distrito para Departamento
+          <i class="fas fa-plus-circle me-2"></i>Crear Distrito para: 
+          <span class="fst-italic" id="depto_nombre_header"></span>
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
 
       <form id="formCrearDistritoDesdeDepto" method="POST" action="{% url 'gerencia:crear_distrito' %}">
         {% csrf_token %}
+        <input type="hidden" id="depto_id" name="departamento">
 
         <div class="modal-body">
-
-          <!-- Departamento fijo -->
-          <div class="mb-3">
-            <label class="form-label fw-bold">Departamento</label>
-            <input type="text" class="form-control" id="depto_nombre" readonly>
-            <input type="hidden" id="depto_id" name="departamento">
-          </div>
-
           <!-- Código -->
           <div class="mb-3">
             <label class="form-label fw-bold">
@@ -38,12 +32,12 @@
               <i class="fas fa-signature me-1"></i>Nombre del Distrito
             </label>
             <input type="text" class="form-control" id="distrito_nombre"
-                   name="nombre" maxlength="200">
+                   name="nombre" maxlength="200" minlength="3">
             <div class="invalid-feedback"></div>
           </div>
           
           <!-- Div para errores generales -->
-          <i class="fas fa-exclamation-triangle me-1 text-warning"></i><div id="crearDistritoError" class="text-danger text-center small mb-3"></div>
+          <div id="crearDistritoError" class="text-danger small mb-3"></div>
         </div>
 
         <div class="modal-footer justify-content-between">
@@ -98,30 +92,30 @@
                   }
               })
               .then(r => r.json())
-              .then(data => {
-                  if (data.success) {
-                      bootstrap.Modal.getInstance(modal).hide();
-                      location.reload();
-                  } else {
-                      if (data.errors) {
-                          // Mostrar errores por campo
-                          for (const [field, messages] of Object.entries(data.errors)) {
-                              const input = form.querySelector('[name="' + field + '"]');
-                              const feedback = input ? input.nextElementSibling : null;
-                              if (input && feedback) {
-                                  input.classList.add('is-invalid');
-                                  feedback.textContent = messages.join(' ');
-                              }
-                          }
-                      } else if (data.message) {
-                          errorDiv.textContent = data.message;
-                      }
-                  }
-              })
-              .catch(() => mostrarToast('error','Error al guardar'))
-              .finally(() => {
-                  btnSubmit.disabled = false;
-                  btnSubmit.innerHTML = oldText;
+                .then(data => {
+                    if (data.success) {
+                        bootstrap.Modal.getInstance(modal).hide();
+                        location.reload();
+                    } else {
+                        if (data.errors) {
+                            // Mostrar errores por campo
+                            for (const [field, messages] of Object.entries(data.errors)) {
+                                const input = form.querySelector('[name="' + field + '"]');
+                                const feedback = input ? input.nextElementSibling : null;
+                                if (input && feedback) {
+                                    input.classList.add('is-invalid');
+                                    feedback.textContent = messages.join(' ');
+                                }
+                            }
+                        } else if (data.message) {
+                            errorDiv.textContent = data.message;
+                        }
+                    }
+                })
+                .catch(() => mostrarToast('error','Error al guardar'))
+                .finally(() => {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = oldText;
               });
           });
       }
@@ -131,10 +125,14 @@
 
       modal.addEventListener('show.bs.modal', function(e) {
           const btn = e.relatedTarget;
+          const deptoNombre = btn.dataset.nombre;
+          
           document.getElementById('depto_id').value = btn.dataset.id;
-          document.getElementById('depto_nombre').value = btn.dataset.nombre;
+          document.getElementById('depto_nombre_header').textContent = `${deptoNombre}`;
           document.getElementById('distrito_codigo').value = '';
           document.getElementById('distrito_nombre').value = '';
+          
+          limpiarErrores(form);
       });
 
       modal.addEventListener('hidden.bs.modal', () => {

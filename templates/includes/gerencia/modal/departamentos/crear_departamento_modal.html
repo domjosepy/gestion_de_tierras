@@ -10,20 +10,27 @@
 
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label fw-bold">Código</label>
-            <input type="number" name="codigo" id="codigo" class="form-control" required>
+            <label class="form-label fw-bold">
+              <i class="fas fa-hashtag me-1"></i>Código</label>
+            <input type="number" name="codigo" id="codigo" class="form-control" min="1">
+            <div class="invalid-feedback"></div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fw-bold">Nombre</label>
-            <input type="text" name="nombre" id="nombre" class="form-control" required oninput="soloTexto(this)">
+              <label class="form-label fw-bold">
+                  <i class="fas fa-signature me-1"></i>Nombre
+              </label>
+              <input type="text" name="nombre" id="nombre" class="form-control" 
+                    oninput="soloTexto(this)" 
+                    minlength="3" title="El nombre debe tener al menos 3 caracteres">
+              <div class="invalid-feedback"></div>
           </div>
 
-          <div id="crearDeptoError" class="text-danger small"></div>
+          <div id="crearDeptoError" class="text-danger small mb-3"></div>
         </div>
 
         <div class="modal-footer justify-content-between">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i>Cancelar</button>
           <button type="submit" class="btn btn-outline-success">
             <i class="fas fa-save me-1"></i>Guardar</button>
@@ -38,27 +45,69 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("crearDeptoForm");
     const errorDiv = document.getElementById("crearDeptoError");
 
+    function limpiarErrores(form) {
+        form.querySelectorAll('.is-invalid').forEach(input => {
+            input.classList.remove('is-invalid');
+        });
+        form.querySelectorAll('.invalid-feedback').forEach(div => {
+            div.textContent = '';
+        });
+        errorDiv.textContent = '';
+    }
+
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
+        limpiarErrores(form);
 
-        const res = await fetch(form.action, {
-            method: "POST",
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            body: new FormData(form)
-        });
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const oldText = btnSubmit.innerHTML;
 
-        const data = await res.json();
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
 
-        if (data.success) {
-            const modal = bootstrap.Modal.getInstance(document.getElementById("crearDeptoModal"));
-            modal.hide();
-            form.reset();
-            errorDiv.textContent = "";
+        try {
+            const res = await fetch(form.action, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                body: new FormData(form)
+            });
 
-           location.reload();
-        } else {
-            errorDiv.textContent = data.message;
+            const data = await res.json();
+
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById("crearDeptoModal"));
+                modal.hide();
+                form.reset();
+                location.reload();
+            } else {
+                if (data.errors) {
+                    // Mostrar errores por campo
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        const input = form.querySelector('[name="' + field + '"]');
+                        const feedback = input ? input.nextElementSibling : null;
+                        if (input && feedback) {
+                            input.classList.add('is-invalid');
+                            feedback.textContent = messages.join(' ');
+                        }
+                    }
+                } else if (data.message) {
+                    errorDiv.textContent = data.message;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
         }
+    });
+
+    // Limpiar errores cuando se cierre el modal
+    const modal = document.getElementById('crearDeptoModal');
+    modal.addEventListener('hidden.bs.modal', () => {
+        form.reset();
+        limpiarErrores(form);
     });
 });
 </script>
