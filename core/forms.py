@@ -103,35 +103,68 @@ class DistritoForm(forms.ModelForm):
         model = Distrito
         fields = ['nombre', 'codigo', 'departamento']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del Distrito'}),
-            'codigo': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Código único dentro del departamento'}),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Nombre del Distrito'
+            }),
+            'codigo': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Código único dentro del departamento'
+            }),
             'departamento': forms.Select(attrs={'class': 'form-select'}),
         }
+        error_messages = {
+            'nombre': {
+                'required': "El nombre del distrito es obligatorio.",
+                'max_length': "El nombre no puede tener más de 200 caracteres."
+            },
+            'codigo': {
+                'required': "El código del distrito es obligatorio.",
+            },
+            'departamento': {
+                'required': "El departamento es obligatorio.",
+            },
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Personalizar el label del campo departamento
+        self.fields['departamento'].label = "Departamento"
+        self.fields['departamento'].empty_label = "-- Seleccione un Departamento --"
+
+    def clean_departamento(self):
+        departamento = self.cleaned_data.get('departamento')
+        if not departamento:
+            raise ValidationError("Debe seleccionar un departamento.")
+        return departamento
 
     def clean_nombre(self):
-        nombre = self.cleaned_data.get('nombre', '').strip().upper()
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        
+        if not nombre:
+            raise ValidationError("El nombre del distrito es obligatorio.")
+        
+        # Validar que tenga al menos 3 caracteres
         if len(nombre) < 3:
-            raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
-        return nombre
+            raise ValidationError("El nombre debe tener al menos 3 caracteres.")
+        
+        # Validar que solo contenga letras, números, espacios y apóstrofes
+        patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
+        if not re.match(patron, nombre):
+            raise ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
+        
+        return nombre.upper()
 
     def clean_codigo(self):
         codigo = self.cleaned_data.get('codigo')
-        departamento = self.cleaned_data.get('departamento')
-
-        if codigo is None or codigo < 1:
-            raise forms.ValidationError("El código debe ser un número positivo.")
-
-        # Validación: único solo dentro del mismo departamento
-        if codigo and departamento:
-            existe_codigo = Distrito.objects.filter(
-                codigo=codigo,
-                departamento=departamento
-            ).exclude(id=self.instance.id).exists()
-
-            if existe_codigo:
-                raise forms.ValidationError(
-                    f'El código {codigo} ya está asignado en el departamento "{departamento}".'
-                )
+        
+        if codigo is None:
+            raise ValidationError("El código es obligatorio.")
+            
+        # Validar que sea positivo
+        if codigo < 1:
+            raise ValidationError("El código debe ser un número positivo.")
+        
         return codigo
 
     def clean(self):
@@ -142,9 +175,6 @@ class DistritoForm(forms.ModelForm):
         nombre = cleaned_data.get('nombre')
         codigo = cleaned_data.get('codigo')
         departamento = cleaned_data.get('departamento')
-
-        if not departamento:
-            raise forms.ValidationError("Debe seleccionar un departamento.")
 
         # Verificar nombre único por departamento
         if nombre and departamento:
@@ -173,36 +203,104 @@ class DistritoForm(forms.ModelForm):
 class ColoniaForm(forms.ModelForm):
     distritos = forms.ModelMultipleChoiceField(
         queryset=Distrito.objects.all(),
-        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
-        required=True
+        widget=forms.CheckboxSelectMultiple(),
+        required=True,
+        error_messages={
+            'required': 'Debe seleccionar al menos un distrito.',
+        }
     )
 
     class Meta:
         model = Colonia
-        fields = ['nombre', 'codigo', 'distritos', 'estado', 'finca_matriz', 'padron_matriz']
+        fields = ['nombre', 'codigo', 'distritos']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la Colonia'}),
-            'codigo': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Código único'}),
-            'estado': forms.Select(attrs={'class': 'form-select'}),
-            'finca_matriz': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Finca matriz'}),
-            'padron_matriz': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Padrón matriz'}),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Nombre de la Colonia'
+            }),
+            'codigo': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Código'
+            }),
+        }
+        error_messages = {
+            'nombre': {
+                'required': "El nombre de la colonia es obligatorio.",
+                'max_length': "El nombre no puede tener más de 250 caracteres."
+            },
+            'codigo': {
+                'required': "El código de la colonia es obligatorio.",
+            },
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Agregar atributos required para evitar validación HTML5
+        self.fields['nombre'].required = True
+        self.fields['codigo'].required = True
+        self.fields['distritos'].required = True
+
+    # Tus métodos clean_nombre, clean_codigo y clean permanecen igual...
     def clean_nombre(self):
-        nombre = validar_nombre_general(self.cleaned_data.get('nombre', ''))
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        
+        if not nombre:
+            raise ValidationError("El nombre de la colonia es obligatorio.")
+        
         if len(nombre) < 3:
-            raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
-        if Colonia.objects.filter(nombre__iexact=nombre).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError(f'La Colonia "{nombre}" ya existe.')
-        return nombre
-    
+            raise ValidationError("El nombre debe tener al menos 3 caracteres.")
+        
+        patron = r"^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñ\s']+$"
+        if not re.match(patron, nombre):
+            raise ValidationError("El nombre solo puede contener letras, números, espacios y apóstrofes.")
+        
+        return nombre.upper()
+
     def clean_codigo(self):
-        codigo = validar_codigo_numerico(self.cleaned_data.get('codigo'))
-        if Colonia.objects.filter(codigo=codigo).exclude(id=self.instance.id).exists():
-            raise forms.ValidationError(f"Ya existe una colonia con el código {codigo}.")
+        codigo = self.cleaned_data.get('codigo')
+        
+        if codigo is None:
+            raise ValidationError("El código es obligatorio.")
+            
+        if codigo < 1:
+            raise ValidationError("El código debe ser un número positivo.")
+        
         return codigo
 
+    def clean(self):
+        cleaned_data = super().clean()
+        nombre = cleaned_data.get('nombre')
+        codigo = cleaned_data.get('codigo')
+        distritos = cleaned_data.get('distritos')
 
+        if nombre and distritos:
+            for distrito in distritos:
+                existe_nombre = Colonia.objects.filter(
+                    nombre__iexact=nombre.strip(),
+                    distritos=distrito
+                ).exclude(id=self.instance.id).exists()
+                
+                if existe_nombre:
+                    self.add_error(
+                        'nombre', 
+                        f'Ya existe una colonia llamada "{nombre}" en el distrito "{distrito}".'
+                    )
+
+        if codigo and distritos:
+            for distrito in distritos:
+                existe_codigo = Colonia.objects.filter(
+                    codigo=codigo,
+                    distritos=distrito
+                ).exclude(id=self.instance.id).exists()
+                
+                if existe_codigo:
+                    self.add_error(
+                        'codigo', 
+                        f'Ya existe una colonia con el código "{codigo}" en el distrito "{distrito}".'
+                    )
+
+        return cleaned_data
+    
 # =============================
 #  FORMULARIO SOLICITUD
 # =============================

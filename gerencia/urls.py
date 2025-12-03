@@ -3,7 +3,7 @@ from . import views
 from core.views import (
     DepartamentoListView, crear_departamento, editar_departamento, eliminar_departamento,
     listar_distritos, crear_distrito, editar_distrito, eliminar_distrito,
-    ColoniaListView, ColoniaCreateView, editar_colonia, eliminar_colonia
+    ColoniaListView, crear_colonia, editar_colonia, eliminar_colonia
 )
 
 app_name = "gerencia"
@@ -38,7 +38,7 @@ urlpatterns = [
     # 4. Vistas de colonias
     # ------------------------------------
     path('colonias/', ColoniaListView.as_view(), name='listar_colonias'),
-    path('colonias/crear/', ColoniaCreateView.as_view(), name='crear_colonia'),
+    path('colonias/crear/', crear_colonia, name='crear_colonia'),
     path('colonias/editar/<int:colonia_id>/',
          editar_colonia, name='editar_colonia'),
     path('colonias/eliminar/<int:colonia_id>/',

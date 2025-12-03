@@ -1,5 +1,5 @@
 <!-- Modal: Editar Distrito -->
-<div class="modal fade" id="editarDistritoModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade modal-warning" id="editarDistritoModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-header bg-warning text-dark">
@@ -8,6 +8,7 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
+      
       <form id="formEditarDistrito" method="POST">
         {% csrf_token %}
         <input type="hidden" id="editar_distrito_id">
@@ -16,46 +17,51 @@
           <!-- Departamento -->
           <div class="mb-3">
             <label for="editar_departamento" class="form-label fw-bold">
-              <i class="fas fa-map-marked-alt me-1"></i>Departamento <span class="text-danger">*</span>
+              <i class="fas fa-map-marked-alt me-1"></i>Departamento
             </label>
-            <select class="form-select" id="editar_departamento" name="departamento" required>
+            <select class="form-select" id="editar_departamento" name="departamento">
               <option value="">-- Seleccione un Departamento --</option>
               {% for depto in departamentos %}
                 <option value="{{ depto.id }}">{{ depto.codigo }}. {{ depto.nombre }}</option>
               {% endfor %}
             </select>
-            <div class="invalid-feedback"></div>
-          </div>
-
-          <!-- Nombre -->
-          <div class="mb-3">
-            <label for="editar_nombre" class="form-label fw-bold">
-              <i class="fas fa-signature me-1"></i>Nombre del Distrito <span class="text-danger">*</span>
-            </label>
-            <input type="text" 
-                   class="form-control" 
-                   id="editar_nombre" 
-                   name="nombre" 
-                   maxlength="200"
-                   required>
-            <div class="invalid-feedback"></div>
-            <small class="text-muted">Solo letras, espacios y apóstrofes, mínimo 3 caracteres</small>
+            <div class="invalid-feedback">Por favor seleccione un departamento</div>
+            <small class="text-muted">Departamento al que pertenece el distrito</small>
           </div>
 
           <!-- Código -->
           <div class="mb-3">
             <label for="editar_codigo" class="form-label fw-bold">
-              <i class="fas fa-hashtag me-1"></i>Código <span class="text-danger">*</span>
+              <i class="fas fa-hashtag me-1"></i>Código
             </label>
             <input type="number" 
                    class="form-control" 
                    id="editar_codigo" 
                    name="codigo" 
                    min="1"
-                   required>
+                   placeholder="Ingrese el código">
             <div class="invalid-feedback"></div>
-            <small class="text-muted">Debe ser único dentro del departamento</small>
+            <small class="text-muted">Debe ser único dentro del departamento seleccionado</small>
           </div>
+
+          <!-- Nombre -->
+          <div class="mb-3">
+            <label for="editar_nombre" class="form-label fw-bold">
+              <i class="fas fa-signature me-1"></i>Nombre del Distrito
+            </label>
+            <input type="text" 
+                   class="form-control" 
+                   id="editar_nombre" 
+                   name="nombre" 
+                   maxlength="200"
+                   minlength="3"
+                   placeholder="Ingrese el nombre del distrito">
+            <div class="invalid-feedback"></div>
+            <small class="text-muted">Mínimo 3 caracteres. Debe ser único dentro del departamento</small>
+          </div>
+
+          <!-- Div para errores generales -->
+          <div id="editarDistritoError" class="text-danger small mb-3"></div>
         </div>
 
         <div class="modal-footer justify-content-between">
@@ -72,72 +78,90 @@
 </div>
 
 <script>
-  
 document.addEventListener('DOMContentLoaded', function() {
   const modal = document.getElementById('editarDistritoModal');
   const form = document.getElementById('formEditarDistrito');
+  const errorDiv = document.getElementById('editarDistritoError');
+
+  function limpiarErrores(form) {
+      form.querySelectorAll('.is-invalid').forEach(input => {
+          input.classList.remove('is-invalid');
+      });
+      form.querySelectorAll('.invalid-feedback').forEach(div => {
+          div.textContent = '';
+      });
+      errorDiv.textContent = '';
+  }
 
   // Cargar datos al abrir modal
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.editar-distrito-btn');
-    if (btn) {
+  modal.addEventListener('show.bs.modal', function(e) {
+      const btn = e.relatedTarget;
+      
       document.getElementById('editar_distrito_id').value = btn.dataset.id;
       document.getElementById('editar_nombre').value = btn.dataset.nombre;
       document.getElementById('editar_codigo').value = btn.dataset.codigo;
       document.getElementById('editar_departamento').value = btn.dataset.departamento;
+      
       limpiarErrores(form);
-    }
   });
 
   // Limpiar al cerrar
   modal.addEventListener('hidden.bs.modal', function() {
-    form.reset();
-    limpiarErrores(form);
+      form.reset();
+      limpiarErrores(form);
+      form.classList.remove('was-validated');
   });
 
   // Enviar formulario
   form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    if (!form.checkValidity()) {
-      form.classList.add('was-validated');
-      return;
-    }
+      e.preventDefault();
+      limpiarErrores(form);
 
-    const distritoId = document.getElementById('editar_distrito_id').value;
-    const formData = new FormData(form);
-    const btnSubmit = form.querySelector('button[type="submit"]');
-    const btnTextoOriginal = btnSubmit.innerHTML;
-    
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+      const distritoId = document.getElementById('editar_distrito_id').value;
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const btnTextoOriginal = btnSubmit.innerHTML;
+      
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
 
-    fetch(`/gerencia/distritos/editar/${distritoId}/`, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        bootstrap.Modal.getInstance(modal).hide();
-        mostrarToast('success', data.message);
-        setTimeout(() => location.reload(), 1500);
-      } else {
-        mostrarErroresEnCampos(form, data.errors);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      mostrarToast('error', 'Ocurrió un error al actualizar el distrito');
-    })
-    .finally(() => {
-      btnSubmit.disabled = false;
-      btnSubmit.innerHTML = btnTextoOriginal;
-    });
+      fetch(`/gerencia/distritos/editar/${distritoId}/`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+          }
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              bootstrap.Modal.getInstance(modal).hide();
+              location.reload();
+          } else {
+              if (data.errors) {
+                  // Mostrar errores por campo
+                  for (const [field, messages] of Object.entries(data.errors)) {
+                      const input = form.querySelector('[name="' + field + '"]');
+                      const feedback = input ? input.nextElementSibling : null;
+                      if (input && feedback) {
+                          input.classList.add('is-invalid');
+                          feedback.textContent = messages.join(' ');
+                      }
+                  }
+              } else if (data.message) {
+                  errorDiv.textContent = data.message;
+              }
+          }
+      })
+      .catch(error => {
+          console.error('Error:', error);
+          errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+      })
+      .finally(() => {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = btnTextoOriginal;
+      });
   });
 });
 </script>

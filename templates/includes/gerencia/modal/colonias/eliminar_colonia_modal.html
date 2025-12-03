@@ -1,27 +1,53 @@
 <!-- Modal Eliminar Colonia -->
-<div class="modal fade modal-danger" id="eliminarColoniaModal" tabindex="-1" aria-labelledby="eliminarColoniaModalLabel" aria-hidden="true">
+<div class="modal fade modal-danger" id="eliminarColoniaModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
-      <div class="modal-header text-white">
-        <h5 class="modal-title fw-bold" id="eliminarColoniaModalLabel">
-          <i class="fas fa-triangle-exclamation me-2"></i> Confirmar Eliminación
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>Eliminar Colonia
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-
-      <form method="post" id="eliminarColoniaForm" action="">
+      <form id="formEliminarColonia" method="POST">
         {% csrf_token %}
+        <input type="hidden" id="eliminar_colonia_id">
+        
         <div class="modal-body">
-          <p class="fs-5 mb-2">¿Estás seguro que deseas eliminar la Colonia <strong id="ColoniaNombreEliminar"></strong>?</p>
-          <p class="text-danger fw-semibold mb-0 text-center"><strong>Esta acción no se puede deshacer.</strong></p>
+          <div class="card border-danger">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2 text-muted">Colonia a eliminar:</h6>
+              <p class="card-text mb-1">
+                <strong>Código:</strong> <span id="eliminar_codigo"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Nombre:</strong> <span id="eliminar_nombre" class="text-danger"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Distritos:</strong> <span id="eliminar_distritos"></span>
+              </p>
+              <p class="card-text mb-0">
+                <strong>Departamento(s):</strong> <span id="eliminar_departamentos"></span>
+              </p>
+            </div>
+          </div>
+
+          <div class="alert alert-warning d-none mt-3" id="alert_solicitudes_info">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span id="mensaje_solicitudes_info"></span>
+          </div>
+
+          <div class="alert alert-warning d-none mt-2" id="alert_relevamientos_info">
+            <i class="fas fa-clipboard-list me-2"></i>
+            <span id="mensaje_relevamientos_info"></span>
+          </div>
         </div>
 
-        <div class="modal-footer border-0 justify-content-between">
-          <button type="button" class=" btn btn-outline-warning" data-bs-dismiss="modal">
-            <i class="fas fa-xmark me-1"></i> Cancelar
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
           </button>
-          <button type="submit" class="btn btn-outline-danger">
-            <i class="fas fa-trash-alt me-1"></i> Eliminar
+          <button type="submit" class="btn btn-outline-danger" id="btnEliminarColonia">
+            <i class="fas fa-trash me-1"></i>Eliminar
           </button>
         </div>
       </form>
@@ -30,15 +56,134 @@
 </div>
 
 <script>
-  // Modal Eliminar Colonia
-  const eliminarColoniaModal = document.getElementById('eliminarColoniaModal');
-  eliminarColoniaModal.addEventListener('show.bs.modal', function (event) {
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('eliminarColoniaModal');
+    const form = document.getElementById('formEliminarColonia');
+    const btnEliminar = document.getElementById('btnEliminarColonia');
+
+    // Cargar datos al abrir modal
+    modal.addEventListener('show.bs.modal', function(event) {
       const button = event.relatedTarget;
       const coloniaId = button.getAttribute('data-coloniaid');
       const coloniaNombre = button.getAttribute('data-colonianombre');
+      const coloniaCodigo = button.getAttribute('data-coloniacodigo');
+      const coloniaDistritos = button.getAttribute('data-coloniadistritos');
+      
+      // Obtener información de solicitudes y relevamientos si están disponibles
+      const tieneSolicitudes = button.getAttribute('data-tienesolicitudes') === 'true';
+      const tieneRelevamientos = button.getAttribute('data-tienerelevamientos') === 'true';
+      const cantSolicitudes = button.getAttribute('data-cantsolicitudes') || '0';
+      const cantRelevamientos = button.getAttribute('data-cantrelevamientos') || '0';
 
-      const form = eliminarColoniaModal.querySelector('#eliminarColoniaForm');
+      // Establecer datos en el formulario
+      document.getElementById('eliminar_colonia_id').value = coloniaId;
+      document.getElementById('eliminar_nombre').textContent = coloniaNombre;
+      document.getElementById('eliminar_codigo').textContent = coloniaCodigo || 'N/A';
+      
+      // Mostrar distritos
+      const distritosSpan = document.getElementById('eliminar_distritos');
+      if (coloniaDistritos && coloniaDistritos.trim() !== '') {
+        distritosSpan.textContent = coloniaDistritos;
+      } else {
+        distritosSpan.textContent = 'No especificados';
+      }
+      
+      // Obtener departamentos de los distritos (esto puede requerir un atributo adicional)
+      const departamentos = button.getAttribute('data-departamentos');
+      const departamentosSpan = document.getElementById('eliminar_departamentos');
+      if (departamentos && departamentos.trim() !== '') {
+        departamentosSpan.textContent = departamentos;
+      } else {
+        departamentosSpan.textContent = 'No especificados';
+      }
+
+      // Manejar alertas de solicitudes
+      const alertSolicitudes = document.getElementById('alert_solicitudes_info');
+      const mensajeSolicitudes = document.getElementById('mensaje_solicitudes_info');
+      
+      if (tieneSolicitudes) {
+        mensajeSolicitudes.textContent = 
+          `Esta colonia tiene ${cantSolicitudes} solicitud(es) asociada(s). No podrá eliminarse hasta que se procesen o eliminen.`;
+        alertSolicitudes.classList.remove('d-none');
+        btnEliminar.disabled = true;
+      } else {
+        alertSolicitudes.classList.add('d-none');
+      }
+
+      // Manejar alertas de relevamientos
+      const alertRelevamientos = document.getElementById('alert_relevamientos_info');
+      const mensajeRelevamientos = document.getElementById('mensaje_relevamientos_info');
+      
+      if (tieneRelevamientos) {
+        mensajeRelevamientos.textContent = 
+          `Esta colonia tiene ${cantRelevamientos} relevamiento(s) asociado(s). No podrá eliminarse hasta que se procesen o eliminen.`;
+        alertRelevamientos.classList.remove('d-none');
+        btnEliminar.disabled = true;
+      } else {
+        alertRelevamientos.classList.add('d-none');
+      }
+
+      // Habilitar botón solo si no hay asociaciones
+      if (!tieneSolicitudes && !tieneRelevamientos) {
+        btnEliminar.disabled = false;
+      }
+
+      // Establecer la URL del formulario
       form.action = `{% url 'gerencia:eliminar_colonia' 0 %}`.replace('0', coloniaId);
-      document.getElementById('ColoniaNombreEliminar').textContent = coloniaNombre;
+    });
+
+    // Limpiar al cerrar modal
+    modal.addEventListener('hidden.bs.modal', function() {
+      form.reset();
+      document.getElementById('alert_solicitudes_info').classList.add('d-none');
+      document.getElementById('alert_relevamientos_info').classList.add('d-none');
+      btnEliminar.disabled = false;
+    });
+
+    // Enviar formulario
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const coloniaId = document.getElementById('eliminar_colonia_id').value;
+      const formData = new FormData(form);
+      const btnTextoOriginal = btnEliminar.innerHTML;
+
+      btnEliminar.disabled = true;
+      btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Eliminando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw errorData;
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modal).hide();
+          location.reload();
+        } else {
+          // Mostrar mensaje de error
+          mostrarToast('error', data.message || 'No se pudo eliminar la colonia');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        mostrarToast('error', 'Ocurrió un error al eliminar la colonia');
+      })
+      .finally(() => {
+        btnEliminar.disabled = false;
+        btnEliminar.innerHTML = btnTextoOriginal;
+      });
+    });
   });
 </script>

@@ -1,60 +1,95 @@
 <!-- Modal Editar Colonia -->
-<div class="modal fade modal-warning" id="editarColoniaModal" tabindex="-1" aria-labelledby="editarColoniaModalLabel" aria-hidden="true">
+<div class="modal fade modal-warning" id="editarColoniaModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content shadow-lg border-0">
-      <form id="editarColoniaForm" method="post">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-warning text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-edit me-2"></i> Editar Colonia
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="formEditarColonia" method="POST" action="" novalidate>
         {% csrf_token %}
-        <div class="modal-header text-white">
-          <h5 class="modal-title fw-bold" id="editarColoniaModalLabel">
-            <i class="fas fa-pen-to-square me-2"></i> Editar Colonia
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-
+        <input type="hidden" id="coloniaId" name="colonia_id">
+        
         <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label for="coloniaCodigo" class="form-label fw-semibold">Código</label>
-              <input type="text" class="form-control form-control-glow" id="coloniaCodigo" name="codigo" required>
-            </div>
-            <div class="col-md-6">
-              <label for="coloniaNombre" class="form-label fw-semibold text-primary">Nombre</label>
-              <input type="text" class="form-control form-control-glow" id="coloniaNombre" name="nombre" required>
-            </div>
-            <div class="col-md-6">
-              <label for="coloniaEstado" class="form-label fw-semibold">Estado</label>
-              <select class="form-control form-control-glow" id="coloniaEstado" name="estado" required>
-                {% for estado in estado_choices %}
-                <option value="{{ estado.0 }}">{{ estado.1 }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label for="coloniaDistritos" class="form-label fw-semibold">Distritos</label>
-              <select class="form-control form-control-glow" id="coloniaDistritos" name="distritos" multiple required>
-                {% for distrito in distritos %}
-                <option value="{{ distrito.id }}">{{ distrito.nombre }} - {{ distrito.departamento.nombre }}</option>
-                {% endfor %}
-              </select>
-              <small class="form-text text-muted">Mantén presionado Ctrl para seleccionar múltiples distritos</small>
-            </div>
-            <div class="col-md-6">
-              <label for="coloniaFinca" class="form-label fw-semibold">Finca Matriz</label>
-              <input type="text" class="form-control form-control-glow" id="coloniaFinca" name="finca_matriz">
-            </div>
-            <div class="col-md-6">
-              <label for="coloniaPadron" class="form-label fw-semibold">Padrón Matriz</label>
-              <input type="text" class="form-control form-control-glow" id="coloniaPadron" name="padron_matriz">
-            </div>
+          <!-- Departamento para filtrar -->
+          <div class="mb-3">
+            <label for="filtroDepartamentoEditar" class="form-label fw-bold">
+              <i class="fas fa-filter me-1"></i>Filtrar por Departamento
+            </label>
+            <select class="form-select" id="filtroDepartamentoEditar">
+              <option value="">Todos los departamentos</option>
+              {% for departamento in departamentos %}
+                <option value="{{ departamento.id }}">{{ departamento.nombre }}</option>
+              {% endfor %}
+            </select>
+            <small class="text-muted">Seleccione un departamento para filtrar los distritos</small>
           </div>
+
+          <!-- Distritos - Interfaz mejorada -->
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-map-marked-alt me-1"></i>Distritos
+            </label>
+            
+            <!-- Contenedor de distritos con scroll -->
+            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+              <div id="distritosContainerEditar">
+                {% for distrito in distritos %}
+                <div class="form-check mb-2 distrito-item-editar" data-departamento="{{ distrito.departamento.id }}">
+                  <input class="form-check-input" type="checkbox" name="distritos" value="{{ distrito.id }}" id="distritoEditar{{ distrito.id }}">
+                  <label class="form-check-label" for="distritoEditar{{ distrito.id }}">
+                    {{ distrito.nombre }} <small class="text-muted">({{ distrito.departamento.nombre }})</small>
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div id="errorDistritosEditar" class="text-danger small mt-2"></div>
+            <small class="text-muted">Seleccione uno o más distritos para la colonia</small>
+          </div>
+
+          <!-- Código -->
+          <div class="mb-3">
+            <label for="coloniaCodigoEditar" class="form-label fw-bold">
+              <i class="fas fa-hashtag me-1"></i>Código
+            </label>
+            <input type="number" 
+                   class="form-control" 
+                   id="coloniaCodigoEditar" 
+                   name="codigo" 
+                   min="1">
+            <div id="errorCodigoEditar" class="text-danger small mt-2"></div>
+            <small class="text-muted">Debe ser único dentro de cada distrito seleccionado</small>
+          </div>
+
+          <!-- Nombre -->
+          <div class="mb-3">
+            <label for="coloniaNombreEditar" class="form-label fw-bold">
+              <i class="fas fa-signature me-1"></i>Nombre de la Colonia
+            </label>
+            <input type="text" 
+                   class="form-control" 
+                   id="coloniaNombreEditar" 
+                   name="nombre" 
+                   maxlength="250"
+                   minlength="3">
+            <div id="errorNombreEditar" class="text-danger small mt-2"></div>
+            <small class="text-muted">Mínimo 3 caracteres. Debe ser único dentro de cada distrito seleccionado</small>
+          </div>
+
+          <!-- Div para errores generales -->
+          <div id="editarColoniaError" class="alert alert-danger d-none"></div>
         </div>
 
-        <div class="modal-footer border-0 justify-content-between">
+        <div class="modal-footer justify-content-between">
           <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
-            <i class="fas fa-xmark me-1"></i> Cancelar
+            <i class="fas fa-times me-1"></i> Cancelar
           </button>
-          <button type="submit" class="btn btn-primary btn-outline-primary">
-            <i class="fas fa-save me-1"></i>Guardar
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Guardar
           </button>
         </div>
       </form>
@@ -63,45 +98,182 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const editarColoniaModal = document.getElementById('editarColoniaModal');
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editarColoniaModal');
+    const form = document.getElementById('formEditarColonia');
+    const errorDiv = document.getElementById('editarColoniaError');
+    const filtroDepartamentoEditar = document.getElementById('filtroDepartamentoEditar');
+    const distritosContainerEditar = document.getElementById('distritosContainerEditar');
 
-        editarColoniaModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const coloniaId = button.getAttribute('data-coloniaid');
-            const coloniaCodigo = button.getAttribute('data-coloniacodigo');
-            const coloniaNombre = button.getAttribute('data-colonianombre');
-            const coloniaEstado = button.getAttribute('data-coloniaestado');
-            const coloniaFinca = button.getAttribute('data-coloniafinca');
-            const coloniaPadron = button.getAttribute('data-coloniapadron');
-            const coloniaDistritos = button.getAttribute('data-coloniadistritos');
+    //  Función para filtrar distritos por departamento en edición
+    function filtrarDistritosEditar() {
+      const departamentoId = filtroDepartamentoEditar.value;
+      const distritosItems = distritosContainerEditar.querySelectorAll('.distrito-item-editar');
+      
+      distritosItems.forEach(item => {
+        if (departamentoId === '' || item.getAttribute('data-departamento') === departamentoId) {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
 
-            const form = editarColoniaModal.querySelector('#editarColoniaForm');
-            form.action = `/gerencia/colonia/editar/${coloniaId}/`; 
-            
-            // Llenar campos básicos
-            form.querySelector('#coloniaCodigo').value = coloniaCodigo;
-            form.querySelector('#coloniaNombre').value = coloniaNombre;
-            form.querySelector('#coloniaEstado').value = coloniaEstado;
-            form.querySelector('#coloniaFinca').value = coloniaFinca || '';
-            form.querySelector('#coloniaPadron').value = coloniaPadron || '';
+    //  Evento para el filtro de departamento en edición
+    if (filtroDepartamentoEditar) {
+      filtroDepartamentoEditar.addEventListener('change', filtrarDistritosEditar);
+    }
 
-            // Llenar distritos (multiple select)
-            const distritosSelect = form.querySelector('#coloniaDistritos');
-            const distritosArray = coloniaDistritos ? coloniaDistritos.split(',') : [];
-            
-            // Limpiar selecciones previas
-            for (let i = 0; i < distritosSelect.options.length; i++) {
-            distritosSelect.options[i].selected = false;
-            }
-            
-            // Seleccionar los distritos de la colonia
-            for (let i = 0; i < distritosSelect.options.length; i++) {
-            const option = distritosSelect.options[i];
-            if (distritosArray.includes(option.text)) {
-                option.selected = true;
-            }
+    //  Limpia errores previos
+    function limpiarErroresEditar() {
+        form.querySelectorAll('.is-invalid').forEach(input => {
+            input.classList.remove('is-invalid');
+        });
+        
+        document.querySelectorAll('#editarColoniaModal .text-danger').forEach(div => {
+            div.textContent = '';
+        });
+        
+        errorDiv.classList.add('d-none');
+        errorDiv.textContent = '';
+    }
+
+    //  Mostrar errores específicos en edición
+    function mostrarErrorEditar(campo, mensaje) {
+        const errorElement = document.getElementById(`error${campo}Editar`);
+        const inputElement = document.getElementById(`colonia${campo}Editar`);
+        
+        if (errorElement && inputElement) {
+            errorElement.textContent = mensaje;
+            inputElement.classList.add('is-invalid');
+        }
+    }
+
+    // Al abrir el modal, cargar los datos de la colonia
+    modal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const coloniaId = button.getAttribute('data-coloniaid');
+        const coloniaCodigo = button.getAttribute('data-coloniacodigo');
+        const coloniaNombre = button.getAttribute('data-colonianombre');
+        const coloniaDistritos = button.getAttribute('data-coloniadistritos');
+
+        // Establecer la URL del formulario
+        form.action = `/gerencia/colonias/editar/${coloniaId}/`;
+        document.getElementById('coloniaId').value = coloniaId;
+
+        // Cargar código y nombre
+        document.getElementById('coloniaCodigoEditar').value = coloniaCodigo;
+        document.getElementById('coloniaNombreEditar').value = coloniaNombre;
+
+        // Cargar distritos seleccionados por ID
+        const distritosSeleccionadosIds = coloniaDistritos ? coloniaDistritos.split(',').map(id => id.trim()) : [];
+        
+        // Desmarcar todos los checkboxes primero
+        distritosContainerEditar.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        // Marcar los checkboxes cuyos value estén en distritosSeleccionadosIds
+        distritosContainerEditar.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (distritosSeleccionadosIds.includes(checkbox.value)) {
+                checkbox.checked = true;
             }
         });
+
+        // Limpiar errores y resetear filtro
+        limpiarErroresEditar();
+        if (filtroDepartamentoEditar) {
+            filtroDepartamentoEditar.value = '';
+            filtrarDistritosEditar();
+        }
     });
+
+    //  Reset al cerrar modal
+    modal.addEventListener('hidden.bs.modal', function() {
+        form.reset();
+        limpiarErroresEditar();
+    });
+
+    //  Enviar formulario vía AJAX
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        limpiarErroresEditar();
+
+        const formData = new FormData(form);
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const oldText = btnSubmit.innerHTML;
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errorData => {
+                    throw errorData;
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(modal).hide();
+                location.reload();
+            } else {
+                if (data.errors) {
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        if (field === '__all__') {
+                            errorDiv.textContent = messages.join(' ');
+                            errorDiv.classList.remove('d-none');
+                            continue;
+                        }
+                        
+                        let campoDisplay = field;
+                        if (field === 'nombre') campoDisplay = 'Nombre';
+                        if (field === 'codigo') campoDisplay = 'Codigo';
+                        if (field === 'distritos') campoDisplay = 'Distritos';
+                        
+                        mostrarErrorEditar(campoDisplay, messages.join(' '));
+                    }
+                } else if (data.message) {
+                    errorDiv.textContent = data.message;
+                    errorDiv.classList.remove('d-none');
+                }
+            }
+        })
+        .catch(errorData => {
+            if (errorData.errors) {
+                for (const [field, messages] of Object.entries(errorData.errors)) {
+                    if (field === '__all__') {
+                        errorDiv.textContent = messages.join(' ');
+                        errorDiv.classList.remove('d-none');
+                        continue;
+                    }
+                    
+                    let campoDisplay = field;
+                    if (field === 'nombre') campoDisplay = 'Nombre';
+                    if (field === 'codigo') campoDisplay = 'Codigo';
+                    if (field === 'distritos') campoDisplay = 'Distritos';
+                    
+                    mostrarErrorEditar(campoDisplay, messages.join(' '));
+                }
+            } else {
+                console.error('Error:', errorData);
+                errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+                errorDiv.classList.remove('d-none');
+            }
+        })
+        .finally(() => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
+        });
+    });
+  });
 </script>

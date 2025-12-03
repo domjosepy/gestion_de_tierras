@@ -1,5 +1,5 @@
 <!-- Modal: Crear Distrito -->
-<div class="modal fade" id="crearDistritoModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade modal-primary" id="crearDistritoModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-header bg-primary text-white">
@@ -8,57 +8,63 @@
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
+      
       <form id="formCrearDistrito" method="POST" action="{% url 'gerencia:crear_distrito' %}">
         {% csrf_token %}
+        
         <div class="modal-body">
           <!-- Departamento -->
           <div class="mb-3">
             <label for="crear_departamento" class="form-label fw-bold">
-              <i class="fas fa-map-marked-alt me-1"></i>Departamento <span class="text-danger">*</span>
+              <i class="fas fa-map-marked-alt me-1"></i>Departamento
             </label>
-            <select class="form-select" id="crear_departamento" name="departamento" required>
+            <select class="form-select" id="crear_departamento" name="departamento">
               <option value="">-- Seleccione un Departamento --</option>
               {% for depto in departamentos %}
-                <option value="{{ depto.id }}"> {{ depto.nombre }}</option>
+                <option value="{{ depto.id }}">{{ depto.nombre }}</option>
               {% endfor %}
             </select>
-            <div class="invalid-feedback"></div>
+            <div class="invalid-feedback">Por favor seleccione un departamento</div>
             <small class="text-muted">Seleccione el departamento al que pertenece el distrito</small>
-          </div>
-
-          <!-- Nombre -->
-          <div class="mb-3">
-            <label for="crear_nombre" class="form-label fw-bold">
-              <i class="fas fa-signature me-1"></i>Nombre del Distrito <span class="text-danger">*</span>
-            </label>
-            <input type="text" 
-                   class="form-control" 
-                   id="crear_nombre" 
-                   name="nombre" 
-                   maxlength="200"
-                   required>
-            <div class="invalid-feedback"></div>
-            <small class="text-muted">Solo letras y espacios, mínimo 3 caracteres</small>
           </div>
 
           <!-- Código -->
           <div class="mb-3">
             <label for="crear_codigo" class="form-label fw-bold">
-              <i class="fas fa-hashtag me-1"></i>Código <span class="text-danger">*</span>
+              <i class="fas fa-hashtag me-1"></i>Código
             </label>
             <input type="number" 
                    class="form-control" 
                    id="crear_codigo" 
                    name="codigo"                    
                    min="1"
-                   required>
+                   placeholder="Ingrese el código">
             <div class="invalid-feedback"></div>
-            <small class="text-muted">Debe ser único dentro del departamento</small>
+            <small class="text-muted">Debe ser único dentro del departamento seleccionado</small>
           </div>
+
+          <!-- Nombre -->
+          <div class="mb-3">
+            <label for="crear_nombre" class="form-label fw-bold">
+              <i class="fas fa-signature me-1"></i>Nombre del Distrito
+            </label>
+            <input type="text" 
+                   class="form-control" 
+                   id="crear_nombre" 
+                   name="nombre" 
+                   maxlength="200"
+                   minlength="3"
+                   placeholder="Ingrese el nombre del distrito">
+            <div class="invalid-feedback"></div>
+            <small class="text-muted">Mínimo 3 caracteres. Debe ser único dentro del departamento</small>
+          </div>
+
+          <!-- Div para errores generales -->
+          <div id="crearDistritoError" class="text-danger small mb-3"></div>
         </div>
 
         <div class="modal-footer justify-content-between">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i>Cancelar
           </button>
           <button type="submit" class="btn btn-outline-success">
@@ -74,6 +80,17 @@
   document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('crearDistritoModal');
     const form = document.getElementById('formCrearDistrito');
+    const errorDiv = document.getElementById('crearDistritoError');
+
+    function limpiarErrores(form) {
+        form.querySelectorAll('.is-invalid').forEach(input => {
+            input.classList.remove('is-invalid');
+        });
+        form.querySelectorAll('.invalid-feedback').forEach(div => {
+            div.textContent = '';
+        });
+        errorDiv.textContent = '';
+    }
 
     // Limpiar formulario al cerrar modal
     modal.addEventListener('hidden.bs.modal', function() {
@@ -84,11 +101,7 @@
     // Enviar formulario
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      
-      if (!form.checkValidity()) {
-        form.classList.add('was-validated');
-        return;
-      }
+      limpiarErrores(form);
 
       const formData = new FormData(form);
       const btnSubmit = form.querySelector('button[type="submit"]');
@@ -109,15 +122,27 @@
       .then(data => {
         if (data.success) {
           bootstrap.Modal.getInstance(modal).hide();
-          setTimeout(() => location.reload(), 1500);
-          mostrarToast('success', data.message);
+          mostrarToast('success', 'Distrito creado correctamente');
+          location.reload();
         } else {
-          mostrarErroresEnCampos(form, data.errors);
+          if (data.errors) {
+            // Mostrar errores por campo
+            for (const [field, messages] of Object.entries(data.errors)) {
+                const input = form.querySelector('[name="' + field + '"]');
+                const feedback = input ? input.nextElementSibling : null;
+                if (input && feedback) {
+                    input.classList.add('is-invalid');
+                    feedback.textContent = messages.join(' ');
+                }
+            }
+          } else if (data.message) {
+            errorDiv.textContent = data.message;
+          }
         }
       })
       .catch(error => {
         console.error('Error:', error);
-        mostrarToast('error', 'Ocurrió un error al crear el distrito');
+        errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
       })
       .finally(() => {
         btnSubmit.disabled = false;

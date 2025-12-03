@@ -34,6 +34,7 @@
         <div class="card-body text-center">
           <i class="fa-solid fa-map fa-3x text-success mb-3"></i>
           <h5 class="fw-bold">Distritos</h5>
+          <p class="text-muted">Total de distritos: {{ distritos.count }}</p>
           <p class="text-muted">Administre los distritos asociados.</p>
           <a href="{% url 'gerencia:listar_distritos' %}" class="btn btn-outline-success btn-sm">
             <i class="fa-solid fa-eye me-2"></i>Ver lista
@@ -48,6 +49,7 @@
         <div class="card-body text-center">
           <i class="fa-solid fa-tractor fa-3x text-warning mb-3"></i>
           <h5 class="fw-bold">Colonias</h5>
+          <p class="text-muted">Total de colonias: {{ colonias.count }}</p>
           <p class="text-muted">Consulte o agregue colonias territoriales.</p>
           <a href="{% url 'gerencia:listar_colonias' %}" class="btn btn-outline-warning btn-sm">
             <i class="fa-solid fa-eye me-2"></i>Ver lista

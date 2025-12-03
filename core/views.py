@@ -147,14 +147,17 @@ def eliminar_departamento(request, departamento_id):
 def listar_distritos(request):
     """Lista todos los distritos con sus departamentos"""
     distritos = Distrito.objects.select_related('departamento').all().order_by('nombre')
-    departamentos = Departamento.objects.all()
+    departamentos = Departamento.objects.all().order_by('nombre')  # Asegurar orden
     form = DistritoForm()
     return render(
         request,
         'includes/gerencia/tablas/listar_distritos.html',
-        {'distritos': distritos, 'departamentos': departamentos, 'form': form}
+        {
+            'distritos': distritos, 
+            'departamentos': departamentos, 
+            'form': form
+        }
     )
-
 
 @require_POST
 def crear_distrito(request):
@@ -172,18 +175,17 @@ def crear_distrito(request):
         if is_ajax:
             return JsonResponse(data)
         
-        messages.success(request, data['message'])
         return redirect('gerencia:listar_distritos')
 
     # Manejo de errores
     if is_ajax:
-        errores = {}
-        for field, errors in form.errors.items():
-            errores[field] = [str(error) for error in errors]
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [error for error in error_list]
         
         return JsonResponse({
             'success': False,
-            'errors': errores
+            'errors': errors
         }, status=400)
     
     # Si no es AJAX
@@ -191,7 +193,6 @@ def crear_distrito(request):
         messages.error(request, error)
     
     return redirect('gerencia:listar_distritos')
-
 
 @require_POST
 def editar_distrito(request, pk):
@@ -203,34 +204,29 @@ def editar_distrito(request, pk):
     if form.is_valid():
         distrito = form.save()
         
-        data = {
-            'success': True,
-            'message': f'El Distrito "{distrito.nombre}" fue modificado.'
-        }
-
+        notificar_a_admins(
+            mensaje=f'El Distrito "{distrito.nombre}" fue editado.',
+            tipo="WARNING",
+            exclude_user=request.user
+        )
+        msg = f'El Distrito "{distrito.nombre}" fue modificado!'
+        messages.info(request, msg)
         if is_ajax:
-            return JsonResponse(data)
+            return JsonResponse({'success': True, 'message': msg})
+        messages.success(request, msg)
+    else:
+        # Manejo de errores en formato consistente
+        if is_ajax:
+            errors = {}
+            for field, error_list in form.errors.items():
+                errors[field] = [error for error in error_list]
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
         
-        messages.success(request, data['message'])
-        return redirect('gerencia:listar_distritos')
-
-    # Manejo de errores
-    if is_ajax:
-        errores = {}
-        for field, errors in form.errors.items():
-            errores[field] = [str(error) for error in errors]
-        
-        return JsonResponse({
-            'success': False,
-            'errors': errores
-        }, status=400)
-    
-    # Si no es AJAX
-    for error in form.errors.values():
-        messages.error(request, error)
+        # Si no es AJAX
+        for error in form.errors.values():
+            messages.error(request, error)
     
     return redirect('gerencia:listar_distritos')
-
 
 @require_POST
 def eliminar_distrito(request, pk):
@@ -253,7 +249,7 @@ def eliminar_distrito(request, pk):
 
     nombre_distrito = distrito.nombre
     distrito.delete()
-    
+    messages.info(request, f'El Distrito "{nombre_distrito}" fue eliminado.')
     msg = f'El Distrito "{nombre_distrito}" fue eliminado.'
     
     if is_ajax:
@@ -274,15 +270,13 @@ class ColoniaListView(LoginRequiredMixin, ListView):
     paginate_by = 25
     template_name = 'includes/gerencia/tablas/listar_colonias.html'
     context_object_name = 'colonias'
-    form_class = ColoniaForm
 
     def get_queryset(self):
         # Optimizar consultas relacionadas
-        qs = Colonia.objects.prefetch_related('solicitudes').all()
+        qs = Colonia.objects.prefetch_related('distritos').all()
 
         q = self.request.GET.get('q')
         estado = self.request.GET.get('estado')
-        departamento_id = self.request.GET.get('departamento')  
         distrito_id = self.request.GET.get('distrito')
 
         if q:
@@ -296,77 +290,122 @@ class ColoniaListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['distritos'] = Distrito.objects.all()
+        context['distritos'] = Distrito.objects.select_related('departamento').order_by('departamento__nombre', 'nombre')
+        context['departamentos'] = Departamento.objects.all().order_by('nombre')  # Agregar departamentos
         context['estado_choices'] = Colonia.ESTADO_CHOICES
         return context
 
 
-class ColoniaCreateView(LoginRequiredMixin, CreateView):
-    model = Colonia
-    form_class = ColoniaForm
-    template_name = 'includes/gerencia/modal/colonias/crear_colonia_modal.html'
+@require_POST
+def crear_colonia(request):
+    """Crea una nueva colonia"""
+    form = ColoniaForm(request.POST)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-    def get_success_url(self):
-        return self.request.META.get('HTTP_REFERER', reverse_lazy('gerencia:listar_colonias'))
+    if form.is_valid():
+        # Asignar código automáticamente si no se proporciona
+        if not form.cleaned_data.get('codigo'):
+            codigos_existentes = set(Colonia.objects.exclude(codigo__isnull=True).values_list('codigo', flat=True))
+            codigo = 1
+            while codigo in codigos_existentes:
+                codigo += 1
+            form.instance.codigo = codigo
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-
-        # Buscar el menor número faltante (antes de guardar)
-        codigos_existentes = set(
-            Colonia.objects.values_list('codigo', flat=True))
-        codigo = 1
-        while codigo in codigos_existentes:
-            codigo += 1
-        form.instance.codigo = codigo  # asignar el primer número libre
-
-        response = super().form_valid(form)
+        colonia = form.save()
         
-        # Si viene de un distrito específico, asegurarnos de que esté asignado
-        distrito_id = self.request.POST.get('distritos')
-        if distrito_id:
-            try:
-                distrito = Distrito.objects.get(id=distrito_id)
-                self.object.distritos.add(distrito)
-            except Distrito.objects.DoesNotExist:
-                pass
+        messages.success(request, f'La Colonia "{colonia.nombre}" fue creada!')
+        data = {'success': True}
+
+        if is_ajax:
+            return JsonResponse(data)
         
-        messages.success(
-            self.request,
-            f'Colonia "{self.object.nombre}" creada exitosamente!'
-        )
-        return response
-
-    def form_invalid(self, form):
-        messages.error(
-            self.request,
-            'Error al crear la colonia. Por favor revise los datos.'
-        )
-        return super().form_invalid(form)
-
-
-def editar_colonia(request, colonia_id):
-    colonia = get_object_or_404(Colonia, id=colonia_id)
-    if request.method == 'POST':
-        # Para ManyToMany fields, necesitamos usar el form
-        form = ColoniaForm(request.POST, instance=colonia)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Colonia actualizada correctamente.")
-        else:
-            messages.error(request, "Error al actualizar la colonia.")
         return redirect('gerencia:listar_colonias')
+
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            # Convertir errores a lista de strings
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errors,
+            'message': 'Por favor corrige los errores en el formulario.'
+        }, status=400)
+    
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field if field != '__all__' else 'Formulario'}: {error}")
+    
     return redirect('gerencia:listar_colonias')
 
 
-def eliminar_colonia(request, colonia_id):
+@require_POST
+def editar_colonia(request, colonia_id):
+    """Edita una colonia existente"""
     colonia = get_object_or_404(Colonia, id=colonia_id)
+    form = ColoniaForm(request.POST, instance=colonia)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if form.is_valid():
+        colonia = form.save()
+        
+        messages.success(request, f'La Colonia "{colonia.nombre}" fue actualizada!')
+        data = {'success': True}
+
+        if is_ajax:
+            return JsonResponse(data)
+        
+        return redirect('gerencia:listar_colonias')
+
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+    
+    # Si no es AJAX
+    for error in form.errors.values():
+        messages.error(request, error)
+    
+    return redirect('gerencia:listar_colonias')
+
+@require_POST
+def eliminar_colonia(request, colonia_id):
+    """Elimina una colonia si no tiene solicitudes o relevamientos asociados"""
+    colonia = get_object_or_404(Colonia, id=colonia_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Verificar si tiene solicitudes o relevamientos asociados
     if colonia.solicitudes.exists() or colonia.relevamientos.exists():
-        messages.error(
-            request,
-            "Esta Colonia tiene solicitudes o relevamientos asociados y no puede ser eliminada."
-        )
-    else:
-        colonia.delete()
-        messages.success(request, "Colonia eliminada correctamente.")
+        msg = f'No se puede eliminar la colonia "{colonia.nombre}" porque tiene solicitudes o relevamientos asociados.'
+        
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'message': msg
+            }, status=400)
+        
+        messages.error(request, msg)
+        return redirect('gerencia:listar_colonias')
+
+    nombre_colonia = colonia.nombre
+    colonia.delete()
+    messages.info(request, f'La Colonia "{nombre_colonia}" fue eliminada.')
+    msg = f'La Colonia "{nombre_colonia}" fue eliminada.'
+    
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': msg
+        })
+    
+    messages.success(request, msg)
     return redirect('gerencia:listar_colonias')

@@ -17,26 +17,16 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['permisos'] = Permission.objects.all()  # Para el modal de creación de roles
-        
-        return context
-    
-# Vistas para la gestión de colonias
-class ColoniaListView(LoginRequiredMixin, ListView):
-    model = Colonia
-    paginate_by = 25
-    template_name = "gerencia/colonias_list.html"
-    context_object_name = "colonias"
 
-    def get_queryset(self):
-        qs = Colonia.objects.prefetch_related("distritos").all()
-        q = self.request.GET.get("q")
-        estado = self.request.GET.get("estado")
-        distrito = self.request.GET.get("distrito")
-        if q:
-            qs = qs.filter(nombre__icontains=q)
-        if estado:
-            qs = qs.filter(estado=estado)
-        if distrito:
-            qs = qs.filter(distritos__id=distrito)
-        return qs.distinct()
+        # 👉 Agregamos los QuerySets para que el template pueda contar
+        context['departamentos'] = Departamento.objects.all()
+        context['distritos'] = Distrito.objects.all()
+        context['colonias'] = Colonia.objects.all()
+        
+        context['objetivos'] = Objetivo.objects.all()
+        context['solicitudes'] = Solicitud.objects.all()
+        context['relevamientos'] = Relevamiento.objects.all()
+
+        return context
+
 

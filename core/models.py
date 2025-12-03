@@ -5,7 +5,6 @@ from django.conf import settings
 
 User = settings.AUTH_USER_MODEL
 
-
 # ===============================
 # MODELO: DEPARTAMENTO
 # ===============================
@@ -73,10 +72,9 @@ class Colonia(models.Model):
     distritos = models.ManyToManyField(Distrito, related_name="colonias")
     estado = models.CharField(
         max_length=20, choices=ESTADO_CHOICES, default="activo")
-    codigo = models.PositiveIntegerField(blank=True, null=True, unique=True)
+    codigo = models.PositiveIntegerField(blank=True, null=True) 
 
     class Meta:
-        unique_together = ("nombre",)
         verbose_name = "Colonia"
         verbose_name_plural = "Colonias"
         ordering = ["nombre"]

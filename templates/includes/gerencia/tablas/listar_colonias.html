@@ -1,37 +1,31 @@
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}Gestión de Colonias{% endblock %}
-
+{% block title %}Gerencia - Colonias{% endblock %}
 {% block content %}
 <div class="container-fluid fade-in">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-tree-city me-3"></i>Gestión de Colonias
-        </h1>
+        <h2 class="text-warning fw-bold mb-0">
+            <i class="fas fa-tractor me-3"></i>Colonias
+        </h2>
     </div>
 
 
     <div class="card shadow mb-4">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="coloniaTable" width="100%" cellspacing="0">
+                <table class="beautiful-table" id="coloniaTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr>
                             <th class="text-center">Departamento</th>
                             <th class="text-center">Distrito</th>
                             <th class="text-center">Código</th>
                             <th class="text-center">Colonia</th>
-                            
                             <th class="text-center">Solicitudes</th>
-                            <th class="text-center">Estado</th>
-                            <th class="text-center">Finca Matriz</th>
-                            <th class="text-center">Padrón Matriz</th>
                             <th class="text-center">Acciones
-                                <button class="btn btn-sm btn-primary bg-primary" title="Agregar Colonia" 
+                                <button class="btn btn-sm btn-primary" title="Agregar Colonia" 
                                         data-bs-toggle="modal" data-bs-target="#crearColoniaModal">
                                     <i class="fas fa-plus"></i>
-                                    <i class="fas fa-tree-city"></i>
+                                    <i class="fas fa-tractor"></i>
                                 </button>
                             </th>
                         </tr>
@@ -39,8 +33,6 @@
                     <tbody>
                         {% for colonia in colonias %}
                         <tr class="text-center">
-
-                            
                             <td class="text-uppercase">
                                 <strong>{{ colonia.distritos.first.departamento.codigo }}.</strong> {{ colonia.distritos.first.departamento.nombre }}
                             </td>
@@ -58,13 +50,7 @@
                                     {{ colonia.solicitudes.count }} solicitud{{ colonia.solicitudes.count|pluralize:"es" }}
                                 </span>
                             </td>
-                            <td>
-                                <span class="badge {% if colonia.estado == 'activo' %}bg-success{% else %}bg-danger{% endif %}">
-                                    {{ colonia.get_estado_display }}
-                                </span>
-                            </td>
-                            <td>{{ colonia.finca_matriz|default:"-" }}</td>
-                            <td>{{ colonia.padron_matriz|default:"-" }}</td>
+                            
                             <td class="text-center">
                                 <!-- Botón editar -->
                                 <button class="btn btn-sm me-1 btn-warning" 
@@ -72,28 +58,43 @@
                                         data-coloniaid="{{ colonia.id }}"
                                         data-coloniacodigo="{{ colonia.codigo }}"
                                         data-colonianombre="{{ colonia.nombre }}"
-                                        data-coloniaestado="{{ colonia.estado }}"
-                                        data-coloniafinca="{{ colonia.finca_matriz|default:'' }}"
-                                        data-coloniapadron="{{ colonia.padron_matriz|default:'' }}"
-                                        data-coloniadistritos="{{ colonia.distritos.all|join:',' }}"
+                                        data-coloniadistritos="{% for distrito in colonia.distritos.all %}{{ distrito.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
                                         title="Editar Colonia">
                                     <i class="fas fa-edit"></i>
                                 </button>
 
                                 <!-- Botón eliminar -->
+                                <!-- Botón eliminar en listar_colonias.html -->
                                 {% if not colonia.solicitudes.exists and not colonia.relevamientos.exists %}
-                                <button class="btn btn-sm me-1 btn-danger"
-                                        data-bs-toggle="modal" data-bs-target="#eliminarColoniaModal"
-                                        data-coloniaid="{{ colonia.id }}"
-                                        data-colonianombre="{{ colonia.nombre }}"
-                                        title="Eliminar Colonia">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
+                                    <button class="btn btn-sm me-1 btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#eliminarColoniaModal"
+                                            data-coloniaid="{{ colonia.id }}"
+                                            data-colonianombre="{{ colonia.nombre }}"
+                                            data-coloniacodigo="{{ colonia.codigo }}"
+                                            data-coloniadistritos="{% for distrito in colonia.distritos.all %}{{ distrito.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                            data-departamentos="{% for distrito in colonia.distritos.all %}{{ distrito.departamento.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                            data-tienesolicitudes="false"
+                                            data-tienerelevamientos="false"
+                                            data-cantsolicitudes="0"
+                                            data-cantrelevamientos="0"
+                                            title="Eliminar Colonia">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 {% else %}
-                                <button class="btn btn-sm btn-danger me-1" disabled
-                                        title="No se puede eliminar: Colonia en uso">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
+                                    <button class="btn btn-sm me-1 btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#eliminarColoniaModal"
+                                            data-coloniaid="{{ colonia.id }}"
+                                            data-colonianombre="{{ colonia.nombre }}"
+                                            data-coloniacodigo="{{ colonia.codigo }}"
+                                            data-coloniadistritos="{% for distrito in colonia.distritos.all %}{{ distrito.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                            data-departamentos="{% for distrito in colonia.distritos.all %}{{ distrito.departamento.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                            data-tienesolicitudes="{{ colonia.solicitudes.exists|yesno:'true,false' }}"
+                                            data-tienerelevamientos="{{ colonia.relevamientos.exists|yesno:'true,false' }}"
+                                            data-cantsolicitudes="{{ colonia.solicitudes.count }}"
+                                            data-cantrelevamientos="{{ colonia.relevamientos.count }}"
+                                            title="Ver detalles de eliminación">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 {% endif %}
                                 
                                 <!-- Botón Solicitar Relevamiento -->

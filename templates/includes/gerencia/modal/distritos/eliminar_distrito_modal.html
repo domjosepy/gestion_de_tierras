@@ -1,5 +1,5 @@
 <!-- Modal: Eliminar Distrito -->
-<div class="modal fade" id="eliminarDistritoModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade modal-danger" id="eliminarDistritoModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
       <div class="modal-header bg-danger text-white">
@@ -17,13 +17,13 @@
             <div class="card-body">
               <h6 class="card-subtitle mb-2 text-muted">Distrito a eliminar:</h6>
               <p class="card-text mb-1">
-                <strong>Nombre:</strong> <span id="eliminar_nombre_display" class="text-danger"></span>
+                <strong>Código:</strong> <span id="eliminar_codigo"></span>
               </p>
               <p class="card-text mb-1">
-                <strong>Código:</strong> <span id="eliminar_codigo_display"></span>
+                <strong>Nombre:</strong> <span id="eliminar_nombre" class="text-danger"></span>
               </p>
               <p class="card-text mb-0">
-                <strong>Departamento:</strong> <span id="eliminar_departamento_display"></span>
+                <strong>Departamento:</strong> <span id="eliminar_departamento"></span>
               </p>
             </div>
           </div>
@@ -35,11 +35,11 @@
         </div>
 
         <div class="modal-footer justify-content-between">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
             <i class="fas fa-times me-1"></i>Cancelar
           </button>
           <button type="submit" class="btn btn-outline-danger" id="btnEliminarDistrito">
-            <i class="fas fa-trash me-1"></i>Eliminar Distrito
+            <i class="fas fa-trash me-1"></i>Eliminar
           </button>
         </div>
       </form>
@@ -58,9 +58,9 @@
       const btn = e.target.closest('.eliminar-distrito-btn');
       if (btn) {
         document.getElementById('eliminar_distrito_id').value = btn.dataset.id;
-        document.getElementById('eliminar_nombre_display').textContent = btn.dataset.nombre;
-        document.getElementById('eliminar_codigo_display').textContent = btn.dataset.codigo || 'N/A';
-        document.getElementById('eliminar_departamento_display').textContent = btn.dataset.departamento || 'N/A';
+        document.getElementById('eliminar_nombre').textContent = btn.dataset.nombre;
+        document.getElementById('eliminar_codigo').textContent = btn.dataset.codigo || 'N/A';
+        document.getElementById('eliminar_departamento').textContent = btn.dataset.departamento || 'N/A';
 
         const alertColonias = document.getElementById('alert_colonias_info');
         const colonias = parseInt(btn.dataset.colonias) || 0;
@@ -107,8 +107,7 @@
       .then(data => {
         if (data.success) {
           bootstrap.Modal.getInstance(modal).hide();
-          mostrarToast('success', data.message);
-          setTimeout(() => location.reload(), 1500);
+          location.reload();
         } else {
           mostrarToast('error', data.message);
         }
