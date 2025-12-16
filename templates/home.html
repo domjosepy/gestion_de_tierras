@@ -17,10 +17,10 @@
               <p>Has iniciado sesión correctamente en el sistema.</p>
               <hr>
               <div class="d-flex flex-column flex-md-row gap-2">
-                <a href="{% url 'password_change' %}" class="btn btn-warning">
+                <a href="{% url 'administrador:password_change' %}" class="btn btn-warning">
                   <i class="fas fa-key me-1"></i> Cambiar Contraseña
                 </a>
-                <form action="{% url 'logout' %}" method="post" class="d-inline">
+                <form action="{% url 'administrador:logout' %}" method="post" class="d-inline">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-danger">
                     <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
@@ -34,10 +34,10 @@
               <p>Para acceder al sistema, por favor inicia sesión.</p>
               <hr>
               <div class="d-flex flex-column flex-md-row gap-2">
-                <a href="{% url 'login' %}" class="btn btn-primary">
+                <a href="{% url 'administrador:login' %}" class="btn btn-primary">
                   <i class="fas fa-sign-in-alt me-1"></i> Iniciar Sesión
                 </a>
-                <a href="{% url 'password_reset' %}" class="btn btn-secondary">
+                <a href="{% url 'administrador:password_reset' %}" class="btn btn-secondary">
                   <i class="fas fa-unlock-alt me-1"></i> Recuperar Contraseña
                 </a>
               </div>

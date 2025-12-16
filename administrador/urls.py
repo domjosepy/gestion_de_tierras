@@ -2,18 +2,20 @@ from django.urls import path
 from .views import (
     LoginView, HomeView, AdminView, InvitadoView, SignUpView, 
     CustomPasswordChangeView, edit_profile, test_toast, 
-    RolListView, RolCreateView, SimpleUserCreateView, 
+     SimpleUserCreateView, 
     asignar_rol_usuario, cambiar_estado_usuario,
-    editar_rol, eliminar_rol   
+    listar_roles, crear_rol, editar_rol, eliminar_rol   
 )
 from django.contrib.auth.views import LogoutView
+
+app_name = 'administrador'
 
 urlpatterns = [
     # -------------------------------------
     # 1. Autenticación y Cuenta de Usuario
     # -------------------------------------
     path('login/', LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('logout/', LogoutView.as_view(next_page='administrador:login'), name='logout'),
     path('signup/', SignUpView.as_view(), name='signup'),
     path('password_change/', CustomPasswordChangeView.as_view(), name='password_change'),
     path('profile/edit/', edit_profile, name='edit_profile'),
@@ -31,8 +33,8 @@ urlpatterns = [
     #------------------------------------
     # 3. Vistas de Roles
     # ------------------------------------
-    path('roles/', RolListView.as_view(), name='listar_roles'),
-    path('roles/crear/', RolCreateView.as_view(), name='crear_rol'),
+    path('roles/', listar_roles, name='listar_roles'),
+    path('roles/crear/', crear_rol, name='crear_rol'),
     path('roles/editar/<int:rol_id>/', editar_rol, name='editar_rol'),
     path('roles/eliminar/<int:rol_id>/', eliminar_rol, name='eliminar_rol'),
 

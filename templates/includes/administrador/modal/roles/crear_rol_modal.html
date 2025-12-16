@@ -1,57 +1,72 @@
 <!-- Modal Crear Rol -->
-<div class="modal fade modal-primary" id="crearRolModal" tabindex="-1" aria-labelledby="crearRolModalLabel" aria-hidden="true">
+<div class="modal fade modal-primary" id="crearRolModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
-    <form method="post" action="{% url 'crear_rol' %}">
+    <form id="formCrearRol" method="post" action="{% url 'administrador:crear_rol' %}" novalidate>
       {% csrf_token %}
-      <div class="modal-content">
+      <div class="modal-content rounded-4 border-0 shadow-lg">
         <!-- Encabezado -->
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="crearRolModalLabel">
+          <h5 class="modal-title">
             <i class="fas fa-plus-circle me-2"></i> Crear Nuevo Rol
           </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
 
         <!-- Cuerpo -->
         <div class="modal-body">
+          <!-- Nombre -->
           <div class="mb-3">
-            <label for="nombre" class="form-label">Nombre del Rol</label>
-            <input type="text" class="form-control" id="nombre" name="nombre" required>
+            <label for="nombre" class="form-label fw-bold">Nombre del Rol</label>
+            <input type="text" class="form-control" id="nombre" name="nombre" 
+                   maxlength="50" minlength="3" required>
+            <div id="errorNombre" class="text-danger small mt-2"></div>
+            <small class="text-muted">Mínimo 3 caracteres. Solo letras, espacios, guiones y guiones bajos.</small>
           </div>
 
+          <!-- Descripción -->
           <div class="mb-3">
-            <label for="descripcion" class="form-label">Descripción</label>
-            <textarea class="form-control" id="descripcion" name="descripcion" rows="2"></textarea>
+            <label for="descripcion" class="form-label fw-bold">Descripción</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" 
+                     rows="2" maxlength="500"></textarea>
+            <div id="errorDescripcion" class="text-danger small mt-2"></div>
+            <small class="text-muted">Opcional. Mínimo 10 caracteres si se proporciona.</small>
           </div>
-            <div class="d-flex gap-3 align-items-start">
-                <!-- Selector de Color -->
-                <div class="mb-3 flex-shrink-0">
-                    <label for="color" class="form-label">Color</label>
-                    <input type="color" class="form-control form-control-color color-btn" 
-                          id="color" name="color" value="#007bff"
-                          style="width: 50px; height: 50px;">
+
+          <div class="d-flex gap-3 align-items-start">
+            <!-- Color -->
+            <div class="mb-3 flex-shrink-0">
+              <label for="color" class="form-label fw-bold">Color</label>
+              <input type="color" class="form-control form-control-color color-btn" 
+                    id="color" name="color" value="#6c757d"
+                    style="width: 50px; height: 50px;">
+              <div id="errorColor" class="text-danger small mt-2"></div>
+              <small class="text-muted">Color para identificar el rol</small>
+            </div>
+            
+            <!-- Permisos -->
+            <div class="mb-3 flex-grow-1">
+              <label class="form-label fw-bold">Permisos</label>
+              <div class="border rounded p-3 bg-light" style="max-height: 220px; overflow-y: auto;">
+                {% for permiso in permisos %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" 
+                        id="permiso_{{ permiso.id }}" 
+                        name="permisos" value="{{ permiso.id }}">
+                  <label class="form-check-label" for="permiso_{{ permiso.id }}" style="font-size: 0.9rem;">
+                    <strong>{{ permiso.name }}</strong> 
+                    <small class="text-muted d-block">({{ permiso.content_type.app_label }}.{{ permiso.codename }})</small>
+                  </label>
                 </div>
-                
-                <!-- Permisos -->
-                <div class="mb-3 flex-grow-1">
-                    <label class="form-label">Permisos</label>
-                    <div class="border rounded p-3 bg-light" style="max-height: 220px; overflow-y: auto;">
-                        {% for permiso in permisos %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" 
-                                  id="permiso_{{ permiso.id }}" 
-                                  name="permisos" value="{{ permiso.id }}">
-                            <label class="form-check-label" for="permiso_{{ permiso.id }}">
-                                {{ permiso.name }} 
-                                <small class="text-muted">({{ permiso.content_type.app_label }}.{{ permiso.codename }})</small>
-                            </label>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
+                {% endfor %}
+              </div>
+              <div id="errorPermisos" class="text-danger small mt-2"></div>
+              <small class="text-muted">Seleccione los permisos asociados al rol</small>
             </div>
           </div>
-      
+
+          <!-- Errores generales -->
+          <div id="crearRolError" class="alert alert-danger d-none mt-3"></div>
+        </div>
 
         <!-- Footer -->
         <div class="modal-footer justify-content-between">
@@ -67,3 +82,121 @@
   </div>
 </div>
 <!-- Fin Modal Crear Rol -->
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('crearRolModal');
+    const form = document.getElementById('formCrearRol');
+    const errorDiv = document.getElementById('crearRolError');
+
+    // Función para limpiar errores
+    function limpiarErrores() {
+      form.querySelectorAll('.is-invalid').forEach(input => {
+        input.classList.remove('is-invalid');
+      });
+      form.querySelectorAll('.text-danger').forEach(div => {
+        div.textContent = '';
+      });
+      errorDiv.classList.add('d-none');
+      errorDiv.textContent = '';
+    }
+
+    // Función para mostrar error en un campo
+    function mostrarError(campo, mensaje) {
+      const errorElement = document.getElementById(`error${campo}`);
+      const inputElement = document.getElementById(campo.toLowerCase());
+      if (errorElement && inputElement) {
+        errorElement.textContent = mensaje;
+        inputElement.classList.add('is-invalid');
+      }
+    }
+
+    // Reset al abrir modal
+    modal.addEventListener('show.bs.modal', function() {
+      form.reset();
+      limpiarErrores();
+      // Restablecer color por defecto
+      document.getElementById('color').value = '#6c757d';
+    });
+
+    // Reset al cerrar modal
+    modal.addEventListener('hidden.bs.modal', function() {
+      form.reset();
+      limpiarErrores();
+    });
+
+    // Enviar formulario vía AJAX
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      limpiarErrores();
+
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const oldText = btnSubmit.innerHTML;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw errorData;
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modal).hide();
+          location.reload();
+        } else {
+          if (data.errors) {
+            for (const [field, messages] of Object.entries(data.errors)) {
+              if (field === '__all__') {
+                errorDiv.textContent = messages.join(' ');
+                errorDiv.classList.remove('d-none');
+                continue;
+              }
+              
+              let campoDisplay = field.charAt(0).toUpperCase() + field.slice(1);
+              mostrarError(campoDisplay, messages.join(' '));
+            }
+          } else if (data.message) {
+            errorDiv.textContent = data.message;
+            errorDiv.classList.remove('d-none');
+          }
+        }
+      })
+      .catch(errorData => {
+        if (errorData.errors) {
+          for (const [field, messages] of Object.entries(errorData.errors)) {
+            if (field === '__all__') {
+              errorDiv.textContent = messages.join(' ');
+              errorDiv.classList.remove('d-none');
+              continue;
+            }
+            
+            let campoDisplay = field.charAt(0).toUpperCase() + field.slice(1);
+            mostrarError(campoDisplay, messages.join(' '));
+          }
+        } else {
+          console.error('Error:', errorData);
+          errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+          errorDiv.classList.remove('d-none');
+        }
+      })
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = oldText;
+      });
+    });
+  });
+</script>

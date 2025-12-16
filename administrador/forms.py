@@ -3,6 +3,8 @@ from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm, User
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from .models import Rol
+from django.contrib.auth.models import Permission
+import re
 
 User = get_user_model()
 # FORMULARIO PERSONALIZADO DE CREACION DE USUARIO CON ROL INVITADO POR DEFECTO
@@ -133,3 +135,106 @@ class CustomUserChangeForm(forms.ModelForm):
             'ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Cédula de identidad'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono'}),
         }
+
+
+# FORMULARIO DE GESTIÓN DE ROLES
+class RolForm(forms.ModelForm):
+    permisos = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        error_messages={
+            'invalid_choice': 'Permiso no válido.',
+            'invalid_pk_value': 'Valor de permiso no válido.'
+        }
+    )
+
+    class Meta:
+        model = Rol
+        fields = ['nombre', 'descripcion', 'color', 'permisos']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del rol',
+                'autocomplete': 'off'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del rol',
+                'maxlength': '500'
+            }),
+            'color': forms.TextInput(attrs={
+                'type': 'color',
+                'class': 'form-control form-control-color',
+                'style': 'width: 50px; height: 50px;'
+            }),
+        }
+        error_messages = {
+            'nombre': {
+                'required': 'El nombre del rol es obligatorio.',
+                'unique': 'Ya existe un rol con este nombre.',
+                'max_length': 'El nombre no puede tener más de 50 caracteres.'
+            },
+            'descripcion': {
+                'max_length': 'La descripción no puede tener más de 500 caracteres.'
+            }
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ordenar permisos por app y luego por nombre
+        self.fields['permisos'].queryset = Permission.objects.select_related(
+            'content_type'
+        ).order_by('content_type__app_label', 'name')
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        
+        if not nombre:
+            raise forms.ValidationError("El nombre del rol es obligatorio.")
+        
+        if len(nombre) < 3:
+            raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
+        
+        # Validar que solo contenga letras, espacios y algunos caracteres especiales
+        patron = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\-_]+$"
+        if not re.match(patron, nombre):
+            raise forms.ValidationError(
+                "El nombre solo puede contener letras, espacios, guiones y guiones bajos."
+            )
+        
+        # Verificar unicidad (si estamos editando, excluir el rol actual)
+        queryset = Rol.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        
+        if queryset.exists():
+            raise forms.ValidationError(f'Ya existe un rol con el nombre "{nombre}".')
+        
+        return nombre.upper()
+
+    def clean_descripcion(self):
+        descripcion = self.cleaned_data.get('descripcion', '').strip()
+        
+        if descripcion and len(descripcion) < 10:
+            raise forms.ValidationError(
+                "La descripción debe tener al menos 10 caracteres si se proporciona."
+            )
+        
+        return descripcion
+
+    def clean_color(self):
+        color = self.cleaned_data.get('color', '').strip()
+        
+        if color:
+            # Validar formato hexadecimal (ej: #FF0000)
+            patron = r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+            if not re.match(patron, color):
+                raise forms.ValidationError(
+                    "El color debe estar en formato hexadecimal válido (ej: #FF0000 o #F00)."
+                )
+        else:
+            color = '#6c757d'  # Color por defecto (bootstrap secondary)
+        
+        return color

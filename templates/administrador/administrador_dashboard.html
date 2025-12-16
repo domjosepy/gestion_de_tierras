@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const rolId = document.getElementById("rolSelect").value;
             const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-            fetch("{% url 'asignar_rol' %}", {
+            fetch("{% url 'administrador:asignar_rol' %}", {
                 method: "POST",
                 headers: {
                     "X-CSRFToken": csrftoken,

@@ -40,8 +40,8 @@
                 </div>
                 <hr>
                 <div class="d-flex flex-column flex-md-row gap-2 justify-content-center">
-                 
-                  <form action="{% url 'logout' %}" method="post" class="d-inline">
+                  
+                  <form action="{% url 'administrador:logout' %}" method="post" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-danger text-center">
                       <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión

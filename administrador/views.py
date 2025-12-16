@@ -19,7 +19,7 @@ from django.views.generic import TemplateView, CreateView, ListView
 from core.notificaciones.utils import notificar_a_admins
 
 # Local application imports
-from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm
+from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm, RolForm
 from .models import User, Rol
 
 # VISTA DE INICIO DE SESION PERSONALIZADA
@@ -63,10 +63,18 @@ class LoginView(DjangoLoginView):
                 pass
 
         # Si falla, intentamos sin namespace
+        # Intentar con namespace por defecto
+        try:
+            return reverse_lazy(f"administrador:{nombre_url}")
+        except NoReverseMatch:
+            pass
+
+        # Intentar sin namespace (por si existe)
         try:
             return reverse_lazy(nombre_url)
         except NoReverseMatch:
-            return reverse_lazy("home")
+            return reverse_lazy("administrador:home")
+
 
 # MUESTRA LA VISTA DEL HOME
 
@@ -147,7 +155,7 @@ class AdminView(LoginRequiredMixin, TemplateView):
 
 class SignUpView(CreateView):
     form_class = CustomUserCreationForm
-    success_url = reverse_lazy("login")
+    success_url = reverse_lazy("administrador:login")
     template_name = "registration/signup.html"
 
     def form_valid(self, form):
@@ -190,7 +198,7 @@ class CustomPasswordChangeView(PasswordChangeView):
         try:
             return reverse_lazy(nombre_url)
         except Exception:
-            return reverse_lazy('home')
+            return reverse_lazy('administrador:home')
 
     def form_valid(self, form):
         messages.success(
@@ -200,85 +208,150 @@ class CustomPasswordChangeView(PasswordChangeView):
         return super().form_valid(form)
 
 # ======================================
-# Vistas para Roles
-# =======================================
+# Vistas para Roles (Actualizadas)
+# ======================================
 
+@login_required
+def listar_roles(request):
+    """Lista todos los roles con permisos pre-cargados"""
+    roles = Rol.objects.prefetch_related('permisos').all()
+    permisos = Permission.objects.select_related('content_type').order_by(
+        'content_type__app_label', 'name'
+    )
+    return render(request, 'administrador/listar_roles.html', {
+        'roles': roles,
+        'permisos': permisos
+    })
 
-class RolListView(LoginRequiredMixin, ListView):
-    model = Rol
-    template_name = 'administrador/listar_roles.html'
-    context_object_name = 'roles'
+@require_POST
+@login_required
+def crear_rol(request):
+    """Crea un nuevo rol con validaciones AJAX"""
+    form = RolForm(request.POST)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-
-class RolCreateView(LoginRequiredMixin, CreateView):
-    model = Rol
-    fields = ['nombre', 'descripcion', 'color', 'permisos']
-    template_name = 'includes/administrador/modal/roles/crear_rol_modal.html'
-
-    def get_success_url(self):
-        # Redirige a la página anterior si existe, si no a listar_roles
-        return self.request.META.get('HTTP_REFERER', str(reverse_lazy('listar_roles')))
-
-    def form_valid(self, form):
-        # Guardar el rol sin los permisos primero
-        rol = form.save(commit=False)
-        rol.save()
-
-        # Capturar los permisos enviados desde el formulario
-        permisos_ids = self.request.POST.getlist('permisos')
-        if permisos_ids:
-            rol.permisos.set(permisos_ids)
-
-        # Mensaje de éxito
-        messages.success(
-            self.request, f'Rol "{rol.nombre}" creado exitosamente!'
-        )
-
-        # Notificar a los admins
+    if form.is_valid():
+        rol = form.save()
+        
+        # Notificar a administradores
         notificar_a_admins(
             mensaje=f'Se ha creado un nuevo rol: "{rol.nombre}".',
             tipo="INFO",
-            exclude_user=self.request.user,
-
-            link=reverse("listar_roles")
+            exclude_user=request.user,
+            link=reverse("administrador:listar_roles")
         )
+        
+        messages.success(request, f'Rol "{rol.nombre}" creado exitosamente!')
+        
+        if is_ajax:
+            return JsonResponse({'success': True})
+        
+        return redirect('administrador:listar_roles')
 
-        return super().form_valid(form)
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+    
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field}: {error}")
+    
+    return redirect('administrador:listar_roles')
 
-    def form_invalid(self, form):
-        messages.error(
-            self.request, 'Error al crear el rol. Por favor revise los datos.'
-        )
-        return super().form_invalid(form)
-
-
+@require_POST
+@login_required
 def editar_rol(request, rol_id):
+    """Edita un rol existente con validaciones AJAX"""
     rol = get_object_or_404(Rol, id=rol_id)
-    if request.method == 'POST':
-        rol.nombre = request.POST.get('nombre')
-        rol.descripcion = request.POST.get('descripcion')
-        permisos_ids = request.POST.getlist('permisos')
-        rol.permisos.set(permisos_ids)
-        rol.save()
-        messages.success(request, "Rol actualizado correctamente.")
+    form = RolForm(request.POST, instance=rol)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if form.is_valid():
+        rol = form.save()
+        
+        # Notificar a administradores
         notificar_a_admins(
             mensaje=f'El rol "{rol.nombre}" fue editado.',
             tipo="WARNING",
-            exclude_user=request.user
+            exclude_user=request.user,
+            link=reverse("administrador:listar_roles")
         )
-        return redirect('listar_roles')
-    return redirect('listar_roles')
+        
+        messages.success(request, f'Rol "{rol.nombre}" actualizado exitosamente!')
+        
+        if is_ajax:
+            return JsonResponse({'success': True})
+        
+        return redirect('administrador:listar_roles')
 
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+    
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field}: {error}")
+    
+    return redirect('administrador:listar_roles')
 
+@require_POST
+@login_required
 def eliminar_rol(request, rol_id):
+    """Elimina un rol si no tiene usuarios asociados"""
     rol = get_object_or_404(Rol, id=rol_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Verificar si tiene usuarios asociados
     if rol.user_set.exists():
-        messages.error(
-            request, "Este rol está asignado a uno o más usuarios y no puede ser eliminado.")
-    else:
-        rol.delete()
-        messages.success(request, "Rol eliminado correctamente.")
-    return redirect('listar_roles')
+        msg = f'No se puede eliminar el rol "{rol.nombre}" porque tiene {rol.user_set.count()} usuario(s) asociado(s).'
+        
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'message': msg
+            }, status=400)
+        
+        messages.error(request, msg)
+        return redirect('administrador:listar_roles')
+
+    nombre_rol = rol.nombre
+    rol.delete()
+    
+    # Notificar a administradores
+    notificar_a_admins(
+        mensaje=f'El rol "{nombre_rol}" fue eliminado.',
+        tipo="DANGER",
+        exclude_user=request.user,
+        link=reverse("administrador:listar_roles")
+    )
+    
+    msg = f'El rol "{nombre_rol}" fue eliminado exitosamente.'
+    messages.info(request, msg)
+    
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': msg
+        })
+    
+    messages.success(request, msg)
+    return redirect('administrador:listar_roles')
 
 # =============================================================
 # VISTA PERSONALIZADA PARA CREAR USUARIOS CON EL ADMINISTRADOR
@@ -288,7 +361,7 @@ def eliminar_rol(request, rol_id):
 class SimpleUserCreateView(CreateView):
     form_class = SimpleUserCreationForm
     template_name = 'administrador/crear_usuario.html'
-    success_url = reverse_lazy('administrador_dashboard')
+    success_url = reverse_lazy('administrador:administrador_dashboard')
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -300,7 +373,7 @@ class SimpleUserCreateView(CreateView):
             tipo="INFO",
             exclude_user=self.request.user,
             # Para que el admin pueda ir a ver los usuarios creados
-            link=reverse("administrador_dashboard")
+            link=reverse("administrador:administrador_dashboard")
         )
         return response
 
@@ -376,7 +449,7 @@ def cambiar_estado_usuario(request):
             mensaje=f'El estado del usuario {user.username} fue cambiado a "{user.estado}"',
             tipo="WARNING" if user.estado == "INACTIVO" else "SUCCESS",
             exclude_user=request.user,
-            link=reverse("administrador_dashboard")
+            link=reverse("administrador:administrador_dashboard")
         )
 
         return JsonResponse({'success': True, 'message': f'Estado actualizado a {user.estado} para {user.username}'})
@@ -405,7 +478,7 @@ def edit_profile(request):
             try:
                 return redirect(nombre_url)
             except:
-                return redirect('home')
+                return redirect('administrador:home')
         else:
             for field, errors in form.errors.items():
                 for error in errors:

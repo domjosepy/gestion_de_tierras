@@ -1,41 +1,172 @@
-<div class="modal fade" id="eliminarRolModal" tabindex="-1" aria-labelledby="eliminarRolModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="eliminarRolModalLabel">Confirmar Eliminación</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal Eliminar Rol -->
+<div class="modal fade modal-danger" id="eliminarRolModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>Eliminar Rol
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formEliminarRol" method="POST">
+        {% csrf_token %}
+        <input type="hidden" id="eliminar_rol_id">
+        
+        <div class="modal-body">
+          <div class="card border-danger">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2 text-muted">Rol a eliminar:</h6>
+              <p class="card-text mb-1">
+                <strong>Nombre:</strong> <span id="eliminar_nombre" class="text-danger"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Descripción:</strong> <span id="eliminar_descripcion"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Permisos asociados:</strong> <span id="eliminar_permisos"></span>
+              </p>
+              <p class="card-text mb-0">
+                <strong>Usuarios con este rol:</strong> <span id="eliminar_usuarios"></span>
+              </p>
             </div>
-            <form method="post" id="eliminarRolForm" action="">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <p>¿Estás seguro que deseas eliminar el rol <strong id="rolNombreEliminar"></strong>?</p>
-                    <p class="text-danger text-danger">Esta acción no se puede deshacer.</p>
-                </div>
-                <div class="modal-footer border-0 justify-content-between">
-                    <button type="button" class=" btn btn-outline-warning" data-bs-dismiss="modal">
-                        <i class="fas fa-xmark me-1"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="fas fa-trash-alt me-1"></i> Eliminar
-                    </button>
-                </div>
-            </form>
+          </div>
+
+          <div class="alert alert-warning d-none mt-3" id="alert_usuarios_info">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span id="mensaje_usuarios_info"></span>
+          </div>
         </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-danger" id="btnEliminarRol">
+            <i class="fas fa-trash me-1"></i>Eliminar
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
-{% block scripts %}
-    <script>
-        // Modal Eliminar Rol
-        const eliminarRolModal = document.getElementById('eliminarRolModal');
-        eliminarRolModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const rolId = button.getAttribute('data-rolid');
-            const rolNombre = button.getAttribute('data-rolnombre');
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('eliminarRolModal');
+    const form = document.getElementById('formEliminarRol');
+    const btnEliminar = document.getElementById('btnEliminarRol');
 
-            const form = eliminarRolModal.querySelector('#eliminarRolForm');
-            form.action = `/roles/eliminar/${rolId}/`;
-            document.getElementById('rolNombreEliminar').textContent = rolNombre;
+    // Cargar datos al abrir modal
+    modal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const rolId = button.getAttribute('data-rolid');
+      const rolNombre = button.getAttribute('data-rolnombre');
+      const rolDescripcion = button.getAttribute('data-roldescripcion') || 'Sin descripción';
+      const rolPermisos = button.getAttribute('data-rolpermisoscount') || '0';
+      const tieneUsuarios = button.getAttribute('data-tieneusuarios') === 'true';
+      const cantUsuarios = button.getAttribute('data-cantusuarios') || '0';
+
+      // Establecer datos en el formulario
+      document.getElementById('eliminar_rol_id').value = rolId;
+      document.getElementById('eliminar_nombre').textContent = rolNombre;
+      document.getElementById('eliminar_descripcion').textContent = rolDescripcion;
+      document.getElementById('eliminar_permisos').textContent = rolPermisos + ' permiso(s)';
+      document.getElementById('eliminar_usuarios').textContent = cantUsuarios + ' usuario(s)';
+
+      // Manejar alerta de usuarios
+      const alertUsuarios = document.getElementById('alert_usuarios_info');
+      const mensajeUsuarios = document.getElementById('mensaje_usuarios_info');
+      
+      if (tieneUsuarios) {
+        mensajeUsuarios.textContent = 
+          `Este rol tiene ${cantUsuarios} usuario(s) asociado(s). No podrá eliminarse hasta que se reasignen.`;
+        alertUsuarios.classList.remove('d-none');
+        btnEliminar.disabled = true;
+      } else {
+        alertUsuarios.classList.add('d-none');
+        btnEliminar.disabled = false;
+      }
+
+      // Establecer la URL del formulario
+      form.action = "{% url 'administrador:eliminar_rol' 0 %}".replace('0', rolId);
+    });
+
+    // Limpiar al cerrar modal
+    modal.addEventListener('hidden.bs.modal', function() {
+      form.reset();
+      document.getElementById('alert_usuarios_info').classList.add('d-none');
+      btnEliminar.disabled = false;
+    });
+
+    // Enviar formulario
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const rolId = document.getElementById('eliminar_rol_id').value;
+      const formData = new FormData(form);
+      const btnTextoOriginal = btnEliminar.innerHTML;
+
+      btnEliminar.disabled = true;
+      btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Eliminando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw errorData;
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(modal).hide();
+                location.reload();
+            } else {
+                if (data.errors) {
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        if (field === '__all__') {
+                            errorDiv.textContent = messages.join(' ');
+                            errorDiv.classList.remove('d-none');
+                            continue;
+                        }
+                        
+                        let campoDisplay = field.charAt(0).toUpperCase() + field.slice(1);
+                        mostrarErrorEditar(campoDisplay, messages.join(' '));
+                    }
+                } else if (data.message) {
+                    errorDiv.textContent = data.message;
+                    errorDiv.classList.remove('d-none');
+                }
+            }
+        })
+        .catch(errorData => {
+            if (errorData.errors) {
+                for (const [field, messages] of Object.entries(errorData.errors)) {
+                    if (field === '__all__') {
+                        mostrarToast(messages.join(' '), 'error');
+                        continue;
+                    }
+                    
+                    let campoDisplay = field.charAt(0).toUpperCase() + field.slice(1);
+                    mostrarErrorEditar(campoDisplay, messages.join(' '));
+                }
+            } else {
+                console.error('Error:', errorData);
+                mostrarToast('Error al guardar. Intente nuevamente.', 'error');
+            }
+        })
+        .finally(() => {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
         });
-    </script>
-{% endblock %}
+    });
+  });
+</script>

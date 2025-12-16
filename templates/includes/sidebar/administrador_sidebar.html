@@ -1,6 +1,6 @@
 <!-- === admin_sidebar.html (menú de administradores) === -->
 <li class="nav-item">
-  <a class="nav-link" href="{% url 'administrador_dashboard' %}">
+  <a class="nav-link" href="{% url 'administrador:administrador_dashboard' %}">
     <i class="fas fa-tachometer-alt me-2 text-primary"></i>
     <span class="justify-content-center">Panel de Control</span>
   </a>
@@ -28,7 +28,7 @@
 
   <ul class="nav flex-column">
     <li class="nav-item">
-      <a class="nav-link active"  title="Panel de Control" data-bs-toggle="tooltip" href="{% url 'administrador_dashboard' %}">
+      <a class="nav-link active"  title="Panel de Control" data-bs-toggle="tooltip" href="{% url 'administrador:administrador_dashboard' %}">
         <i class="fas fa-tachometer-alt"></i>
         <span>Panel de Control</span>
       </a>
@@ -42,8 +42,8 @@
       </a>
       <div id="collapseUsers" class="collapse">
         <div class="collapse-inner">
-          <a class="collapse-item" href="{% url 'crear_usuario' %}">Crear Usuario</a>
-          <a class="collapse-item" href="{% url 'listar_roles' %}">Gestionar Roles</a>
+          <a class="collapse-item" href="{% url 'administrador:crear_usuario' %}">Crear Usuario</a>
+          <a class="collapse-item" href="{% url 'administrador:listar_roles' %}">Gestionar Roles</a>
         </div>
       </div>
     </li>

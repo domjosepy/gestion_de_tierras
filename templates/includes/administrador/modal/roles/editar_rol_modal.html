@@ -1,62 +1,221 @@
 <!-- Modal Editar Rol -->
-{% for rol in roles %}
-  {% if rol.id %}
-  <!-- Modal Editar Rol -->
-  <div class="modal fade modal-warning" id="editarRolModal{{ rol.id }}" tabindex="-1" aria-labelledby="editarRolModalLabel{{ rol.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content">
-        <form method="post" action="{% url 'editar_rol' rol.id %}">
-          {% csrf_token %}
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title" id="editarRolModalLabel{{ rol.id }}">Editar Rol</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-          </div>
-          <div class="modal-body">
-            <div class="row">
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="nombre{{ rol.id }}" class="form-label">Nombre</label>
-                  <input type="text" class="form-control" id="nombre{{ rol.id }}" name="nombre" value="{{ rol.nombre }}" required>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="mb-3">
-                  <label for="descripcion{{ rol.id }}" class="form-label">Descripción</label>
-                  <textarea class="form-control" id="descripcion{{ rol.id }}" name="descripcion" rows="2">{{ rol.descripcion }}</textarea>
-                </div>
-              </div>
-            </div>
+<div class="modal fade modal-warning" id="editarRolModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="formEditarRol" method="post" action="" novalidate>
+      {% csrf_token %}
+      <input type="hidden" id="rolId">
+      
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <!-- Encabezado -->
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-edit me-2"></i> Editar Rol
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
 
-            <div class="mb-3">
-              <label class="form-label">Permisos</label>
-              <div class="row">
+        <!-- Cuerpo -->
+        <div class="modal-body">
+          <!-- Nombre -->
+          <div class="mb-3">
+            <label for="nombreEditar" class="form-label fw-bold">Nombre del Rol</label>
+            <input type="text" class="form-control" id="nombreEditar" name="nombre" 
+                   maxlength="50" minlength="3" required>
+            <div id="errorNombreEditar" class="text-danger small mt-2"></div>
+            <small class="text-muted">Mínimo 3 caracteres. Solo letras, espacios, guiones y guiones bajos.</small>
+          </div>
+
+          <!-- Descripción -->
+          <div class="mb-3">
+            <label for="descripcionEditar" class="form-label fw-bold">Descripción</label>
+            <textarea class="form-control" id="descripcionEditar" name="descripcion" 
+                     rows="2" maxlength="500"></textarea>
+            <div id="errorDescripcionEditar" class="text-danger small mt-2"></div>
+            <small class="text-muted">Opcional. Mínimo 10 caracteres si se proporciona.</small>
+          </div>
+
+          <div class="d-flex gap-3 align-items-start">
+            <!-- Color -->
+            <div class="mb-3 flex-shrink-0">
+              <label for="colorEditar" class="form-label fw-bold">Color</label>
+              <input type="color" class="form-control form-control-color color-btn" 
+                    id="colorEditar" name="color" value="#6c757d"
+                    style="width: 50px; height: 50px;">
+              <div id="errorColorEditar" class="text-danger small mt-2"></div>
+              <small class="text-muted">Color para identificar el rol</small>
+            </div>
+            
+            <!-- Permisos -->
+            <div class="mb-3 flex-grow-1">
+              <label class="form-label fw-bold">Permisos</label>
+              <div class="border rounded p-3 bg-light" style="max-height: 220px; overflow-y: auto;" id="permisosContainerEditar">
                 {% for permiso in permisos %}
-                <div class="col-md-4">
-                  <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="permiso{{ rol.id }}{{ permiso.id }}" name="permisos"
-                           value="{{ permiso.id }}" {% if permiso in rol.permisos.all %}checked{% endif %}>
-                    <label class="form-check-label" for="permiso{{ rol.id }}{{ permiso.id }}">
-                      {{ permiso.name }}
-                    </label>
-                  </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" 
+                        id="permisoEditar{{ permiso.id }}" 
+                        name="permisos" value="{{ permiso.id }}">
+                  <label class="form-check-label" for="permisoEditar{{ permiso.id }}" style="font-size: 0.9rem;">
+                    <strong>{{ permiso.name }}</strong> 
+                    <small class="text-muted d-block">({{ permiso.content_type.app_label }}.{{ permiso.codename }})</small>
+                  </label>
                 </div>
                 {% endfor %}
               </div>
+              <div id="errorPermisosEditar" class="text-danger small mt-2"></div>
+              <small class="text-muted">Seleccione los permisos asociados al rol</small>
             </div>
           </div>
 
-          <div class="modal-footer justify-content-between">
-            <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-outline-primary">Guardar cambios</button>
-          </div>
-        </form>
+          <!-- Errores generales -->
+          <div id="editarRolError" class="alert alert-danger d-none mt-3"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Guardar
+          </button>
+        </div>
       </div>
-    </div>
+    </form>
   </div>
-  {% endif %}
-{% endfor %}
+</div>
 
-<!-- Fin Modal Editar Rol -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editarRolModal');
+    const form = document.getElementById('formEditarRol');
+    const errorDiv = document.getElementById('editarRolError');
 
+    // Función para limpiar errores
+    function limpiarErroresEditar() {
+      form.querySelectorAll('.is-invalid').forEach(input => {
+        input.classList.remove('is-invalid');
+      });
+      form.querySelectorAll('.text-danger').forEach(div => {
+        div.textContent = '';
+      });
+      errorDiv.classList.add('d-none');
+      errorDiv.textContent = '';
+    }
 
+    // Función para mostrar error en un campo
+    function mostrarErrorEditar(campo, mensaje) {
+      const errorElement = document.getElementById(`error${campo}Editar`);
+      const inputElement = document.getElementById(`${campo.toLowerCase()}Editar`);
+      if (errorElement && inputElement) {
+        errorElement.textContent = mensaje;
+        inputElement.classList.add('is-invalid');
+      }
+    }
 
+    // Al abrir el modal, cargar los datos del rol
+    modal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const rolId = button.getAttribute('data-rolid');
+      const rolNombre = button.getAttribute('data-rolnombre');
+      const rolDescripcion = button.getAttribute('data-roldescripcion');
+      const rolColor = button.getAttribute('data-rolcolor');
+      const rolPermisos = button.getAttribute('data-rolpermisos');
+
+      // Establecer la URL del formulario
+      form.action = "{% url 'administrador:editar_rol' 0 %}".replace('0', rolId);
+      document.getElementById('rolId').value = rolId;
+
+      // Cargar datos en los campos
+      document.getElementById('nombreEditar').value = rolNombre;
+      document.getElementById('descripcionEditar').value = rolDescripcion || '';
+      document.getElementById('colorEditar').value = rolColor || '#6c757d';
+
+      // Cargar permisos seleccionados
+      const permisosSeleccionados = rolPermisos ? rolPermisos.split(',') : [];
+      const checkboxes = document.querySelectorAll('#permisosContainerEditar input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = permisosSeleccionados.includes(checkbox.value);
+      });
+
+      limpiarErroresEditar();
+    });
+
+    // Reset al cerrar modal
+    modal.addEventListener('hidden.bs.modal', function() {
+      form.reset();
+      limpiarErroresEditar();
+    });
+
+    // Enviar formulario vía AJAX
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      limpiarErroresEditar();
+
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const oldText = btnSubmit.innerHTML;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw errorData;
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+          if (data.success) {
+              bootstrap.Modal.getInstance(modal).hide();
+              location.reload();
+          } else {
+              if (data.errors) {
+                  for (const [field, messages] of Object.entries(data.errors)) {
+                      if (field === '__all__') {
+                          errorDiv.textContent = messages.join(' ');
+                          errorDiv.classList.remove('d-none');
+                          continue;
+                      }
+                      
+                      let campoDisplay = field.charAt(0).toUpperCase() + field.slice(1);
+                      mostrarErrorEditar(campoDisplay, messages.join(' '));
+                  }
+              } else if (data.message) {
+                  errorDiv.textContent = data.message;
+                  errorDiv.classList.remove('d-none');
+              }
+          }
+      })
+      .catch(errorData => {
+          if (errorData.errors) {
+              for (const [field, messages] of Object.entries(errorData.errors)) {
+                  if (field === '__all__') {
+                      mostrarToast(messages.join(' '), 'error');
+                      continue;
+                  }
+                  
+                  let campoDisplay = field.charAt(0).toUpperCase() + field.slice(1);
+                  mostrarErrorEditar(campoDisplay, messages.join(' '));
+              }
+          } else {
+              console.error('Error:', errorData);
+              mostrarToast('Error al guardar. Intente nuevamente.', 'error');
+          }
+      })
+      .finally(() => {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = oldText;
+      });
+    });
+  });
+</script>
