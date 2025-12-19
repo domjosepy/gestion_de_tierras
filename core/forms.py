@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 import re
-from .models import Departamento, Distrito, Colonia, Solicitud
+from .models import Departamento, Distrito, Colonia
 
 
 # ===============================
@@ -301,26 +301,3 @@ class ColoniaForm(forms.ModelForm):
 
         return cleaned_data
     
-# =============================
-#  FORMULARIO SOLICITUD
-# =============================
-class SolicitudForm(forms.ModelForm):
-    class Meta:
-        model = Solicitud
-        fields = ["colonia", "tipo", "observaciones"]
-        widgets = {
-            'colonia': forms.Select(attrs={'class': 'form-select'}),
-            'tipo': forms.Select(attrs={'class': 'form-select'}),
-            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones'}),
-        }
-
-    def clean(self):
-        cleaned = super().clean()
-        try:
-            self.instance.colonia = cleaned.get('colonia')
-            self.instance.tipo = cleaned.get('tipo')
-            self.instance.observaciones = cleaned.get('observaciones')
-            self.instance.full_clean(exclude=None)
-        except forms.ValidationError as e:
-            raise forms.ValidationError(e.messages)
-        return cleaned

@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.db.models import Q
-from core.models import Departamento, Distrito, Colonia, Area, Objetivo, Solicitud, Relevamiento
+from core.models import Departamento, Distrito, Colonia
 from core.forms import ColoniaForm, DistritoForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
@@ -23,9 +23,9 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
         context['distritos'] = Distrito.objects.all()
         context['colonias'] = Colonia.objects.all()
         
-        context['objetivos'] = Objetivo.objects.all()
-        context['solicitudes'] = Solicitud.objects.all()
-        context['relevamientos'] = Relevamiento.objects.all()
+       # context['objetivos'] = Objetivo.objects.all()
+        #context['solicitudes'] = Solicitud.objects.all()
+        #context['relevamientos'] = Relevamiento.objects.all()
 
         return context
 
