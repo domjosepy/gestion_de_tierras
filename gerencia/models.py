@@ -24,13 +24,30 @@ class SolicitudRelevamiento(models.Model):
         ("aprobado_para_campo", "Aprobado para Campo"),
         ("en_ejecucion_campo", "En Ejecución de Campo"),
     ]
+    #Definir los estados en los que se puede editar o borrar una solicitud
+    ESTADOS_EDITABLES = ["pendiente_asignacion_sig", "pendiente_analisis"]
+    ESTADOS_BORRABLES = ["pendiente_asignacion_sig", "pendiente_analisis"]
+
+    def puede_editar(self):
+        """
+        Retorna True si la solicitud puede ser editada.
+        """
+        return self.estado in self.ESTADOS_EDITABLES
+
+    def puede_borrar(self):
+        """
+        Retorna True si la solicitud puede ser borrada.
+        """
+        return self.estado in self.ESTADOS_EDITABLES
+
+
 
     colonia = models.ForeignKey(
         "core.Colonia",
         on_delete=models.PROTECT,
         related_name="solicitudes_relevamiento"
     )
-    tipo = models.CharField(max_length=20, choices=TIPOS)
+    tipo = models.CharField(max_length=20, choices=TIPOS, editable=False)
     estado = models.CharField(max_length=30, choices=ESTADOS, default="pendiente_asignacion_sig")
     creado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -43,8 +60,31 @@ class SolicitudRelevamiento(models.Model):
         verbose_name_plural = "Solicitudes de relevamiento"
         ordering = ["-fecha_creacion"]
 
+    def save(self, *args, **kwargs):
+
+         # no permitir cambios cuando no está en estados editables
+        if self.pk and self.estado not in self.ESTADOS_EDITABLES:
+            raise ValidationError("No se puede modificar una solicitud que ya fue aprobada o asignada.")
+        
+        # Asignar tipo automáticamente según flag de la colonia VEEEEEEEEEEEEEEEEEEEEEERRR ESTA PARTEEEE
+        
+        if self.colonia and hasattr(self.colonia, "tiene_relevamiento"):
+            if self.colonia.tiene_relevamiento:
+                self.tipo = self.TIPO_ACTUALIZACION
+                # Estado inicial para análisis
+                if self.estado == "pendiente_asignacion_sig":
+                    self.estado = "pendiente_analisis"
+            else:
+                self.tipo = self.TIPO_RELEVAMIENTO
+                # Estado inicial para SIG
+                if self.estado == "pendiente_analisis":
+                    self.estado = "pendiente_asignacion_sig"
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"Solicitud {self.pk} - {self.colonia} ({self.get_estado_display()})"
+
+
 
 
 class SolicitudRelevamientoAudit(models.Model):

@@ -291,7 +291,7 @@ class ColoniaListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['distritos'] = Distrito.objects.select_related('departamento').order_by('departamento__nombre', 'nombre')
-        context['departamentos'] = Departamento.objects.all().order_by('nombre')  # Agregar departamentos
+        context['departamentos'] = Departamento.objects.all().order_by('nombre')  # Agregar departamentos para filtros
         context['estado_choices'] = Colonia.ESTADO_CHOICES
         return context
 

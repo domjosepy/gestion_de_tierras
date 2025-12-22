@@ -99,11 +99,14 @@
                                 
                                 <!-- Botón Solicitar Relevamiento -->
                                 <button class="btn btn-sm btn-info" 
-                                        title="Solicitar Relevamiento (Próximamente)"
-                                        disabled>
+                                        title="Solicitar Relevamiento"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#crearSolicitudRelevModal"
+                                        data-coloniaid="{{ colonia.id }}">
                                     <i class="fas fa-clipboard-list me-1"></i>
                                     <i class="fas fa-search"></i>
                                 </button>
+
                             </td>
                         </tr>
                         {% empty %}
@@ -122,6 +125,7 @@
 {% include 'includes/gerencia/modal/colonias/crear_colonia_modal.html' %}
 {% include 'includes/gerencia/modal/colonias/editar_colonia_modal.html' %}
 {% include 'includes/gerencia/modal/colonias/eliminar_colonia_modal.html' %}
+{% include 'includes/gerencia/modal/solicitudes_relevamiento/crear_solicitud_relev_modal.html' %}
 
 {% endblock %}
 
@@ -137,11 +141,12 @@ document.addEventListener('DOMContentLoaded', function() {
             info: "Mostrando {start} a {end} de {rows} Colonias"
         }
     });
-
+    
     // Inicializar tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         new bootstrap.Tooltip(el);
     });
 });
+
 </script>
 {% endblock %}

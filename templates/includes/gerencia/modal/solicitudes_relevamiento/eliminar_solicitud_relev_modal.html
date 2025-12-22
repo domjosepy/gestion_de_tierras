@@ -1,0 +1,111 @@
+<div class="modal fade modal-danger" id="eliminarSolicitudRelevModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="fa-solid fa-trash me-2"></i>Eliminar Solicitud</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <strong>¡Advertencia!</strong> Esta acción no se puede deshacer.
+        </div>
+        
+        <p>¿Está seguro que desea eliminar la siguiente solicitud?</p>
+        
+        <div class="card mb-3">
+          <div class="card-body">
+            <h6 class="card-title" id="eliminarSolicitudTitulo"></h6>
+            <p class="card-text mb-1">
+              <strong>Colonia:</strong> <span id="eliminarColoniaNombre"></span>
+            </p>
+            <p class="card-text mb-1">
+              <strong>Tipo:</strong> <span id="eliminarTipo"></span>
+            </p>
+            <p class="card-text mb-1">
+              <strong>Estado:</strong> <span id="eliminarEstado"></span>
+            </p>
+          </div>
+        </div>
+        
+        <div id="eliminarSolicitudError" class="text-danger small mb-3"></div>
+      </div>
+
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cancelar</button>
+        <button type="button" class="btn btn-outline-danger" id="confirmarEliminarBtn">
+          <i class="fas fa-trash me-1"></i>Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById('eliminarSolicitudRelevModal');
+    const confirmarBtn = document.getElementById('confirmarEliminarBtn');
+    const errorDiv = document.getElementById('eliminarSolicitudError');
+    
+    let solicitudId = null;
+
+    // Asignar datos al abrir el modal
+    modal.addEventListener('show.bs.modal', (event) => {
+        const button = event.relatedTarget;
+        solicitudId = button.getAttribute('data-solicitudid');
+        const coloniaNombre = button.getAttribute('data-colonianombre');
+        const coloniaCodigo = button.getAttribute('data-coloniacodigo');
+        const tipo = button.getAttribute('data-tipo');
+        const estado = button.getAttribute('data-estado');
+        
+        document.getElementById('eliminarSolicitudTitulo').textContent = 
+            `Solicitud #${solicitudId}`;
+        document.getElementById('eliminarColoniaNombre').textContent = 
+            `${coloniaCodigo} - ${coloniaNombre}`;
+        document.getElementById('eliminarTipo').textContent = tipo;
+        document.getElementById('eliminarEstado').textContent = estado;
+    });
+
+    confirmarBtn.addEventListener('click', async () => {
+        errorDiv.textContent = '';
+        confirmarBtn.disabled = true;
+        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Eliminando...';
+
+        try {
+            const res = await fetch(`/gerencia/solicitudes-relevamiento/${solicitudId}/eliminar/`, {
+                method: "POST",
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                mostrarToast('Solicitud eliminada exitosamente', 'success');
+                
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                if (data.error) {
+                    errorDiv.textContent = data.error;
+                } else {
+                    errorDiv.textContent = 'Error al eliminar la solicitud';
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al eliminar. Intente nuevamente.';
+        } finally {
+            confirmarBtn.disabled = false;
+            confirmarBtn.innerHTML = '<i class="fas fa-trash me-1"></i>Eliminar';
+        }
+    });
+});
+</script>

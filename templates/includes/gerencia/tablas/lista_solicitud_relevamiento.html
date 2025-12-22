@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Gerencia - Solicitudes de Relevamiento{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h2 class="text-warning fw-bold mb-0">
+            <i class="fas fa-clipboard-list me-3"></i>Solicitudes de Relevamiento
+        </h2>
+        <a href="{% url 'gerencia:listar_colonias' %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-1"></i>Volver a Colonias
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="beautiful-table" id="solicitudesTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Depto/Dtto/Colonia</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Observación</th>
+                            <th>Creado por</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in solicitudes %}
+                        <tr>
+                            <td>{{ s.id }}</td>
+                            <td>{{ s.departamento.nombre }} / {{ s.distrito.nombre }} / {{ s.colonia.nombre }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if s.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ s.get_tipo_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if s.estado == 'aprobado_para_campo' %}bg-success
+                                    {% elif s.estado == 'rechazado' %}bg-danger
+                                    {% elif s.estado == 'en_ejecucion_campo' %}bg-primary
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ s.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>{{ s.observaciones|default:"-" }}</td>
+                            <td>{{ s.creado_por|default:"-" }}</td>
+                            <td>{{ s.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                            <td class="text-center">
+                                <!-- Botón ver detalles -->
+                                <button class="btn btn-sm btn-info me-1" 
+                                        title="Ver detalles"
+                                        onclick="window.location.href='#'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                {% if s.puede_editar %}
+                                <!-- Botón editar -->
+                                <button class="btn btn-sm btn-warning me-1" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editarSolicitudRelevModal"
+                                        data-solicitudid="{{ s.pk }}"
+                                        data-colonianombre="{{ s.colonia.nombre }}"
+                                        data-coloniacodigo="{{ s.colonia.codigo }}"
+                                        data-tipo="{{ s.get_tipo_display }}"
+                                        data-estado="{{ s.get_estado_display }}"
+                                        title="Editar Solicitud">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                {% endif %}
+                                
+                                {% if s.puede_borrar %}
+                                <!-- Botón eliminar -->
+                                <button class="btn btn-sm btn-danger me-1" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#eliminarSolicitudRelevModal"
+                                        data-solicitudid="{{ s.pk }}"
+                                        data-colonianombre="{{ s.colonia.nombre }}"
+                                        data-coloniacodigo="{{ s.colonia.codigo }}"
+                                        data-tipo="{{ s.get_tipo_display }}"
+                                        data-estado="{{ s.get_estado_display }}"
+                                        title="Eliminar Solicitud">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay solicitudes registradas.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incluir modales -->
+{% include 'includes/gerencia/modal/solicitudes_relevamiento/editar_solicitud_relev_modal.html' %}
+{% include 'includes/gerencia/modal/solicitudes_relevamiento/eliminar_solicitud_relev_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new simpleDatatables.DataTable('#solicitudesTable', {
+        perPage: 10,
+        labels: {
+            placeholder: "Buscar...",
+            perPage: "Registros por página",
+            noRows: "No se encontraron solicitudes",
+            info: "Mostrando {start} a {end} de {rows} solicitudes"
+        }
+    });
+    
+    // Inicializar tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

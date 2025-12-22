@@ -1,0 +1,127 @@
+<div class="modal fade modal-warning" id="editarSolicitudRelevModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="editarSolicitudRelevForm" method="post" action="" novalidate>
+        {% csrf_token %}
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title"><i class="fa-solid fa-edit me-2"></i>Editar Solicitud</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-map-marker-alt me-1"></i>Colonia</label>
+            <div class="form-control bg-light" id="editarColoniaNombre"></div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-clipboard-list me-1"></i>Estado</label>
+            <div class="form-control bg-light" id="editarEstado"></div>
+          </div>
+          
+          <!-- Observaciones -->
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-comment-dots me-1"></i>Observaciones</label>
+            <textarea name="observaciones" id="editarObservaciones" class="form-control" rows="3"
+                      placeholder="Ingrese observaciones adicionales"></textarea>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div id="editarSolicitudRelevError" class="text-danger small mb-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar</button>
+          <button type="submit" class="btn btn-outline-warning">
+            <i class="fas fa-save me-1"></i>Actualizar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById('editarSolicitudRelevModal');    
+    const form = document.getElementById("editarSolicitudRelevForm");
+    const errorDiv = document.getElementById("editarSolicitudRelevError");
+
+    // Asignar datos al abrir el modal
+    modal.addEventListener('show.bs.modal', async (event) => {
+        const button = event.relatedTarget;
+        const solicitudId = button.getAttribute('data-solicitudid');
+        
+        // Cargar datos de la solicitud
+        try {
+            const response = await fetch(`/gerencia/solicitudes-relevamiento/${solicitudId}/datos/`);
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('editarColoniaNombre').textContent = 
+                    `${data.colonia.codigo} - ${data.colonia.nombre}`;
+                document.getElementById('editarEstado').textContent = data.estado_display;
+                document.getElementById('editarObservaciones').value = data.observaciones || '';
+                form.action = `/gerencia/solicitudes-relevamiento/${solicitudId}/editar/`;
+            } else {
+                mostrarToast('Error al cargar los datos', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarToast('Error al cargar los datos', 'error');
+        }
+    });
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const oldText = btnSubmit.innerHTML;
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
+
+        try {
+            const res = await fetch(form.action, {
+                method: "POST",
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: new FormData(form)
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                mostrarToast('Solicitud actualizada exitosamente', 'success');
+                
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                if (data.errors) {
+                    // Mostrar errores
+                    const observacionesInput = document.getElementById('editarObservaciones');
+                    const feedback = observacionesInput.nextElementSibling;
+                    if (data.errors.observaciones) {
+                        observacionesInput.classList.add('is-invalid');
+                        feedback.textContent = data.errors.observaciones.join(' ');
+                    }
+                } else if (data.error) {
+                    errorDiv.textContent = data.error;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al actualizar. Intente nuevamente.';
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
+        }
+    });
+});
+</script>

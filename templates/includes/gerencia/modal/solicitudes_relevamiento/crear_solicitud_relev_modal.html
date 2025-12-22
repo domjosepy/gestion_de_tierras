@@ -1,0 +1,152 @@
+<div class="modal fade modal-primary" id="crearSolicitudRelevModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="crearSolicitudRelevForm" method="post" action="" novalidate>
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-2"></i>Crear Solicitud de Relevamiento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Colonia (selección única o mostrando la seleccionada) -->
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-map-marker-alt me-1"></i>Colonia</label>
+            <div class="form-control bg-light" id="coloniaSeleccionada">
+              <span class="text-muted">Seleccionar una colonia de la lista...</span>
+            </div>
+            <input type="hidden" name="colonia" id="colonia_id" value="">
+            <div class="invalid-feedback"></div>
+          </div>
+          
+          <!-- Observaciones -->
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-comment-dots me-1"></i>Observaciones</label>
+            <textarea name="observaciones" id="observaciones" class="form-control" rows="3"
+                      placeholder="Ingrese observaciones adicionales"></textarea>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-list me-1"></i>Prioridad</label>
+            <select name="tipo" id="prioridad" class="form-select">
+              <option value="" selected disabled>Seleccione la prioridad del relevamiento</option>
+              <option value="alta">ALTA</option>
+              <option value="media">MEDIA</option>
+              <option value="baja">BAJA</option>
+            </select>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div id="crearSolicitudRelevError" class="text-danger small mb-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar</button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i>Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById('crearSolicitudRelevModal');    
+    const form = document.getElementById("crearSolicitudRelevForm");
+    const errorDiv = document.getElementById("crearSolicitudRelevError");
+    const coloniaSeleccionada = document.getElementById('coloniaSeleccionada');
+    const coloniaInput = document.getElementById('colonia_id');
+
+    // Asignar acción dinámica al abrir el modal
+    modal.addEventListener('show.bs.modal', (event) => {
+        const button = event.relatedTarget;
+        const coloniaId = button.getAttribute('data-coloniaid');
+        const coloniaNombre = button.getAttribute('data-colonianombre');
+        const coloniaCodigo = button.getAttribute('data-coloniacodigo');
+        
+        // Mostrar la colonia seleccionada
+        coloniaSeleccionada.innerHTML = `
+            <strong>${coloniaCodigo} - ${coloniaNombre}</strong>
+        `;
+        
+        // Establecer el valor en el input hidden
+        coloniaInput.value = coloniaId;
+        
+        // Establecer la URL del formulario
+        form.action = `/gerencia/solicitudes-relevamiento/crear/${coloniaId}/`;
+    });
+
+    function limpiarErrores(form) {
+        form.querySelectorAll('.is-invalid').forEach(input => input.classList.remove('is-invalid'));
+        form.querySelectorAll('.invalid-feedback').forEach(div => div.textContent = '');
+        errorDiv.textContent = '';
+    }
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        limpiarErrores(form);
+
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const oldText = btnSubmit.innerHTML;
+
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+
+        try {
+            const res = await fetch(form.action, {
+                method: "POST",
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: new FormData(form)
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                // Mostrar toast de éxito
+                mostrarToast('Solicitud creada exitosamente', 'success');
+                
+                // Cerrar modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                
+                // Recargar página después de 1.5 segundos
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                if (data.errors) {
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        const input = form.querySelector('[name="' + field + '"]');
+                        const feedback = input ? input.nextElementSibling : null;
+                        if (input && feedback) {
+                            input.classList.add('is-invalid');
+                            feedback.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
+                        }
+                    }
+                } else if (data.error) {
+                    errorDiv.textContent = data.error;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
+        }
+    });
+
+    modal.addEventListener('hidden.bs.modal', () => {
+        form.reset();
+        limpiarErrores(form);
+        coloniaSeleccionada.innerHTML = '<span class="text-muted">Seleccionar una colonia de la lista...</span>';
+        coloniaInput.value = '';
+    });
+});
+</script>

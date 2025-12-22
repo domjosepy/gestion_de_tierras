@@ -52,11 +52,4 @@ urlpatterns = [
     # Cambiar estado de usuario para AJAX del switch
     path('cambiar_estado_usuario/', cambiar_estado_usuario, name='cambiar_estado_usuario'),
 
-    # =========================================
-    # Asegúrate de tener una vista basada en clase para crear usuarios, por ejemplo UserCreateView
-    # path('usuarios/crear/', UserCreateView.as_view(), name='crear_usuario'),
-
-    # Si solo tienes el formulario, primero crea una vista basada en clase en views.py que use SimpleUserCreationForm
-    # Luego importa esa vista aquí y usa:
-    # path('usuarios/crear/', TuVistaDeCreacionDeUsuario.as_view(), name='crear_usuario'),
 ]
