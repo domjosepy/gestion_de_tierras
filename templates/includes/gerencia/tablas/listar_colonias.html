@@ -64,7 +64,6 @@
                                 </button>
 
                                 <!-- Botón eliminar -->
-                                <!-- Botón eliminar en listar_colonias.html -->
                                 {% if not colonia.solicitudes.exists and not colonia.relevamientos.exists %}
                                     <button class="btn btn-sm me-1 btn-danger"
                                             data-bs-toggle="modal" data-bs-target="#eliminarColoniaModal"
@@ -102,11 +101,30 @@
                                         title="Solicitar Relevamiento"
                                         data-bs-toggle="modal" 
                                         data-bs-target="#crearSolicitudRelevModal"
-                                        data-coloniaid="{{ colonia.id }}">
+                                        data-coloniaid="{{ colonia.id }}"
+                                        data-colonianombre="{{ colonia.nombre }}"
+                                        data-coloniacodigo="{{ colonia.codigo }}"
+                                        {% with distrito=colonia.distritos.first %}
+                                            {% if distrito %}
+                                                data-distritoid="{{ distrito.id }}"
+                                                data-distritonombre="{{ distrito.nombre }}"
+                                                data-distritocodigo="{{ distrito.codigo }}"
+                                                data-departamentoid="{{ distrito.departamento.id }}"
+                                                data-departamentonombre="{{ distrito.departamento.nombre }}"
+                                                data-departamentocodigo="{{ distrito.departamento.codigo }}"
+                                            {% else %}
+                                                data-distritoid=""
+                                                data-distritonombre=""
+                                                data-distritocodigo=""
+                                                data-departamentoid=""
+                                                data-departamentonombre=""
+                                                data-departamentocodigo=""
+                                            {% endif %}
+                                        {% endwith %}
+                                        data-tienerelevamiento="{{ colonia.tiene_relevamiento|yesno:'true,false' }}">
                                     <i class="fas fa-clipboard-list me-1"></i>
                                     <i class="fas fa-search"></i>
                                 </button>
-
                             </td>
                         </tr>
                         {% empty %}

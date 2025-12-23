@@ -20,38 +20,36 @@
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
-                            <th>Depto/Dtto/Colonia</th>
+                            <th>Departamento / Distrito / Colonia</th>
                             <th>Tipo</th>
                             <th>Estado</th>
                             <th>Observación</th>
-                            <th>Creado por</th>
                             <th>Fecha</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for s in solicitudes %}
+                        {% for solicitud in solicitudes %}
                         <tr>
-                            <td>{{ s.id }}</td>
-                            <td>{{ s.departamento.nombre }} / {{ s.distrito.nombre }} / {{ s.colonia.nombre }}</td>
+                            <td>{{ solicitud.id }}</td>
+                            <td>{{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }} / {{ solicitud.colonia.nombre }}</td>
                             <td>
                                 <span class="badge 
-                                    {% if s.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                    {{ s.get_tipo_display }}
+                                    {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ solicitud.get_tipo_display }}
                                 </span>
                             </td>
                             <td>
                                 <span class="badge 
-                                    {% if s.estado == 'aprobado_para_campo' %}bg-success
-                                    {% elif s.estado == 'rechazado' %}bg-danger
-                                    {% elif s.estado == 'en_ejecucion_campo' %}bg-primary
+                                    {% if solicitud.estado == 'aprobado_para_campo' %}bg-success
+                                    {% elif solicitud.estado == 'rechazado' %}bg-danger
+                                    {% elif solicitud.estado == 'en_ejecucion_campo' %}bg-primary
                                     {% else %}bg-secondary{% endif %}">
-                                    {{ s.get_estado_display }}
+                                    {{ solicitud.get_estado_display }}
                                 </span>
                             </td>
-                            <td>{{ s.observaciones|default:"-" }}</td>
-                            <td>{{ s.creado_por|default:"-" }}</td>
-                            <td>{{ s.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                            <td>{{ solicitud.observaciones|default:"-" }}</td>
+                            <td>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
                             <td class="text-center">
                                 <!-- Botón ver detalles -->
                                 <button class="btn btn-sm btn-info me-1" 
@@ -60,31 +58,31 @@
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 
-                                {% if s.puede_editar %}
+                                {% if solicitud.puede_editar %}
                                 <!-- Botón editar -->
                                 <button class="btn btn-sm btn-warning me-1" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#editarSolicitudRelevModal"
-                                        data-solicitudid="{{ s.pk }}"
-                                        data-colonianombre="{{ s.colonia.nombre }}"
-                                        data-coloniacodigo="{{ s.colonia.codigo }}"
-                                        data-tipo="{{ s.get_tipo_display }}"
-                                        data-estado="{{ s.get_estado_display }}"
+                                        data-solicitudid="{{ solicitud.pk }}"
+                                        data-colonianombre="{{ solicitud.colonia.nombre }}"
+                                        data-coloniacodigo="{{ solicitud.colonia.codigo }}"
+                                        data-tipo="{{ solicitud.get_tipo_display }}"
+                                        data-estado="{{ solicitud.get_estado_display }}"
                                         title="Editar Solicitud">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 {% endif %}
                                 
-                                {% if s.puede_borrar %}
+                                {% if solicitud.puede_borrar %}
                                 <!-- Botón eliminar -->
                                 <button class="btn btn-sm btn-danger me-1" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#eliminarSolicitudRelevModal"
-                                        data-solicitudid="{{ s.pk }}"
-                                        data-colonianombre="{{ s.colonia.nombre }}"
-                                        data-coloniacodigo="{{ s.colonia.codigo }}"
-                                        data-tipo="{{ s.get_tipo_display }}"
-                                        data-estado="{{ s.get_estado_display }}"
+                                        data-solicitudid="{{ solicitud.pk }}"
+                                        data-colonianombre="{{ solicitud.colonia.nombre }}"
+                                        data-coloniacodigo="{{ solicitud.colonia.codigo }}"
+                                        data-tipo="{{ solicitud.get_tipo_display }}"
+                                        data-estado="{{ solicitud.get_estado_display }}"
                                         title="Eliminar Solicitud">
                                     <i class="fas fa-trash"></i>
                                 </button>

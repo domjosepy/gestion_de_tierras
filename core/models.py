@@ -74,10 +74,16 @@ class Colonia(models.Model):
         max_length=20, choices=ESTADO_CHOICES, default="activo")
     codigo = models.PositiveIntegerField(blank=True, null=True) 
 
+    tiene_relevamiento = models.BooleanField(
+        default=False,
+        verbose_name="¿Tiene relevamiento previo?"
+    )
+
     class Meta:
         verbose_name = "Colonia"
         verbose_name_plural = "Colonias"
         ordering = ["nombre"]
+    
 
     def save(self, *args, **kwargs):
         if not self.codigo:

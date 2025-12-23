@@ -59,4 +59,7 @@ urlpatterns = [
      path('solicitudes-relevamiento/crear/<int:colonia_id>/', crear_solicitud_relevamiento, name='crear_solicitud_relevamiento'),
      path('solicitudes-relevamiento/<int:pk>/editar/', editar_solicitud_relevamiento, name='editar_solicitud_relevamiento'),
      path('solicitudes-relevamiento/<int:pk>/eliminar/', eliminar_solicitud_relevamiento, name='eliminar_solicitud_relevamiento'),
+     # ------------------------------------
+     # 6. API endpoints
+     path('api/colonias/<int:colonia_id>/info/', views.api_info_colonia, name='api_info_colonia'),
 ]

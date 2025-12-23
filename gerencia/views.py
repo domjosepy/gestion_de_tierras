@@ -35,8 +35,31 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
 
 # LISTA TODAS LAS SOLICITUDES (sin parámetro)
 def lista_solicitudes_relevamiento(request):
-    solicitudes = SolicitudRelevamiento.objects.select_related("colonia", "creado_por").all()
-    return render(request, "includes/gerencia/tablas/lista_solicitud_relevamiento.html", {"solicitudes": solicitudes})
+    """
+    Lista todas las solicitudes de relevamiento con información de departamento y distrito
+    """
+    # Optimizar las consultas con select_related y prefetch_related
+    solicitudes = SolicitudRelevamiento.objects.select_related(
+        "colonia", 
+        "creado_por"
+    ).prefetch_related(
+        "colonia__distritos__departamento"
+    ).all()
+    
+    # Agregar información adicional a cada solicitud
+    for solicitud in solicitudes:
+        # Obtener el primer distrito relacionado con la colonia
+        distritos = solicitud.colonia.distritos.all()
+        if distritos.exists():
+            distrito = distritos.first()
+            solicitud.distrito = distrito
+            solicitud.departamento = distrito.departamento
+        else:
+            solicitud.distrito = None
+            solicitud.departamento = None
+    
+    return render(request, "includes/gerencia/tablas/lista_solicitud_relevamiento.html", 
+                  {"solicitudes": solicitudes})
 
 # OBTENER DATOS DE UNA SOLICITUD PARA EDITAR (con parámetro pk)
 def obtener_datos_solicitud(request, pk):
@@ -47,7 +70,6 @@ def obtener_datos_solicitud(request, pk):
     
     data = {
         'success': True,
-        
         'colonia': {
             'nombre': solicitud.colonia.nombre,
             'codigo': solicitud.colonia.codigo
@@ -63,15 +85,56 @@ def crear_solicitud_relevamiento(request, colonia_id):
     if request.method == "POST":
         form = SolicitudRelevamientoForm(request.POST)
         if form.is_valid():
-            solicitud = form.save(commit=False)
-            solicitud.colonia = colonia
-            solicitud.creado_por = request.user
-            solicitud.save()
-            return JsonResponse({"success": True, "message": "Solicitud creada exitosamente"})
+            try:
+                solicitud = form.save(commit=False)
+                solicitud.colonia = colonia
+                solicitud.creado_por = request.user
+                solicitud.save()
+                
+                return JsonResponse({
+                    "success": True, 
+                    "message": "Solicitud creada exitosamente",
+                    "solicitud_id": solicitud.id,
+                    "redirect_url": reverse("gerencia:lista_solicitudes_relevamiento")
+                })
+            except Exception as e:
+                return JsonResponse({
+                    "success": False, 
+                    "message": f"Error al crear la solicitud: {str(e)}"
+                }, status=500)
         else:
-            return JsonResponse({"success": False, "errors": form.errors})
-    # Si es GET, devolver error
-    return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
+            return JsonResponse({
+                "success": False, 
+                "errors": form.errors,
+                "message": "Errores en el formulario"
+            })
+    
+    return JsonResponse({
+        "success": False, 
+        "message": "Método no permitido"
+    }, status=405)
+
+
+def api_info_colonia(request, colonia_id):
+    """API para obtener información de una colonia (AJAX)"""
+    colonia = get_object_or_404(Colonia, pk=colonia_id)
+    
+    data = {
+        'id': colonia.id,
+        'nombre': colonia.nombre,
+        'codigo': colonia.codigo,
+        'tiene_relevamiento': colonia.tiene_relevamiento if hasattr(colonia, 'tiene_relevamiento') else False,
+        'estado': colonia.estado,
+        'distritos': [{
+            'id': d.id,
+            'nombre': d.nombre,
+            'departamento': d.departamento.nombre
+        } for d in colonia.distritos.all()[:3]]  # Primeros 3 distritos
+    }
+    
+    return JsonResponse(data)
+
+
 
 def editar_solicitud_relevamiento(request, pk):
     """Editar solicitud (AJAX)"""
