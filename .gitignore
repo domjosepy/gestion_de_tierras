@@ -1,3 +1,10 @@
+auxiliares/
+# Python
 __pycache__/
 *.pyc
-auxiliares/
+*.pyo
+
+# Django
+*.sqlite3
+.env
+venv/
