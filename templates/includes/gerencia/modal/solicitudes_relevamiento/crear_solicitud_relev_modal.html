@@ -1,0 +1,347 @@
+<div class="modal fade modal-primary" id="crearSolicitudRelevModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form id="crearSolicitudRelevForm" method="post" action="" novalidate>
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-2"></i>Solicitud de Relevamiento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Información jerárquica compacta -->
+          <div class="card mb-4">
+            <div class="card-header bg-light py-2">
+              <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos</h6>
+            </div>
+            <div class="card-body p-3">
+              <!-- Jerarquía en una línea -->
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <div class="border rounded p-2 bg-light">
+                    <div class="text-muted small">Departamento</div>
+                    <div class="fw-bold" id="departamentoInfo">
+                      <i class="fas fa-map-marker-alt text-primary me-1"></i>
+                      <span id="departamentoTexto"></span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="border rounded p-2 bg-light">
+                    <div class="text-muted small">Distrito</div>
+                    <div class="fw-bold" id="distritoInfo">
+                      <i class="fas fa-map text-success me-1"></i>
+                      <span id="distritoTexto"></span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="border rounded p-2 bg-light">
+                    <div class="text-muted small">Colonia</div>
+                    <div class="fw-bold" id="coloniaInfo">
+                      <i class="fas fa-tractor text-warning me-1"></i>
+                      <span id="coloniaTexto"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información de la solicitud -->
+          <div class="card mb-4">
+            <div class="card-header bg-light py-2">
+              <h6 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Detalles de la Solicitud</h6>
+            </div>
+            <div class="card-body">
+              <!-- Tipo de solicitud -->
+              <div class="mb-3">
+                <label class="form-label fw-bold mb-2"><i class="fas fa-tasks me-1"></i>Tipo de Estudio</label>
+                <div class="border rounded p-3 bg-light" id="tipoSolicitud">
+                  <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-2 fs-6">RELEVAMIENTO</span>
+                    <span class="fs-6">Estudio de Relevamiento (primer relevamiento de la colonia)</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Campo oculto para colonia -->
+              <input type="hidden" name="colonia" id="colonia_id" value="">
+              
+              <!-- Observaciones -->
+              <div class="mb-0">
+                <label class="form-label fw-bold"><i class="fas fa-comment-dots me-1"></i>Observaciones</label>
+                <textarea name="observaciones" id="observaciones" class="form-control" rows="3"
+                          placeholder="Ingrese observaciones adicionales (opcional)"></textarea>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="crearSolicitudRelevError" class="text-danger small mb-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar</button>
+          <button type="submit" class="btn btn-outline-success" id="btnGuardar">
+            <i class="fas fa-save me-1"></i>Crear Solicitud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade modal-primary" id="crearSolicitudRelevModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <form id="crearSolicitudRelevForm" method="post" action="" novalidate>
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title"><i class="fa-solid fa-plus-circle me-2"></i>Solicitud de Relevamiento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Información jerárquica compacta -->
+          <div class="card mb-4">
+            <div class="card-header bg-light py-2">
+              <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos</h6>
+            </div>
+            <div class="card-body p-3">
+              <!-- Jerarquía en una línea -->
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <div class="border rounded p-2 bg-light">
+                    <div class="text-muted small">Departamento</div>
+                    <div class="fw-bold" id="departamentoInfo">
+                      <i class="fas fa-map-marker-alt text-primary me-1"></i>
+                      <span id="departamentoTexto"></span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="border rounded p-2 bg-light">
+                    <div class="text-muted small">Distrito</div>
+                    <div class="fw-bold" id="distritoInfo">
+                      <i class="fas fa-map text-success me-1"></i>
+                      <span id="distritoTexto"></span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-4">
+                  <div class="border rounded p-2 bg-light">
+                    <div class="text-muted small">Colonia</div>
+                    <div class="fw-bold" id="coloniaInfo">
+                      <i class="fas fa-tractor text-warning me-1"></i>
+                      <span id="coloniaTexto"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información de la solicitud -->
+          <div class="card mb-4">
+            <div class="card-header bg-light py-2">
+              <h6 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Detalles de la Solicitud</h6>
+            </div>
+            <div class="card-body">
+              <!-- Tipo de solicitud -->
+              <div class="mb-3">
+                <label class="form-label fw-bold mb-2"><i class="fas fa-tasks me-1"></i>Tipo de Estudio</label>
+                <div class="border rounded p-3 bg-light" id="tipoSolicitud">
+                  <div class="d-flex align-items-center">
+                    <span class="badge bg-info me-2 fs-6">RELEVAMIENTO</span>
+                    <span class="fs-6">Estudio de Relevamiento (primer relevamiento de la colonia)</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Campo oculto para colonia -->
+              <input type="hidden" name="colonia" id="colonia_id" value="">
+              
+              <!-- Observaciones -->
+              <div class="mb-0">
+                <label class="form-label fw-bold"><i class="fas fa-comment-dots me-1"></i>Observaciones</label>
+                <textarea name="observaciones" id="observaciones" class="form-control" rows="3"
+                          placeholder="Ingrese observaciones adicionales (opcional)"></textarea>
+                <div class="invalid-feedback"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="crearSolicitudRelevError" class="text-danger small mb-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar</button>
+          <button type="submit" class="btn btn-outline-success" id="btnGuardar">
+            <i class="fas fa-save me-1"></i>Crear Solicitud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+      const modal = document.getElementById('crearSolicitudRelevModal');    
+      const form = document.getElementById("crearSolicitudRelevForm");
+      const errorDiv = document.getElementById("crearSolicitudRelevError");
+      const coloniaInput = document.getElementById('colonia_id');
+      const btnGuardar = document.getElementById('btnGuardar');
+      
+      const departamentoTexto = document.getElementById('departamentoTexto');
+      const distritoTexto = document.getElementById('distritoTexto');
+      const coloniaTexto = document.getElementById('coloniaTexto');
+      const tipoSolicitud = document.getElementById('tipoSolicitud');
+
+      modal.addEventListener('show.bs.modal', (event) => {
+          const button = event.relatedTarget;
+          
+          if (!button) {
+              mostrarError("No se encontró información de la colonia");
+              return;
+          }
+          
+          const datos = {
+              coloniaId: button.getAttribute('data-coloniaid'),
+              coloniaNombre: button.getAttribute('data-colonianombre'),
+              coloniaCodigo: button.getAttribute('data-coloniacodigo'),
+              distritoId: button.getAttribute('data-distritoid'),
+              distritoNombre: button.getAttribute('data-distritonombre'),
+              distritoCodigo: button.getAttribute('data-distritocodigo'),
+              departamentoId: button.getAttribute('data-departamentoid'),
+              departamentoNombre: button.getAttribute('data-departamentonombre'),
+              departamentoCodigo: button.getAttribute('data-departamentocodigo'),
+              tieneRelevamiento: button.getAttribute('data-tienerelevamiento') === 'true'
+          };
+          
+          if (!datos.coloniaId || !datos.coloniaNombre) {
+              mostrarError("Datos incompletos de la colonia");
+              return;
+          }
+          
+          mostrarInformacionJerarquica(datos);
+          coloniaInput.value = datos.coloniaId;
+          form.action = `/gerencia/solicitudes-relevamiento/crear/${datos.coloniaId}/`;
+          determinarTipoSolicitud(datos.tieneRelevamiento);
+      });
+
+      function mostrarInformacionJerarquica(datos) {
+          if (datos.departamentoNombre && datos.departamentoCodigo) {
+              departamentoTexto.textContent = `${datos.departamentoCodigo} - ${datos.departamentoNombre}`;
+          }
+          
+          if (datos.distritoNombre && datos.distritoCodigo) {
+              distritoTexto.textContent = `${datos.distritoCodigo} - ${datos.distritoNombre}`;
+          }
+          
+          coloniaTexto.textContent = `${datos.coloniaCodigo || ''} - ${datos.coloniaNombre}`.trim();
+          if (datos.coloniaCodigo) {
+              coloniaTexto.innerHTML = `<strong>${datos.coloniaCodigo}</strong> - ${datos.coloniaNombre}`;
+          }
+      }
+
+      function determinarTipoSolicitud(tieneRelevamiento) {
+          if (tieneRelevamiento) {
+              tipoSolicitud.innerHTML = `
+                  <div class="d-flex align-items-center">
+                      <span class="badge bg-warning me-2 fs-6">ACTUALIZACIÓN</span>
+                      <span class="fs-6">Estudio de Actualización (la colonia ya tiene relevamiento previo)</span>
+                  </div>
+              `;
+          } else {
+              tipoSolicitud.innerHTML = `
+                  <div class="d-flex align-items-center">
+                      <span class="badge bg-info me-2 fs-6">RELEVAMIENTO</span>
+                      <span class="fs-6">Estudio de Relevamiento (primer relevamiento de la colonia)</span>
+                  </div>
+              `;
+          }
+      }
+
+      function mostrarError(mensaje) {
+          errorDiv.textContent = mensaje;
+      }
+
+      function limpiarErrores() {
+          form.querySelectorAll('.is-invalid').forEach(input => input.classList.remove('is-invalid'));
+          form.querySelectorAll('.invalid-feedback').forEach(div => div.textContent = '');
+          errorDiv.textContent = '';
+      }
+
+      form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          limpiarErrores();
+
+          const btnSubmit = form.querySelector('button[type="submit"]');
+          const oldText = btnSubmit.innerHTML;
+
+          btnSubmit.disabled = true;
+          btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
+
+          try {
+              const formData = new FormData(form);
+              
+              const res = await fetch(form.action, {
+                  method: "POST",
+                  headers: { 
+                      "X-Requested-With": "XMLHttpRequest",
+                      "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                  },
+                  body: formData
+              });
+
+              const data = await res.json();
+
+              if (data.success) {
+                  // Cerrar modal primero
+                  const modalInstance = bootstrap.Modal.getInstance(modal);
+                  modalInstance.hide();
+                  
+                  // Redirigir a la lista (el toast se mostrará desde la sesión)
+                  setTimeout(() => {
+                      window.location.href = data.redirect_url || "{% url 'gerencia:lista_solicitudes_relevamiento' %}";
+                  }, 300);
+              } else {
+                  if (data.errors) {
+                      for (const [field, messages] of Object.entries(data.errors)) {
+                          const input = form.querySelector('[name="' + field + '"]');
+                          const feedback = input ? input.nextElementSibling : null;
+                          if (input && feedback) {
+                              input.classList.add('is-invalid');
+                              feedback.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
+                          }
+                      }
+                  }
+                  
+                  if (data.message) {
+                      errorDiv.textContent = data.message;
+                  }
+              }
+          } catch (error) {
+              console.error('Error:', error);
+              errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+          } finally {
+              btnSubmit.disabled = false;
+              btnSubmit.innerHTML = oldText;
+          }
+      });
+
+      modal.addEventListener('hidden.bs.modal', () => {
+          form.reset();
+          limpiarErrores();
+          departamentoTexto.textContent = '';
+          distritoTexto.textContent = '';
+          coloniaTexto.textContent = '';
+          coloniaInput.value = '';
+      });
+  });
+</script>

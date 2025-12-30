@@ -151,6 +151,24 @@
                 });
             });
         </script>
+        {% if toast_message %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(() => {
+                    if (typeof mostrarToast === 'function') {
+                        // Maneja tanto string como objeto
+                        {% if toast_message.text %}
+                            mostrarToast('{{ toast_message.text|escapejs }}', '{{ toast_message.type|default:"success" }}');
+                        {% else %}
+                            // Si es solo un string
+                            mostrarToast('{{ toast_message|escapejs }}', 'success');
+                        {% endif %}
+                    }
+                });
+            });
+        </script>
+        {% endif %}
+        <!-- FIN INICIALIZACIÓN DE TOASTS DE DJANGO -->
 
 </body>
 </html>

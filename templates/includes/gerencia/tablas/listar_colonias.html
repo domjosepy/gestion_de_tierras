@@ -3,10 +3,20 @@
 {% block title %}Gerencia - Colonias{% endblock %}
 {% block content %}
 <div class="container-fluid fade-in">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h2 class="text-warning fw-bold mb-0">
+    <div class="d-sm-flex align-items-center mb-4">
+        <a href="{% url 'gerencia:listar_departamentos' %}" class="btn btn-outline-primary m-4">
+            <i class="fas fa-map-marker-alt me-3"></i>Departamentos
+        </a>
+        
+        <a href="{% url 'gerencia:listar_distritos' %}" class="btn btn-outline-success">
+            <i class="fas fa-map me-3"></i>Distritos
+        </a>
+        <h2 class="text-warning fw-bold ms-4">
             <i class="fas fa-tractor me-3"></i>Colonias
         </h2>
+        <a href="{% url 'gerencia:lista_solicitudes_relevamiento' %}" class="btn btn-outline-success ms-4">
+            <i class="fas fa-clipboard-list me-3"></i>Solicitudes de Relevamiento
+        </a>
     </div>
 
 
@@ -64,7 +74,6 @@
                                 </button>
 
                                 <!-- Botón eliminar -->
-                                <!-- Botón eliminar en listar_colonias.html -->
                                 {% if not colonia.solicitudes.exists and not colonia.relevamientos.exists %}
                                     <button class="btn btn-sm me-1 btn-danger"
                                             data-bs-toggle="modal" data-bs-target="#eliminarColoniaModal"
@@ -99,8 +108,30 @@
                                 
                                 <!-- Botón Solicitar Relevamiento -->
                                 <button class="btn btn-sm btn-info" 
-                                        title="Solicitar Relevamiento (Próximamente)"
-                                        disabled>
+                                        title="Solicitar Relevamiento"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#crearSolicitudRelevModal"
+                                        data-coloniaid="{{ colonia.id }}"
+                                        data-colonianombre="{{ colonia.nombre }}"
+                                        data-coloniacodigo="{{ colonia.codigo }}"
+                                        {% with distrito=colonia.distritos.first %}
+                                            {% if distrito %}
+                                                data-distritoid="{{ distrito.id }}"
+                                                data-distritonombre="{{ distrito.nombre }}"
+                                                data-distritocodigo="{{ distrito.codigo }}"
+                                                data-departamentoid="{{ distrito.departamento.id }}"
+                                                data-departamentonombre="{{ distrito.departamento.nombre }}"
+                                                data-departamentocodigo="{{ distrito.departamento.codigo }}"
+                                            {% else %}
+                                                data-distritoid=""
+                                                data-distritonombre=""
+                                                data-distritocodigo=""
+                                                data-departamentoid=""
+                                                data-departamentonombre=""
+                                                data-departamentocodigo=""
+                                            {% endif %}
+                                        {% endwith %}
+                                        data-tienerelevamiento="{{ colonia.tiene_relevamiento|yesno:'true,false' }}">
                                     <i class="fas fa-clipboard-list me-1"></i>
                                     <i class="fas fa-search"></i>
                                 </button>
@@ -122,6 +153,7 @@
 {% include 'includes/gerencia/modal/colonias/crear_colonia_modal.html' %}
 {% include 'includes/gerencia/modal/colonias/editar_colonia_modal.html' %}
 {% include 'includes/gerencia/modal/colonias/eliminar_colonia_modal.html' %}
+{% include 'includes/gerencia/modal/solicitudes_relevamiento/crear_solicitud_relev_modal.html' %}
 
 {% endblock %}
 
@@ -137,11 +169,12 @@ document.addEventListener('DOMContentLoaded', function() {
             info: "Mostrando {start} a {end} de {rows} Colonias"
         }
     });
-
+    
     // Inicializar tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         new bootstrap.Tooltip(el);
     });
 });
+
 </script>
 {% endblock %}

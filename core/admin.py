@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import Departamento, Distrito, Colonia, Area, Objetivo, Solicitud, SolicitudAudit
-
+from .models import Departamento, Distrito, Colonia
 @admin.register(Departamento)
 class DepartamentoAdmin(admin.ModelAdmin):
     list_display = ("nombre", "codigo")
@@ -23,26 +22,3 @@ class ColoniaAdmin(admin.ModelAdmin):
         return ", ".join([str(d) for d in obj.distritos.all()])
     ver_distritos.short_description = "Distritos"
 
-@admin.register(Area)
-class AreaAdmin(admin.ModelAdmin):
-    list_display = ("nombre",)
-    search_fields = ("nombre",)
-
-@admin.register(Objetivo)
-class ObjetivoAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "area")
-    list_filter = ("area",)
-    search_fields = ("nombre",)
-
-@admin.register(Solicitud)
-class SolicitudAdmin(admin.ModelAdmin):
-    list_display = ("id", "colonia", "tipo", "estado", "creado_por", "fecha_creacion")
-    list_filter = ("estado", "tipo")
-    search_fields = ("colonia__nombre", "creado_por__username")
-    readonly_fields = ("fecha_creacion", "fecha_actualizacion")
-
-@admin.register(SolicitudAudit)
-class SolicitudAuditAdmin(admin.ModelAdmin):
-    list_display = ("solicitud", "previo", "nuevo", "cambiado_por", "fecha")
-    readonly_fields = ("solicitud", "previo", "nuevo", "cambiado_por", "fecha", "comentario")
-    

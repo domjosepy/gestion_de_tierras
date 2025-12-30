@@ -122,7 +122,6 @@
       .then(data => {
         if (data.success) {
           bootstrap.Modal.getInstance(modal).hide();
-          mostrarToast('success', 'Distrito creado correctamente');
           location.reload();
         } else {
           if (data.errors) {

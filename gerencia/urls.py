@@ -5,6 +5,13 @@ from core.views import (
     listar_distritos, crear_distrito, editar_distrito, eliminar_distrito,
     ColoniaListView, crear_colonia, editar_colonia, eliminar_colonia
 )
+from gerencia.views import (
+    lista_solicitudes_relevamiento,
+    obtener_datos_solicitud,
+    crear_solicitud_relevamiento,
+    editar_solicitud_relevamiento,
+    eliminar_solicitud_relevamiento
+)
 
 app_name = "gerencia"
 
@@ -44,5 +51,21 @@ urlpatterns = [
     path('colonias/eliminar/<int:colonia_id>/',
          eliminar_colonia, name='eliminar_colonia'),
 
-
+    # ------------------------------------
+    # 5. Vistas de solicitudes de relevamiento
+    # ------------------------------------
+    path('solicitudes-relevamiento/', lista_solicitudes_relevamiento,
+         name='lista_solicitudes_relevamiento'),
+    path('solicitudes-relevamiento/<int:pk>/datos/',
+         obtener_datos_solicitud, name='obtener_datos_solicitud'),
+    path('solicitudes-relevamiento/crear/<int:colonia_id>/',
+         crear_solicitud_relevamiento, name='crear_solicitud_relevamiento'),
+    path('solicitudes-relevamiento/<int:pk>/editar/',
+         editar_solicitud_relevamiento, name='editar_solicitud_relevamiento'),
+    path('solicitudes-relevamiento/<int:pk>/eliminar/',
+         eliminar_solicitud_relevamiento, name='eliminar_solicitud_relevamiento'),
+    # ------------------------------------
+    # 6. API endpoints
+    path('api/colonias/<int:colonia_id>/info/',
+         views.api_info_colonia, name='api_info_colonia'),
 ]
