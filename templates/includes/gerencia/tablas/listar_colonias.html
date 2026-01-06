@@ -14,8 +14,9 @@
         <h2 class="text-warning fw-bold ms-4">
             <i class="fas fa-tractor me-3"></i>Colonias
         </h2>
-        <a href="{% url 'gerencia:lista_solicitudes_relevamiento' %}" class="btn btn-outline-success ms-4">
-            <i class="fas fa-clipboard-list me-3"></i>Solicitudes de Relevamiento
+        <a href="{% url 'gerencia:lista_solicitudes_relevamiento' %}" class="btn btn-outline-info ms-4">
+            <i class="fas fa-clipboard-list me-0"></i>
+            <i class="fas fa-search me-3"></i>Solicitudes de Relevamiento
         </a>
     </div>
 
@@ -55,10 +56,11 @@
                             <td class="text-uppercase">{{ colonia.nombre }}</td>
                             
                             <td>
-                                <span class="badge {% if colonia.solicitudes.count > 0 %}bg-warning{% else %}bg-secondary{% endif %} rounded-pill">
+                                <span class="badge {% if colonia.SolicitudRelevamiento.count > 0 %}bg-warning{% else %}bg-secondary{% endif %} rounded-pill">
                                     <i class="fas fa-clipboard-list me-1"></i>
-                                    {{ colonia.solicitudes.count }} solicitud{{ colonia.solicitudes.count|pluralize:"es" }}
+                                    {{ colonia.SolicitudRelevamiento.count }} solicitud{{ colonia.SolicitudRelevamiento.count|pluralize:"es" }}
                                 </span>
+                                
                             </td>
                             
                             <td class="text-center">

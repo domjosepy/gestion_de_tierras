@@ -1,0 +1,615 @@
+<!-- templates/administrador/reporte_permisos.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Reporte de Permisos y Roles{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h2 class="text-primary fw-bold mb-0">
+            <i class="fas fa-chart-bar me-2"></i>Reporte de Permisos y Roles
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'administrador:gestion_masiva' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-users-cog me-1"></i> Asignación Masiva
+            </a>
+            <a href="{% url 'administrador:administrador_dashboard' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Inicio
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Estadísticas -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1 fw-bold">
+                                Total Usuarios</div>
+                            <div class="h5 mb-0 font-weight-bold text-primary fw-bold">{{ total_usuarios }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1 fw-bold">
+                                Roles Activos</div>
+                            <div class="h5 mb-0 font-weight-bold text-success fw-bold">{{ roles.count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-tags fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1 fw-bold">
+                                Permisos en Uso</div>
+                            <div class="h5 mb-0 font-weight-bold text-info fw-bold">{{ permisos_comunes|length }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-key fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1 fw-bold">
+                                Usuarios sin Rol</div>
+                            <div class="h5 mb-0 font-weight-bold text-warning fw-bold">
+                                {{ usuarios_sin_rol|default:0 }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-times fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos y Distribuciones -->
+    <div class="row">
+        <!-- Gráfico de distribución de usuarios por rol -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-white fw-bold">
+                        <i class="fas fa-chart-pie me-1"></i> Distribución de Usuarios por Rol
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar">
+                        <canvas id="distribucionRolesChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de roles con conteo -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-white fw-bold">
+                        <i class="fas fa-list me-1"></i> Usuarios por Rol
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for item in usuarios_por_rol %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge me-2" style="background-color: {{ item.color }}; color: white;">
+                                    &nbsp;&nbsp;
+                                </span>
+                                {{ item.rol }}
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ item.cantidad }}</span>
+                        </div>
+                        {% empty %}
+                        <div class="list-group-item">No hay datos disponibles</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de permisos más comunes -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-white fw-bold">
+                <i class="fas fa-key me-1"></i> Permisos Más Utilizados
+            </h6>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-secondary" id="exportPermisosCsv">
+                    <i class="fas fa-file-csv"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="exportPermisosExcel">
+                    <i class="fas fa-file-excel"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="exportPermisosPrint">
+                    <i class="fas fa-print"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="beautiful-table" id="tablaPermisos" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Permiso</th>
+                            <th>Código</th>
+                            <th class="text-center">Usuarios Directos</th>
+                            <th class="text-center">Usuarios por Rol</th>
+                            <th class="text-center">Total Usuarios</th>
+                            <th class="text-center">Roles Asignados</th>
+                        </tr>
+                    </thead>
+                    <!-- Tabla de permisos -->
+                    <tbody>
+                        {% for permiso in permisos_comunes %}
+                        <tr>
+                            <td>
+                                <strong>{{ permiso.name }}</strong>
+                                <small class="text-muted d-block">
+                                    {{ permiso.content_type.app_label|title }} App
+                                </small>
+                            </td>
+                            <td>
+                                <code>{{ permiso.codename }}</code>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ permiso.usuarios_directos|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ permiso.usuarios_por_rol|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ permiso.total_usuarios|default:0 }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% for rol in permiso.rol_set.all|slice:":3" %}
+                                <span class="badge mb-1" style="background-color: {{ rol.color }}; color: white;">
+                                    {{ rol.nombre }}
+                                </span>
+                                {% endfor %}
+                                {% if permiso.roles_asignados|default:0 > 3 %}
+                                <span class="badge bg-secondary">+{{ permiso.roles_asignados|add:"-3" }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No hay permisos registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle de roles con acordeón -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-white fw-bold">
+                <i class="fas fa-tags me-1"></i> Detalle de Roles y sus Permisos
+            </h6>
+            <a href="{% url 'administrador:listar_roles' %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-cog me-1"></i> Gestionar Roles
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="accordionRoles">
+                {% for rol in roles %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading{{ rol.id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse{{ rol.id }}" aria-expanded="false" 
+                                aria-controls="collapse{{ rol.id }}">
+                            <div class="d-flex align-items-center w-100">
+                                <span class="badge me-2" style="background-color: {{ rol.color }}; color: white;">
+                                    &nbsp;&nbsp;
+                                </span>
+                                <div class="flex-grow-1">
+                                    {{ rol.nombre }}
+                                    <small class="text-muted d-block">{{ rol.descripcion|default:"Sin descripción"|truncatechars:50 }}</small>
+                                </div>
+                                <div class="ms-auto">
+                                    <span class="badge bg-primary me-2">{{ rol.user_set.count }} usuarios</span>
+                                    <span class="badge bg-secondary">{{ rol.permisos.count }} permisos</span>
+                                </div>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="collapse{{ rol.id }}" class="accordion-collapse collapse" 
+                         aria-labelledby="heading{{ rol.id }}" data-bs-parent="#accordionRoles">
+                        <div class="accordion-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Información del Rol:</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>Creado:</strong> {{ rol.creado|date:"d/m/Y H:i" }}</li>
+                                        <li><strong>Última actualización:</strong> {{ rol.actualizado|date:"d/m/Y H:i" }}</li>
+                                        <li><strong>Grupo Django:</strong> 
+                                            {% if rol.grupo_django %}
+                                            <span class="badge bg-success">Sincronizado</span>
+                                            {% else %}
+                                            <span class="badge bg-warning">No sincronizado</span>
+                                            {% endif %}
+                                        </li>
+                                    </ul>
+                                    
+                                    <h6 class="mt-3">Usuarios con este rol:</h6>
+                                    {% if rol.user_set.all %}
+                                    <div class="list-group list-group-flush">
+                                        {% for usuario in rol.user_set.all|slice:":5" %}
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div>
+                                                {{ usuario.username }}
+                                                <small class="text-muted d-block">{{ usuario.get_full_name }}</small>
+                                            </div>
+                                            <span class="badge bg-{{ usuario.estado|lower }}">
+                                                {{ usuario.get_estado_display }}
+                                            </span>
+                                        </div>
+                                        {% endfor %}
+                                        {% if rol.user_set.count > 5 %}
+                                        <div class="list-group-item text-center">
+                                            <small class="text-muted">
+                                                ... y {{ rol.user_set.count|add:"-5" }} usuario(s) más
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted">Ningún usuario tiene este rol.</p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Permisos asignados:</h6>
+                                    {% if rol.permisos.all %}
+                                    <div class="d-flex flex-wrap gap-1 mb-3">
+                                        {% for permiso in rol.permisos.all|slice:":10" %}
+                                        <span class="badge bg-info mb-1">
+                                            {{ permiso.name|truncatechars:30 }}
+                                        </span>
+                                        {% endfor %}
+                                    </div>
+                                    {% if rol.permisos.count > 10 %}
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Mostrando 10 de {{ rol.permisos.count }} permisos.
+                                    </div>
+                                    {% endif %}
+                                    {% else %}
+                                    <p class="text-muted">Este rol no tiene permisos asignados.</p>
+                                    {% endif %}
+                                    
+                                    <!-- Acciones rápidas -->
+                                    <div class="mt-4">
+                                        <a href="{% url 'administrador:editar_rol' rol.id %}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit me-1"></i> Editar Rol
+                                        </a>
+                                        <button class="btn btn-sm btn-info" 
+                                                onclick="verDetallesRol({{ rol.id }})">
+                                            <i class="fas fa-eye me-1"></i> Ver Detalles
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="accordion-item">
+                    <div class="accordion-body">
+                        No hay roles configurados.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles del rol -->
+<div class="modal fade" id="modalDetallesRol" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Detalles del Rol</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoDetallesRol">
+                Cargando...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 🔧 DataTable
+        const dataTable = new simpleDatatables.DataTable('#tablaPermisos', {
+            perPage: 10,
+            labels: { 
+                placeholder: "Buscar...",
+                perPage: "Registros por página",
+                noRows: "No se encontraron Departamentos registrados",
+                info: "Mostrando {start} a {end} de {rows} Permisos"
+            }
+        });
+    });
+document.addEventListener('DOMContentLoaded', function() {
+    // Datos para el gráfico
+    const rolesLabels = [
+        {% for item in usuarios_por_rol %}
+            "{{ item.rol }}",
+        {% endfor %}
+    ];
+    
+    const rolesData = [
+        {% for item in usuarios_por_rol %}
+            {{ item.cantidad }},
+        {% endfor %}
+    ];
+    
+    const rolesColors = [
+        {% for item in usuarios_por_rol %}
+            "{{ item.color }}",
+        {% endfor %}
+    ];
+
+    // Configuración del gráfico de barras
+    const ctx = document.getElementById('distribucionRolesChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: rolesLabels,
+            datasets: [{
+                label: 'Usuarios por Rol',
+                data: rolesData,
+                backgroundColor: rolesColors,
+                borderColor: rolesColors.map(color => color.replace('0.8', '1')),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw} usuario(s)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Exportar permisos a CSV
+    document.getElementById('exportPermisosCsv').addEventListener('click', function() {
+        const tabla = document.getElementById('tablaPermisos');
+        let csv = [];
+        
+        // Encabezados
+        let headers = [];
+        tabla.querySelectorAll('thead th').forEach(th => {
+            headers.push('"' + th.textContent.replace(/"/g, '""') + '"');
+        });
+        csv.push(headers.join(','));
+        
+        // Filas
+        tabla.querySelectorAll('tbody tr').forEach(row => {
+            let cols = [];
+            row.querySelectorAll('td').forEach(cell => {
+                // Remover etiquetas HTML y obtener solo texto
+                const text = cell.textContent.replace(/\s+/g, ' ').trim();
+                cols.push('"' + text.replace(/"/g, '""') + '"');
+            });
+            csv.push(cols.join(','));
+        });
+        
+        const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'permisos_report_' + new Date().toISOString().split('T')[0] + '.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+    // Exportar permisos a Excel
+    document.getElementById('exportPermisosExcel').addEventListener('click', function() {
+        const tabla = document.getElementById('tablaPermisos');
+        let excel = [];
+        
+        // Encabezados
+        let headers = [];
+        tabla.querySelectorAll('thead th').forEach(th => {
+            headers.push(th.textContent.replace(/\s+/g, ' ').trim());
+        });
+        excel.push(headers.join('\t'));
+        
+        // Filas
+        tabla.querySelectorAll('tbody tr').forEach(row => {
+            let cols = [];
+            row.querySelectorAll('td').forEach(cell => {
+                // Remover etiquetas HTML y obtener solo texto
+                const text = cell.textContent.replace(/\s+/g, ' ').trim();
+                cols.push(text);
+            });
+            excel.push(cols.join('\t'));
+        });
+        
+        const blob = new Blob([excel.join('\n')], { type: 'application/vnd.ms-excel' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'permisos_report_' + new Date().toISOString().split('T')[0] + '.xls';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    });
+
+    // Imprimir tabla de permisos
+    document.getElementById('exportPermisosPrint').addEventListener('click', function() {
+        const tabla = document.getElementById('tablaPermisos');
+        const ventana = window.open('', '', 'height=700,width=900');
+        ventana.document.write(`
+            <html>
+                <head>
+                    <title>Reporte de Permisos</title>
+                    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+                    <style>
+                        @media print {
+                            .badge { border: 1px solid #000; }
+                            code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container mt-4">
+                        <h4>Reporte de Permisos y Roles</h4>
+                        <p>Generado: ${new Date().toLocaleDateString()}</p>
+                        ${tabla.outerHTML}
+                    </div>
+                </body>
+            </html>
+        `);
+        ventana.document.close();
+        ventana.print();
+    });
+
+    // Función para ver detalles del rol (AJAX)
+    window.verDetallesRol = function(rolId) {
+        fetch(`/administrador/roles/detalles/${rolId}/`)
+            .then(response => response.json())
+            .then(data => {
+                const modal = document.getElementById('modalDetallesRol');
+                const contenido = document.getElementById('contenidoDetallesRol');
+                
+                let html = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información General</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Nombre:</th>
+                                    <td>${data.nombre}</td>
+                                </tr>
+                                <tr>
+                                    <th>Descripción:</th>
+                                    <td>${data.descripcion || 'Sin descripción'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Creado:</th>
+                                    <td>${data.creado}</td>
+                                </tr>
+                                <tr>
+                                    <th>Usuarios:</th>
+                                    <td><span class="badge bg-primary">${data.usuarios_count}</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Permisos:</th>
+                                    <td><span class="badge bg-secondary">${data.permisos_count}</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Color del rol:</h6>
+                            <div class="d-flex align-items-center">
+                                <div style="width: 50px; height: 50px; background-color: ${data.color}; border-radius: 5px;" 
+                                     class="me-3"></div>
+                                <code>${data.color}</code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h6 class="mt-4">Permisos Asignados:</h6>
+                    <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                `;
+                
+                if (data.permisos && data.permisos.length > 0) {
+                    data.permisos.forEach(permiso => {
+                        html += `
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                <div>
+                                    <strong>${permiso.name}</strong>
+                                    <small class="text-muted d-block">${permiso.app_label}.${permiso.codename}</small>
+                                </div>
+                                <span class="badge bg-info">${permiso.codename}</span>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += `<p class="text-muted text-center">No hay permisos asignados</p>`;
+                }
+                
+                html += `
+                    </div>
+                    
+                    <div class="mt-4 text-end">
+                        <a href="/administrador/roles/editar/${rolId}/" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit me-1"></i> Editar Rol
+                        </a>
+                        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i> Cerrar
+                        </button>
+                    </div>
+                `;
+                
+                contenido.innerHTML = html;
+                new bootstrap.Modal(modal).show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                ToastManager.create('Error al cargar detalles del rol', 'error');
+            });
+    };
+});
+</script>
+{% endblock %}

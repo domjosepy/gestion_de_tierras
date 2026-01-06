@@ -41,73 +41,73 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {  
-    const form = document.getElementById("crearDeptoForm");
-    const errorDiv = document.getElementById("crearDeptoError");
+  document.addEventListener("DOMContentLoaded", () => {  
+      const form = document.getElementById("crearDeptoForm");
+      const errorDiv = document.getElementById("crearDeptoError");
 
-    function limpiarErrores(form) {
-        form.querySelectorAll('.is-invalid').forEach(input => {
-            input.classList.remove('is-invalid');
-        });
-        form.querySelectorAll('.invalid-feedback').forEach(div => {
-            div.textContent = '';
-        });
-        errorDiv.textContent = '';
-    }
+      function limpiarErrores(form) {
+          form.querySelectorAll('.is-invalid').forEach(input => {
+              input.classList.remove('is-invalid');
+          });
+          form.querySelectorAll('.invalid-feedback').forEach(div => {
+              div.textContent = '';
+          });
+          errorDiv.textContent = '';
+      }
 
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        limpiarErrores(form);
+      form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          limpiarErrores(form);
 
-        const btnSubmit = form.querySelector('button[type="submit"]');
-        const oldText = btnSubmit.innerHTML;
+          const btnSubmit = form.querySelector('button[type="submit"]');
+          const oldText = btnSubmit.innerHTML;
 
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+          btnSubmit.disabled = true;
+          btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
 
-        try {
-            const res = await fetch(form.action, {
-                method: "POST",
-                headers: { "X-Requested-With": "XMLHttpRequest" },
-                body: new FormData(form)
-            });
+          try {
+              const res = await fetch(form.action, {
+                  method: "POST",
+                  headers: { "X-Requested-With": "XMLHttpRequest" },
+                  body: new FormData(form)
+              });
 
-            const data = await res.json();
+              const data = await res.json();
 
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById("crearDeptoModal"));
-                modal.hide();
-                form.reset();
-                location.reload();
-            } else {
-                if (data.errors) {
-                    // Mostrar errores por campo
-                    for (const [field, messages] of Object.entries(data.errors)) {
-                        const input = form.querySelector('[name="' + field + '"]');
-                        const feedback = input ? input.nextElementSibling : null;
-                        if (input && feedback) {
-                            input.classList.add('is-invalid');
-                            feedback.textContent = messages.join(' ');
-                        }
-                    }
-                } else if (data.message) {
-                    errorDiv.textContent = data.message;
-                }
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
-        } finally {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = oldText;
-        }
-    });
+              if (data.success) {
+                  const modal = bootstrap.Modal.getInstance(document.getElementById("crearDeptoModal"));
+                  modal.hide();
+                  form.reset();
+                  location.reload();
+              } else {
+                  if (data.errors) {
+                      // Mostrar errores por campo
+                      for (const [field, messages] of Object.entries(data.errors)) {
+                          const input = form.querySelector('[name="' + field + '"]');
+                          const feedback = input ? input.nextElementSibling : null;
+                          if (input && feedback) {
+                              input.classList.add('is-invalid');
+                              feedback.textContent = messages.join(' ');
+                          }
+                      }
+                  } else if (data.message) {
+                      errorDiv.textContent = data.message;
+                  }
+              }
+          } catch (error) {
+              console.error('Error:', error);
+              errorDiv.textContent = 'Error al guardar. Intente nuevamente.';
+          } finally {
+              btnSubmit.disabled = false;
+              btnSubmit.innerHTML = oldText;
+          }
+      });
 
-    // Limpiar errores cuando se cierre el modal
-    const modal = document.getElementById('crearDeptoModal');
-    modal.addEventListener('hidden.bs.modal', () => {
-        form.reset();
-        limpiarErrores(form);
-    });
-});
+      // Limpiar errores cuando se cierre el modal
+      const modal = document.getElementById('crearDeptoModal');
+      modal.addEventListener('hidden.bs.modal', () => {
+          form.reset();
+          limpiarErrores(form);
+      });
+  });
 </script>

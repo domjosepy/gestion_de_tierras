@@ -1,0 +1,775 @@
+<!-- templates/administrador/gestion_masiva.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Asignación Masiva de Permisos{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Header -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h2 class="text-primary fw-bold mb-0">
+            <i class="fas fa-users-cog me-2"></i>Asignación Masiva de Permisos
+        </h2>
+        
+        <div class="btn-group">
+            <a href="{% url 'administrador:reporte_permisos' %}" class="btn btn-info btn-sm">
+                <i class="fas fa-chart-bar me-1"></i> Ver Reportes
+            </a>
+            <a href="{% url 'administrador:administrador_dashboard' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Inicio
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjeta principal -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center bg-primary">
+            <h6 class="m-0 font-weight-bold text-white fw-bold">
+                <i class="fas fa-tasks me-1"></i> Asignar Permisos a Múltiples Usuarios
+            </h6>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="toggleSelectAll">
+                <label class="form-check-label text-white" for="toggleSelectAll">Seleccionar todos</label>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <form method="post" id="formGestionMasiva" action="{% url 'administrador:gestion_masiva' %}">
+                {% csrf_token %}
+                
+                <!-- Paso 1: Seleccionar Usuarios -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3 border-bottom pb-2">
+                            <i class="fas fa-users me-2"></i> Paso 1: Seleccionar Usuarios
+                        </h5>
+                        
+                        <!-- Filtros rápidos -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <input type="text" id="filtroUsuario" class="form-control" 
+                                       placeholder="Buscar por nombre o email...">
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filtroRol" class="form-select">
+                                    <option value="">Todos los roles</option>
+                                    {% for rol in roles %}
+                                    <option value="{{ rol.id }}">{{ rol.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="filtroEstado" class="form-select">
+                                    <option value="">Todos los estados</option>
+                                    <option value="ACTIVO">Activos</option>
+                                    <option value="INACTIVO">Inactivos</option>
+                                    <option value="PENDIENTE">Pendientes</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="button" id="btnLimpiarFiltros" title="Limpiar Formulario" class="btn btn-outline-danger">
+                                    <i class="fas fa-times me-2"></i>Limpiar Filtros
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Lista de usuarios -->
+                        <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;" id="listaUsuarios">
+                            {% for usuario in usuarios %}
+                            <div class="usuario-item" data-rol="{{ usuario.rol.id|default:'' }}" data-estado="{{ usuario.estado }}">
+                                <div class="form-check">
+                                    <input class="form-check-input usuario-checkbox" type="checkbox" 
+                                           name="usuarios" value="{{ usuario.id }}" 
+                                           id="usuario_{{ usuario.id }}">
+                                    <label class="form-check-label d-flex justify-content-between align-items-center" 
+                                           for="usuario_{{ usuario.id }}">
+                                        <div>
+                                            <strong>{{ usuario.username }}</strong>
+                                            <small class="text-muted d-block">
+                                                {{ usuario.get_full_name|default:usuario.email }}
+                                                {% if usuario.rol %}
+                                                <span class="badge ms-2" style="background-color: {{ usuario.rol.color }}; color: white;">
+                                                    {{ usuario.rol.nombre }}
+                                                </span>
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-{{ usuario.estado|lower }}">
+                                            {{ usuario.get_estado_display }}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted text-center">No hay usuarios disponibles</p>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <span id="contadorSeleccionados">0</span> usuarios seleccionados
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Configurar Permisos -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5 class="mb-3 border-bottom pb-2">
+                            <i class="fas fa-key me-2"></i> Paso 2: Configurar Permisos
+                        </h5>
+                        
+                        <!-- Opción A: Asignar Rol -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <div class="form-check">
+                                    <input class="form-check-input me-2" type="radio" name="tipo_asignacion" 
+                                        id="asignarRol" value="rol" checked>
+                                    <label class="form-check-label fw-bold text-white" for="asignarRol">
+                                        Asignar un Rol Completo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <select name="rol" id="selectRol" class="form-select">
+                                    <option value="">Seleccionar rol...</option>
+                                    {% for rol in roles %}
+                                    <option value="{{ rol.id }}" data-permisos="{{ rol.permisos.count }}">
+                                        {{ rol.nombre }} ({{ rol.permisos.count }} permisos)
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="mt-2" id="detallesRol"></div>
+                            </div>
+                        </div>
+
+                        <!-- Opción B: Permisos Específicos -->
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <div class="form-check">
+                                    <input class="form-check-input me-2" type="radio" name="tipo_asignacion" 
+                                        id="asignarPermisos" value="permisos">
+                                    <label class="form-check-label fw-bold text-white" for="asignarPermisos">
+                                        Seleccionar Permisos Específicos
+                                    </label>
+                                </div>
+                            </div>
+    
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" id="filtroPermisos" class="form-control" 
+                                               placeholder="Buscar permisos...">
+                                    </div>
+                                </div>
+                                
+                                <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                    {% for permiso in permisos %}
+                                    <div class="form-check permiso-item" data-app="{{ permiso.content_type.app_label }}">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="permisos" value="{{ permiso.id }}" 
+                                               id="permiso_{{ permiso.id }}">
+                                        <label class="form-check-label" for="permiso_{{ permiso.id }}" style="font-size: 0.9rem;">
+                                            <strong>{{ permiso.name }}</strong>
+                                            <small class="text-muted d-block">
+                                                {{ permiso.content_type.app_label }}.{{ permiso.codename }}
+                                            </small>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <span id="contadorPermisos">0</span> permisos seleccionados
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Paso 3: Vista Previa -->
+                    <div class="col-md-6">
+                        <h5 class="mb-3 border-bottom pb-2">
+                            <i class="fas fa-eye me-2"></i> Paso 3: Vista Previa
+                        </h5>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <div id="vistaPrevia" class="text-center text-muted">
+                                    <i class="fas fa-users fa-3x mb-3"></i>
+                                    <p>Selecciona usuarios y permisos para ver la vista previa</p>
+                                </div>
+                                
+                                <div id="detallesAsignacion" class="d-none">
+                                    <h6>Resumen de la operación:</h6>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span>Usuarios seleccionados:</span>
+                                            <span id="resumenUsuarios" class="badge bg-primary">0</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span>Tipo de asignación:</span>
+                                            <span id="resumenTipo" class="badge bg-info">Rol</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between">
+                                            <span>Permisos a asignar:</span>
+                                            <span id="resumenPermisos" class="badge bg-success">0</span>
+                                        </li>
+                                    </ul>
+                                    
+                                    <div class="alert alert-warning mt-3">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>¡Atención!</strong> Esta acción no se puede deshacer automáticamente.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'administrador:administrador_dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Cancelar
+                    </a>
+                    <button type="button" class="btn btn-outline-primary" id="btnConfirmar" disabled>
+                        <i class="fas fa-check me-1"></i> Confirmar Asignación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Asignación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span id="confirmMessage">¿Estás seguro de realizar esta asignación?</span>
+                </div>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    Esta acción no se puede deshacer automáticamente.
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="btnProcesar">
+                    <i class="fas fa-check me-1"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ============================================
+// FUNCIÓN TOAST ESPECÍFICA PARA ESTA PÁGINA
+// ============================================
+function mostrarToastGestion(mensaje, tipo = "success") {
+    // Mapear tipos a clases de Bootstrap
+    const tipoBootstrap = tipo === 'error' ? 'danger' : tipo;
+    
+    // Iconos según tipo
+    const iconos = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle'
+    };
+    const icono = iconos[tipo] || 'fa-info-circle';
+    
+    // Crear contenedor específico para esta página
+    let toastContainer = document.getElementById('toastContainerGestion');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainerGestion';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1090';
+        document.body.appendChild(toastContainer);
+    }
+
+    // Crear el toast
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-white bg-${tipoBootstrap} border-0`;
+    toast.role = "alert";
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas ${icono} me-2"></i>
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>`;
+
+    toastContainer.appendChild(toast);
+
+    // Inicializar y mostrar toast de Bootstrap
+    const bsToast = new bootstrap.Toast(toast, { 
+        delay: 3000, 
+        autohide: true 
+    });
+    bsToast.show();
+
+    // Eliminar después de ocultar
+    toast.addEventListener('hidden.bs.toast', function() {
+        toast.remove();
+    });
+}
+
+// ============================================
+// INICIALIZACIÓN CUANDO EL DOM ESTÁ LISTO
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ============================================
+    // 1. ELEMENTOS PRINCIPALES
+    // ============================================
+    const form = document.getElementById('formGestionMasiva');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const btnProcesar = document.getElementById('btnProcesar');
+    const toggleSelectAll = document.getElementById('toggleSelectAll');
+    
+    // Verificar que existan los elementos esenciales
+    if (!form || !btnConfirmar || !btnProcesar) {
+        return;
+    }
+    
+    // Modal de confirmación
+    const confirmModalElement = document.getElementById('confirmModal');
+    if (!confirmModalElement) {
+        return;
+    }
+    const confirmModal = new bootstrap.Modal(confirmModalElement);
+    
+    // ============================================
+    // 2. FUNCIONES AUXILIARES
+    // ============================================
+    
+    // Actualizar contador de usuarios seleccionados
+    function actualizarContador() {
+        const checkboxes = document.querySelectorAll('.usuario-checkbox:checked');
+        const count = checkboxes.length;
+        
+        // Actualizar contadores
+        const contadorElemento = document.getElementById('contadorSeleccionados');
+        const resumenElemento = document.getElementById('resumenUsuarios');
+        
+        if (contadorElemento) contadorElemento.textContent = count;
+        if (resumenElemento) resumenElemento.textContent = count;
+        
+        // Habilitar/deshabilitar botón de confirmación
+        btnConfirmar.disabled = count === 0;
+    }
+    
+    // Actualizar contador de permisos
+    // Actualizar contador de permisos - VERSIÓN CORREGIDA
+    function actualizarPermisosContador() {
+        const checkboxes = document.querySelectorAll('input[name="permisos"]:checked');
+        const count = checkboxes.length;
+        
+        const contador = document.getElementById('contadorPermisos');
+        const resumen = document.getElementById('resumenPermisos');
+        
+        if (contador) contador.textContent = count;
+        if (resumen) resumen.textContent = count;
+        
+        // Actualizar vista previa si estamos en modo "permisos específicos"
+        const tipoAsignacion = document.querySelector('input[name="tipo_asignacion"]:checked');
+        if (tipoAsignacion && tipoAsignacion.value === 'permisos') {
+            actualizarVistaPrevia();
+        }
+        
+    }
+    
+    // Actualizar vista previa
+    function actualizarVistaPrevia() {
+        const vistaPrevia = document.getElementById('vistaPrevia');
+        const detalles = document.getElementById('detallesAsignacion');
+        const usuariosCount = document.querySelectorAll('.usuario-checkbox:checked').length;
+        
+        if (!vistaPrevia || !detalles) return;
+        
+        
+        if (usuariosCount > 0) {
+            vistaPrevia.classList.add('d-none');
+            detalles.classList.remove('d-none');
+            
+            // Actualizar tipo de asignación
+            const tipoElemento = document.querySelector('input[name="tipo_asignacion"]:checked');
+            const resumenTipo = document.getElementById('resumenTipo');
+            
+            if (tipoElemento && resumenTipo) {
+                if (tipoElemento.value === 'rol') {
+                    resumenTipo.textContent = 'Rol';
+                    // Actualizar número de permisos del rol
+                    const rolSelect = document.getElementById('selectRol');
+                    const resumenPermisos = document.getElementById('resumenPermisos');
+                    
+                    if (rolSelect && rolSelect.value && resumenPermisos) {
+                        const option = rolSelect.options[rolSelect.selectedIndex];
+                        const permisosCount = option.dataset.permisos || '0';
+                        resumenPermisos.textContent = permisosCount;
+                    }
+                } else {
+                    resumenTipo.textContent = 'Permisos específicos';
+                    // Actualizar número de permisos seleccionados
+                    const permisosCount = document.querySelectorAll('input[name="permisos"]:checked').length;
+                    const resumenPermisos = document.getElementById('resumenPermisos');
+                    if (resumenPermisos) {
+                        resumenPermisos.textContent = permisosCount;
+                    }
+                }
+            }
+            
+            // Actualizar número de usuarios
+            const resumenUsuarios = document.getElementById('resumenUsuarios');
+            if (resumenUsuarios) {
+                resumenUsuarios.textContent = usuariosCount;
+            }
+        } else {
+            vistaPrevia.classList.remove('d-none');
+            detalles.classList.add('d-none');
+        }
+    }
+    
+    // ============================================
+    // 3. EVENTOS DE USUARIOS
+    // ============================================
+    
+    // Seleccionar todos los usuarios
+    if (toggleSelectAll) {
+        toggleSelectAll.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.usuario-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = toggleSelectAll.checked;
+            });
+            actualizarContador();
+        });
+    }
+    
+    // Filtros de usuarios
+    const filtroUsuario = document.getElementById('filtroUsuario');
+    const filtroRol = document.getElementById('filtroRol');
+    const filtroEstado = document.getElementById('filtroEstado');
+    
+    // Filtro por texto
+    if (filtroUsuario) {
+        filtroUsuario.addEventListener('input', function(e) {
+            const filtro = e.target.value.toLowerCase();
+            document.querySelectorAll('.usuario-item').forEach(item => {
+                const texto = item.textContent.toLowerCase();
+                item.style.display = texto.includes(filtro) ? 'block' : 'none';
+            });
+        });
+    }
+    
+    // Filtro por rol
+    if (filtroRol) {
+        filtroRol.addEventListener('change', function(e) {
+            const rolId = e.target.value;
+            document.querySelectorAll('.usuario-item').forEach(item => {
+                const rol = item.getAttribute('data-rol');
+                item.style.display = (rolId === '' || rol === rolId) ? 'block' : 'none';
+            });
+        });
+    }
+    
+    // Filtro por estado
+    if (filtroEstado) {
+        filtroEstado.addEventListener('change', function(e) {
+            const estado = e.target.value;
+            document.querySelectorAll('.usuario-item').forEach(item => {
+                const itemEstado = item.getAttribute('data-estado');
+                item.style.display = (estado === '' || itemEstado === estado) ? 'block' : 'none';
+            });
+        });
+    }
+    
+    // Limpiar filtros
+    const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
+    if (btnLimpiarFiltros) {
+        btnLimpiarFiltros.addEventListener('click', function() {
+            if (filtroUsuario) filtroUsuario.value = '';
+            if (filtroRol) filtroRol.value = '';
+            if (filtroEstado) filtroEstado.value = '';
+            document.querySelectorAll('.usuario-item').forEach(item => {
+                item.style.display = 'block';
+            });
+        });
+    }
+    
+    // ============================================
+    // 4. EVENTOS DE PERMISOS Y CONFIGURACIÓN
+    // ============================================
+    
+    // Actualizar contadores cuando cambian checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('usuario-checkbox')) {
+            actualizarContador();
+        }
+        if (e.target.name === 'permisos') {
+            actualizarPermisosContador();
+        }
+        if (e.target.name === 'tipo_asignacion') {
+            actualizarVistaPrevia();
+        }
+    });
+    
+    // Detalles del rol seleccionado
+    // Mostrar detalles del rol seleccionado - VERSIÓN CORREGIDA
+    const selectRol = document.getElementById('selectRol');
+    if (selectRol) {
+        selectRol.addEventListener('change', function() {
+            const detallesDiv = document.getElementById('detallesRol');
+            const option = this.options[this.selectedIndex];
+            
+            if (detallesDiv) {
+                if (option.value) {
+                    detallesDiv.innerHTML = `
+                        <div class="alert alert-info mt-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Este rol incluye <strong>${option.dataset.permisos || '0'} permisos</strong>.
+                            Los usuarios seleccionados obtendrán todos los permisos de este rol.
+                        </div>
+                    `;
+                } else {
+                    detallesDiv.innerHTML = '';
+                }
+            }
+            
+            // ACTUALIZAR VISTA PREVIA cuando cambia el rol
+            const tipoAsignacion = document.querySelector('input[name="tipo_asignacion"]:checked');
+            if (tipoAsignacion && tipoAsignacion.value === 'rol') {
+                actualizarVistaPrevia();
+            }
+        });
+    }
+    
+    // Filtro de permisos
+    const filtroPermisos = document.getElementById('filtroPermisos');
+    if (filtroPermisos) {
+        filtroPermisos.addEventListener('input', function(e) {
+            const filtro = e.target.value.toLowerCase();
+            document.querySelectorAll('.permiso-item').forEach(item => {
+                const texto = item.textContent.toLowerCase();
+                item.style.display = texto.includes(filtro) ? 'block' : 'none';
+            });
+        });
+    }
+
+    // Escuchar cambios en los radio buttons de tipo de asignación
+    document.querySelectorAll('input[name="tipo_asignacion"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            actualizarVistaPrevia();
+            
+            // Si cambia a "permisos", actualizar contador de permisos
+            if (this.value === 'permisos') {
+                actualizarPermisosContador();
+            }
+        });
+    });
+    
+    // ============================================
+    // 5. VALIDACIÓN Y ENVÍO DEL FORMULARIO
+    // ============================================
+    
+    // Validar antes de mostrar modal
+    btnConfirmar.addEventListener('click', function() {
+        const usuariosSeleccionados = document.querySelectorAll('.usuario-checkbox:checked');
+        if (usuariosSeleccionados.length === 0) {
+            mostrarToastGestion('Debes seleccionar al menos un usuario', 'error');
+            return;
+        }
+        
+        const tipoAsignacion = document.querySelector('input[name="tipo_asignacion"]:checked');
+        if (!tipoAsignacion) {
+            mostrarToastGestion('Debes seleccionar un tipo de asignación', 'error');
+            return;
+        }
+        
+        // Validar según tipo
+        if (tipoAsignacion.value === 'rol') {
+            const rolSelect = document.getElementById('selectRol');
+            if (!rolSelect || !rolSelect.value) {
+                mostrarToastGestion('Debes seleccionar un rol', 'error');
+                return;
+            }
+        } else {
+            const permisosSeleccionados = document.querySelectorAll('input[name="permisos"]:checked');
+            if (permisosSeleccionados.length === 0) {
+                mostrarToastGestion('Debes seleccionar al menos un permiso', 'error');
+                return;
+            }
+        }
+        
+        // Preparar mensaje de confirmación
+        const usuariosCount = usuariosSeleccionados.length;
+        let mensaje = '';
+        
+        if (tipoAsignacion.value === 'rol') {
+            const rolSelect = document.getElementById('selectRol');
+            if (rolSelect && rolSelect.selectedIndex >= 0) {
+                const rolNombre = rolSelect.options[rolSelect.selectedIndex].text;
+                const permisosCount = rolSelect.options[rolSelect.selectedIndex].dataset.permisos || '0';
+                mensaje = `
+                    <div class="mb-2">
+                        <strong>Tipo:</strong> Asignación de Rol
+                    </div>
+                    <div class="mb-2">
+                        <strong>Rol:</strong> ${rolNombre}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Permisos incluidos:</strong> ${permisosCount}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Usuarios afectados:</strong> ${usuariosCount}
+                    </div>
+                    <div class="mt-3">
+                        <strong>¿Confirmar esta asignación?</strong>
+                    </div>
+                `;
+            }
+        } else {
+            const permisosCount = document.querySelectorAll('input[name="permisos"]:checked').length;
+            mensaje = `
+                <div class="mb-2">
+                    <strong>Tipo:</strong> Permisos Específicos
+                </div>
+                <div class="mb-2">
+                    <strong>Permisos seleccionados:</strong> ${permisosCount}
+                </div>
+                <div class="mb-2">
+                    <strong>Usuarios afectados:</strong> ${usuariosCount}
+                </div>
+                <div class="mt-3">
+                    <strong>¿Confirmar esta asignación?</strong>
+                </div>
+            `;
+        }
+        
+        // Mostrar mensaje en el modal
+        const confirmMessageEl = document.getElementById('confirmMessage');
+        if (confirmMessageEl) {
+            confirmMessageEl.innerHTML = mensaje;
+        }
+        
+        // Mostrar modal
+        confirmModal.show();
+    });
+    
+    // Procesar formulario (AJAX)
+    btnProcesar.addEventListener('click', async function() {
+        // Ocultar modal
+        confirmModal.hide();
+        
+        // Deshabilitar botones y mostrar carga
+        btnConfirmar.disabled = true;
+        btnProcesar.disabled = true;
+        const btnProcesarOriginal = btnProcesar.innerHTML;
+        btnProcesar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+        
+        try {
+            // Preparar datos del formulario
+            const formData = new FormData(form);
+            
+            // Enviar petición AJAX
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            });
+            
+            // Procesar respuesta
+            const data = await response.json();
+            
+            
+           if (data.success) {
+                // 1. GUARDAR el mensaje en sessionStorage ANTES de recargar
+                sessionStorage.setItem('toast_mensaje', data.message);
+                sessionStorage.setItem('toast_tipo', 'success');
+                sessionStorage.setItem('toast_timestamp', new Date().getTime());
+                
+                // 2. RECARGAR inmediatamente
+                window.location.reload();
+            } else {
+                mostrarToastGestion(data.message || 'Error al procesar la solicitud', 'error');
+                
+                // Reactivar botones en caso de error
+                btnConfirmar.disabled = false;
+                btnProcesar.disabled = false;
+                btnProcesar.innerHTML = btnProcesarOriginal;
+            }
+            
+        } catch (error) {
+            console.error(' Error en la petición:', error);
+            mostrarToastGestion('Error de conexión. Intenta nuevamente.', 'error');
+            
+            // Reactivar botones
+            btnConfirmar.disabled = false;
+            btnProcesar.disabled = false;
+            btnProcesar.innerHTML = btnProcesarOriginal;
+        }
+        
+    });
+    // ============================================
+    // 6. MOSTRAR TOAST DESPUÉS DE RECARGAR (SI APLICA)
+    // ============================================
+    // Verificar si hay un mensaje guardado en sessionStorage
+        const mensajeGuardado = sessionStorage.getItem('toast_mensaje');
+        const tipoGuardado = sessionStorage.getItem('toast_tipo');
+        const timestampGuardado = sessionStorage.getItem('toast_timestamp');
+
+        if (mensajeGuardado && tipoGuardado && timestampGuardado) {
+            // Verificar que el mensaje no sea muy viejo (menos de 5 segundos)
+            const ahora = new Date().getTime();
+            const diferencia = ahora - parseInt(timestampGuardado);
+            
+            if (diferencia < 5000) { // 5 segundos
+                // Esperar un poco para que la página termine de cargar
+                setTimeout(() => {
+                    mostrarToastGestion(mensajeGuardado, tipoGuardado);
+                }, 300); // Mostrar después de 5 segundos
+            }
+            
+            // Limpiar el sessionStorage después de mostrar
+            sessionStorage.removeItem('toast_mensaje');
+            sessionStorage.removeItem('toast_tipo');
+            sessionStorage.removeItem('toast_timestamp');
+        }
+    // ============================================
+    // 7. INICIALIZACIÓN
+    // ============================================
+    actualizarContador();
+    actualizarPermisosContador();
+    actualizarVistaPrevia(); 
+
+    
+    });
+</script>
+{% endblock %}

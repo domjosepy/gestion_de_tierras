@@ -2,12 +2,16 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
 from django.core.validators import RegexValidator
 from django.conf import settings
+from django.utils import timezone
+
 
 class Rol(models.Model):
     """
     Modelo independiente para roles con permisos personalizables.
+    Incluye relación bidireccional con grupos de Django.
     """
-    nombre = models.CharField(max_length=50, unique=True, verbose_name='Nombre del Rol')
+    nombre = models.CharField(
+        max_length=50, unique=True, verbose_name='Nombre del Rol')
     descripcion = models.TextField(blank=True)
     permisos = models.ManyToManyField(
         Permission,
@@ -15,11 +19,21 @@ class Rol(models.Model):
         verbose_name='Permisos asociados',
         help_text='Selecciona permisos específicos para este rol'
     )
+    grupo_django = models.OneToOneField(
+        Group,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Grupo de Django asociado',
+        help_text='Grupo de Django sincronizado con este rol'
+    )
     color = models.CharField(
         max_length=20,
-        default='secondary', 
-        help_text='Color para representar el rol (ej: primary, danger)'
+        default='#6c757d',
+        help_text='Color en formato hexadecimal (ej: #007bff)'
     )
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = 'Rol'
@@ -28,6 +42,24 @@ class Rol(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        # Crear/actualizar grupo de Django cuando se guarda el rol
+        if not self.grupo_django:
+            grupo, created = Group.objects.get_or_create(
+                name=f"Rol_{self.nombre}")
+            self.grupo_django = grupo
+        else:
+            self.grupo_django.name = f"Rol_{self.nombre}"
+            self.grupo_django.save()
+
+        super().save(*args, **kwargs)
+
+    def sincronizar_permisos(self):
+        """Sincroniza permisos del rol con el grupo de Django"""
+        if self.grupo_django:
+            self.grupo_django.permissions.clear()
+            self.grupo_django.permissions.add(*self.permisos.all())
 
 
 class User(AbstractUser):
@@ -50,7 +82,7 @@ class User(AbstractUser):
         ('ACTIVO', 'Activo'),
         ('INACTIVO', 'Inactivo'),
     )
-    
+
     ci = models.CharField(
         max_length=8,
         blank=True,
@@ -134,3 +166,37 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.get_estado_display()})"
+
+    fecha_aprobacion = models.DateTimeField(
+        null=True, blank=True, verbose_name='Fecha de aprobación')
+    aprobado_por = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='usuarios_aprobados',
+        verbose_name='Aprobado por'
+    )
+
+    # Propiedad para obtener permisos combinados
+
+    @property
+    def permisos_combinados(self):
+        """Devuelve todos los permisos del usuario (directos + rol + grupos)"""
+        permisos = set()
+
+        # Permisos directos del usuario
+        permisos.update(self.user_permissions.all())
+
+        # Permisos del rol
+        if self.rol and self.rol.permisos.exists():
+            permisos.update(self.rol.permisos.all())
+
+        # Permisos de grupos de Django
+        permisos.update(Permission.objects.filter(group__user=self))
+
+        return permisos
+
+    def tiene_permiso(self, permiso_codename):
+        """Verifica si usuario tiene un permiso específico"""
+        return any(p.codename == permiso_codename for p in self.permisos_combinados)

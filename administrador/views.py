@@ -10,6 +10,7 @@ from django.contrib.auth.views import LoginView as DjangoLoginView, PasswordChan
 from django.db.models import Q, Count
 from django.db.models.functions import TruncMonth
 from django.http import JsonResponse
+from django.core import serializers
 from django.shortcuts import render, get_list_or_404, redirect, get_object_or_404
 from django.urls import reverse, reverse_lazy, NoReverseMatch
 from django.utils.decorators import method_decorator
@@ -18,8 +19,9 @@ from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView, CreateView, ListView
 from core.notificaciones.utils import notificar_a_admins
 
+
 # Local application imports
-from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm, RolForm
+from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm, RolForm, AsignacionPermisosForm
 from .models import User, Rol
 
 # VISTA DE INICIO DE SESION PERSONALIZADA
@@ -211,6 +213,7 @@ class CustomPasswordChangeView(PasswordChangeView):
 # Vistas para Roles (Actualizadas)
 # ======================================
 
+
 @login_required
 def listar_roles(request):
     """Lista todos los roles con permisos pre-cargados"""
@@ -223,6 +226,7 @@ def listar_roles(request):
         'permisos': permisos
     })
 
+
 @require_POST
 @login_required
 def crear_rol(request):
@@ -232,7 +236,7 @@ def crear_rol(request):
 
     if form.is_valid():
         rol = form.save()
-        
+
         # Notificar a administradores
         notificar_a_admins(
             mensaje=f'Se ha creado un nuevo rol: "{rol.nombre}".',
@@ -240,12 +244,12 @@ def crear_rol(request):
             exclude_user=request.user,
             link=reverse("administrador:listar_roles")
         )
-        
+
         messages.success(request, f'Rol "{rol.nombre}" creado exitosamente!')
-        
+
         if is_ajax:
             return JsonResponse({'success': True})
-        
+
         return redirect('administrador:listar_roles')
 
     # Manejo de errores
@@ -253,18 +257,19 @@ def crear_rol(request):
         errors = {}
         for field, error_list in form.errors.items():
             errors[field] = [str(error) for error in error_list]
-        
+
         return JsonResponse({
             'success': False,
             'errors': errors
         }, status=400)
-    
+
     # Si no es AJAX
     for field, error_list in form.errors.items():
         for error in error_list:
             messages.error(request, f"{field}: {error}")
-    
+
     return redirect('administrador:listar_roles')
+
 
 @require_POST
 @login_required
@@ -276,7 +281,7 @@ def editar_rol(request, rol_id):
 
     if form.is_valid():
         rol = form.save()
-        
+
         # Notificar a administradores
         notificar_a_admins(
             mensaje=f'El rol "{rol.nombre}" fue editado.',
@@ -284,12 +289,13 @@ def editar_rol(request, rol_id):
             exclude_user=request.user,
             link=reverse("administrador:listar_roles")
         )
-        
-        messages.success(request, f'Rol "{rol.nombre}" actualizado exitosamente!')
-        
+
+        messages.success(
+            request, f'Rol "{rol.nombre}" actualizado exitosamente!')
+
         if is_ajax:
             return JsonResponse({'success': True})
-        
+
         return redirect('administrador:listar_roles')
 
     # Manejo de errores
@@ -297,18 +303,19 @@ def editar_rol(request, rol_id):
         errors = {}
         for field, error_list in form.errors.items():
             errors[field] = [str(error) for error in error_list]
-        
+
         return JsonResponse({
             'success': False,
             'errors': errors
         }, status=400)
-    
+
     # Si no es AJAX
     for field, error_list in form.errors.items():
         for error in error_list:
             messages.error(request, f"{field}: {error}")
-    
+
     return redirect('administrador:listar_roles')
+
 
 @require_POST
 @login_required
@@ -320,19 +327,19 @@ def eliminar_rol(request, rol_id):
     # Verificar si tiene usuarios asociados
     if rol.user_set.exists():
         msg = f'No se puede eliminar el rol "{rol.nombre}" porque tiene {rol.user_set.count()} usuario(s) asociado(s).'
-        
+
         if is_ajax:
             return JsonResponse({
                 'success': False,
                 'message': msg
             }, status=400)
-        
+
         messages.error(request, msg)
         return redirect('administrador:listar_roles')
 
     nombre_rol = rol.nombre
     rol.delete()
-    
+
     # Notificar a administradores
     notificar_a_admins(
         mensaje=f'El rol "{nombre_rol}" fue eliminado.',
@@ -340,16 +347,16 @@ def eliminar_rol(request, rol_id):
         exclude_user=request.user,
         link=reverse("administrador:listar_roles")
     )
-    
+
     msg = f'El rol "{nombre_rol}" fue eliminado exitosamente.'
     messages.info(request, msg)
-    
+
     if is_ajax:
         return JsonResponse({
             'success': True,
             'message': msg
         })
-    
+
     messages.success(request, msg)
     return redirect('administrador:listar_roles')
 
@@ -487,6 +494,267 @@ def edit_profile(request):
 
     return render(request, "registration/edit_profile.html", {"form": form})
 
+# |=============================================
+# | VISTAS DE GESTION DE PERMISOS Y ROLES
+# |=============================================
+
+
+@login_required
+def gestion_permisos_masiva(request):
+    """Asignación masiva de permisos a usuarios"""
+    if not request.user.has_perm('auth.change_user'):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'message': 'No tienes permiso para realizar esta acción'
+            }, status=403)
+        messages.error(request, 'No tienes permiso para realizar esta acción')
+        return redirect('administrador:administrador_dashboard')
+
+    if request.method == 'POST':
+        # Detectar si es AJAX
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+        try:
+            # Procesar el formulario
+            usuarios_ids = request.POST.getlist('usuarios')
+            permisos_ids = request.POST.getlist('permisos')
+            rol_id = request.POST.get('rol', '')
+            tipo_asignacion = request.POST.get('tipo_asignacion', 'rol')
+
+            # Validaciones
+            if not usuarios_ids:
+                error_msg = 'Debes seleccionar al menos un usuario'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': error_msg})
+                messages.error(request, error_msg)
+                return redirect('administrador:gestion_masiva')
+
+            if tipo_asignacion == 'rol' and not rol_id:
+                error_msg = 'Debes seleccionar un rol'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': error_msg})
+                messages.error(request, error_msg)
+                return redirect('administrador:gestion_masiva')
+
+            if tipo_asignacion == 'permisos' and not permisos_ids:
+                error_msg = 'Debes seleccionar al menos un permiso'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': error_msg})
+                messages.error(request, error_msg)
+                return redirect('administrador:gestion_masiva')
+
+            # Obtener objetos
+            usuarios = User.objects.filter(id__in=usuarios_ids)
+
+            # Verificar que existan los usuarios
+            if not usuarios.exists():
+                error_msg = 'No se encontraron los usuarios seleccionados'
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': error_msg})
+                messages.error(request, error_msg)
+                return redirect('administrador:gestion_masiva')
+
+            cambios = 0
+            usuarios_afectados = []
+
+            for usuario in usuarios:
+                if tipo_asignacion == 'rol':
+                    # Asignar rol
+                    rol = Rol.objects.get(id=rol_id)
+                    usuario.rol = rol
+                    usuario.save()
+                    cambios += 1
+                    usuarios_afectados.append(usuario.username)
+
+                    # Sincronizar con grupo de Django
+                    if rol.grupo_django:
+                        usuario.groups.add(rol.grupo_django)
+
+                    print(
+                        f"Asignado rol {rol.nombre} a usuario {usuario.username}")
+
+                else:  # tipo_asignacion == 'permisos'
+                    # Asignar permisos directos
+                    permisos = Permission.objects.filter(id__in=permisos_ids)
+                    if permisos.exists():
+                        usuario.user_permissions.add(*permisos)
+                        cambios += len(permisos)
+                        usuarios_afectados.append(usuario.username)
+
+            success_msg = f'Se realizaron {cambios} cambios en {usuarios.count()} usuario(s)'
+            if usuarios_afectados:
+                success_msg += f': {", ".join(usuarios_afectados[:3])}'
+                if len(usuarios_afectados) > 3:
+                    success_msg += f' y {len(usuarios_afectados) - 3} más'
+
+            print(f"Operación exitosa: {success_msg}")
+
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': success_msg,
+                    'redirect_url': reverse('administrador:gestion_masiva')
+                })
+
+            messages.success(request, success_msg)
+            return redirect('administrador:gestion_masiva')
+
+        except Rol.DoesNotExist:
+            error_msg = 'El rol seleccionado no existe'
+            print(f"Error: {error_msg}")
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg})
+            messages.error(request, error_msg)
+            return redirect('administrador:gestion_masiva')
+        except Exception as e:
+            error_msg = f'Error al procesar la solicitud: {str(e)}'
+            print(f"Error inesperado: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if is_ajax:
+                return JsonResponse({'success': False, 'message': error_msg})
+            messages.error(request, error_msg)
+            return redirect('administrador:gestion_masiva')
+
+    # GET: Mostrar formulario
+    usuarios = User.objects.filter(estado='ACTIVO').select_related('rol')
+    roles = Rol.objects.all()
+    permisos = Permission.objects.select_related(
+        'content_type').order_by('content_type__app_label', 'name')
+
+    return render(request, 'administrador/gestion_masiva.html', {
+        'usuarios': usuarios,
+        'roles': roles,
+        'permisos': permisos,
+        'title': 'Asignación Masiva de Permisos'
+    })
+
+
+@login_required
+def diagnosticar_permisos(request):
+    """Asignación masiva de permisos a usuarios"""
+    print(f"\n=== DEBUG: Vista gestion_permisos_masiva llamada ===")
+    print(f"Método: {request.method}")
+    print(
+        f"Es AJAX: {request.headers.get('X-Requested-With') == 'XMLHttpRequest'}")
+
+    if not request.user.has_perm('auth.change_user'):
+        print("DEBUG: Usuario sin permisos")
+    """Vista temporal para diagnosticar la relación"""
+
+    # Verificar las relaciones disponibles
+    permiso = Permission.objects.first()
+    if permiso:
+        # Ver qué relaciones tiene
+        print("Relaciones disponibles en Permission:")
+        for field in Permission._meta.get_fields():
+            print(f"  - {field.name}: {field}")
+
+    return JsonResponse({'status': 'ok'})
+
+
+@login_required
+def reporte_permisos(request):
+    """Genera reporte de permisos por rol/usuario"""
+    roles = Rol.objects.prefetch_related('permisos', 'user_set').all()
+
+    # Estadísticas
+    total_usuarios = User.objects.count()
+    usuarios_por_rol = []
+
+    for rol in roles:
+        usuarios_por_rol.append({
+            'rol': rol.nombre,
+            'cantidad': rol.user_set.count(),
+            'color': rol.color,
+            'permisos': rol.permisos.count()
+        })
+
+    # Primero obtenemos los permisos sin annotate
+    permisos_comunes = Permission.objects.select_related('content_type').all()[
+        :20]
+
+    # Luego calculamos manualmente las estadísticas
+    permisos_con_estadisticas = []
+
+    for permiso in permisos_comunes:
+        # 1. Usuarios con permiso directo
+        usuarios_directos = User.objects.filter(
+            user_permissions=permiso).count()
+
+        # 2. Roles que tienen este permiso
+        roles_con_permiso = Rol.objects.filter(permisos=permiso)
+        roles_asignados = roles_con_permiso.count()
+
+        # 3. Usuarios que tienen el permiso a través de roles
+        usuarios_por_rol_permiso = 0
+        for rol in roles_con_permiso:
+            usuarios_por_rol_permiso += rol.user_set.count()
+
+        # 4. Total de usuarios con este permiso
+        total_usuarios_permiso = usuarios_directos + usuarios_por_rol_permiso
+
+        # Agregar atributos al permiso
+        permiso.usuarios_directos = usuarios_directos
+        permiso.roles_asignados = roles_asignados
+        permiso.usuarios_por_rol = usuarios_por_rol_permiso
+        permiso.total_usuarios = total_usuarios_permiso
+        permiso.roles_lista = roles_con_permiso  # Para usar en el template
+
+        permisos_con_estadisticas.append(permiso)
+
+    # Usuarios sin rol
+    usuarios_sin_rol = User.objects.filter(
+        rol__isnull=True, is_superuser=False).count()
+
+    return render(request, 'administrador/reporte_permisos.html', {
+        'roles': roles,
+        'usuarios_por_rol': usuarios_por_rol,
+        'permisos_comunes': permisos_con_estadisticas,
+        'total_usuarios': total_usuarios,
+        'usuarios_sin_rol': usuarios_sin_rol
+    })
+
+# |=============================================
+# | VISTA PARA DETALLES DE ROL (API)
+# |=============================================
+
+
+@login_required
+def detalles_rol_api(request, rol_id):
+    """API para obtener detalles de un rol"""
+    try:
+        rol = Rol.objects.get(id=rol_id)
+
+        # Obtener usuarios con este rol
+        usuarios = User.objects.filter(rol=rol).values(
+            'id', 'username', 'email', 'estado')
+
+        # Obtener permisos
+        permisos = rol.permisos.values(
+            'id', 'name', 'codename', 'content_type__app_label')
+
+        data = {
+            'nombre': rol.nombre,
+            'descripcion': rol.descripcion,
+            'color': rol.color,
+            'creado': rol.creado.strftime('%d/%m/%Y %H:%M'),
+            'usuarios_count': usuarios.count(),
+            'permisos_count': permisos.count(),
+            'usuarios': list(usuarios[:10]),  # Limitar a 10 usuarios
+            'permisos': list(permisos)
+        }
+
+        return JsonResponse(data)
+
+    except Rol.DoesNotExist:
+        return JsonResponse({'error': 'Rol no encontrado'}, status=404)
+
+
+# |=============================================
+# | VISTA DE PRUEBA DE TOASTS
+
 
 @login_required
 def test_toast(request):
@@ -494,4 +762,19 @@ def test_toast(request):
     messages.warning(request, "Este es un mensaje de advertencia. ⚠️")
     messages.error(request, "Este es un mensaje de error. ❌")
     messages.info(request, "Novedades disponibles 📢")
-    return redirect("home")
+    return redirect("administrador:home")
+
+
+# views.py (temporal - elimina después)
+@login_required
+def test_ajax(request):
+    """Vista temporal para testear AJAX"""
+    if request.method == 'POST':
+        print("Test AJAX - Datos recibidos:", dict(request.POST))
+        return JsonResponse({
+            'success': True,
+            'message': 'Test exitoso!',
+            'data_received': dict(request.POST)
+        })
+
+    return JsonResponse({'error': 'Solo POST permitido'})

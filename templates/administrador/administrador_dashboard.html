@@ -8,7 +8,8 @@
 <div class="container-fluid fade-in">
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Panel de Administración</h1>
+        <h2 class="h3 mb-0 text-primary fw-bold">
+            <i class="fa-solid fa-user-tie me-2"></i>Panel de Administración</h2>
     </div>
     
     <!-- Estadísticas -->
@@ -21,10 +22,10 @@
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-primary text-uppercase mb-1">
                                 Usuarios Totales</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_usuarios }}</div>
+                            <div class="h5 mb-0 fw-bold text-primary">{{ total_usuarios }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                            <i class="fas fa-users fa-2x text-primary"></i>
                         </div>
                     </div>
                 </div>
@@ -39,10 +40,10 @@
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">
                                 Pendientes de Rol</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_pendientes.count }}</div>
+                            <div class="h5 mb-0 fw-bold text-warning">{{ usuarios_pendientes.count }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-user-clock fa-2x text-gray-300"></i>
+                            <i class="fas fa-user-clock fa-2x text-warning"></i>
                         </div>
                     </div>
                 </div>
@@ -57,10 +58,10 @@
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-success text-uppercase mb-1">
                                 Usuarios Activos</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_activos.count }}</div>
+                            <div class="h5 mb-0 fw-bold text-success">{{ usuarios_activos.count }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                            <i class="fas fa-user-check fa-2x text-success"></i>
                         </div>
                     </div>
                 </div>
@@ -74,10 +75,10 @@
                         <div class="col me-2">
                             <div class="text-xs fw-bold text-danger text-uppercase mb-1">
                                 Usuarios Inactivos</div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ usuarios_inactivos.count }}</div>
+                            <div class="h5 mb-0 fw-bold text-danger">{{ usuarios_inactivos.count }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-user-minus fa-2x text-gray-300"></i>
+                            <i class="fas fa-user-minus fa-2x text-danger"></i>
                         </div>
                     </div>
                 </div>

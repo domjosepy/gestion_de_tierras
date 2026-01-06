@@ -37,10 +37,7 @@
                 {% include 'includes/navbar.html' %}
 
                 <div class="container-fluid">
-
                     <!-- CONTENEDOR GLOBAL PARA TOASTS -->
-                    
-
                     <div id="toastContainer"
                          class="toast-container position-fixed end-0 mt-5 pt-2 pe-2"
                          style="z-index: 1090; top: 40px;">
@@ -99,11 +96,13 @@
 
     {% block scripts %}{% endblock %}
 
-    <!-- INICIALIZACIÓN DE TOASTS DE DJANGO (con ToastManager) -->
-            <script>
-            // Función para mostrar toasts dinámicamente
-            function mostrarToast(mensaje, tipo = "success") {
-                const toastContainer = document.getElementById("toastContainer");
+    <!-- SCRIPT UNIFICADO PARA TOASTS -->
+    <script>
+        // Configuración global de toasts
+        window.ToastManager = {
+            // Mostrar toast dinámico
+            mostrarToast: function(mensaje, tipo = "success") {
+                const toastContainer = this.obtenerContenedor();
                 
                 const toast = document.createElement("div");
                 toast.className = `toast align-items-center text-white bg-${tipo === 'error' ? 'danger' : tipo} border-0`;
@@ -111,64 +110,110 @@
                 toast.innerHTML = `
                     <div class="d-flex">
                         <div class="toast-body">
-                            <i class="fas 
-                                ${tipo === 'success' ? 'fa-check-circle' : 
-                                tipo === 'error' ? 'fa-exclamation-circle' : 
-                                tipo === 'warning' ? 'fa-exclamation-triangle' : 
-                                'fa-info-circle'} me-2"></i>
+                            <i class="fas ${this.obtenerIcono(tipo)} me-2"></i>
                             ${mensaje}
                         </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                                data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>`;
 
                 toastContainer.appendChild(toast);
+                this.inicializarToast(toast);
+            },
 
-                const bsToast = new bootstrap.Toast(toast, {
-                    delay: 5000
-                });
-                bsToast.show();
+            // Guardar toast para recarga de página
+            guardarParaRecarga: function(mensaje, tipo = 'success') {
+                try {
+                    sessionStorage.setItem('toastPendiente', JSON.stringify({
+                        mensaje: mensaje,
+                        tipo: tipo
+                    }));
+                } catch (e) {
+                    console.error('Error guardando toast:', e);
+                }
+            },
 
-                // Remover el toast después de que se oculte
-                toast.addEventListener('hidden.bs.toast', function () {
-                    toast.remove();
+            // Obtener contenedor de toasts (crearlo si no existe)
+            obtenerContenedor: function() {
+                let contenedor = document.getElementById("toastContainer");
+                if (!contenedor) {
+                    contenedor = document.createElement('div');
+                    contenedor.id = 'toastContainer';
+                    contenedor.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    contenedor.style.zIndex = '1090';
+                    document.body.appendChild(contenedor);
+                }
+                return contenedor;
+            },
+
+            // Obtener icono según tipo
+            obtenerIcono: function(tipo) {
+                const iconos = {
+                    'success': 'fa-check-circle',
+                    'error': 'fa-exclamation-circle',
+                    'warning': 'fa-exclamation-triangle',
+                    'info': 'fa-info-circle'
+                };
+                return iconos[tipo] || 'fa-info-circle';
+            },
+
+            // Inicializar toast de Bootstrap
+            inicializarToast: function(elementoToast) {
+                const toast = new bootstrap.Toast(elementoToast, {
+                    delay: 5000,
+                    autohide: true
                 });
-            }
+                toast.show();
+
+                // Limpiar después de ocultar
+                elementoToast.addEventListener('hidden.bs.toast', function() {
+                    elementoToast.remove();
+                });
+            },
 
             // Inicializar toasts existentes al cargar la página
-            document.addEventListener('DOMContentLoaded', function () {
-                // Inicializar todos los toasts existentes (los de Django messages)
-                const toastEls = document.querySelectorAll('.toast[data-django-message="1"]');
-                toastEls.forEach(toastEl => {
-                    const toast = new bootstrap.Toast(toastEl, {
-                        delay: 5000
-                    });
-                    toast.show();
-                    
-                    // Remover el toast después de que se oculte
-                    toastEl.addEventListener('hidden.bs.toast', function () {
-                        toastEl.remove();
-                    });
+            inicializar: function() {
+                // Toasts de Django messages
+                document.querySelectorAll('.toast[data-django-message="1"]').forEach(toastEl => {
+                    this.inicializarToast(toastEl);
                 });
-            });
-        </script>
-        {% if toast_message %}
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(() => {
-                    if (typeof mostrarToast === 'function') {
-                        // Maneja tanto string como objeto
-                        {% if toast_message.text %}
-                            mostrarToast('{{ toast_message.text|escapejs }}', '{{ toast_message.type|default:"success" }}');
-                        {% else %}
-                            // Si es solo un string
-                            mostrarToast('{{ toast_message|escapejs }}', 'success');
-                        {% endif %}
-                    }
-                });
-            });
-        </script>
-        {% endif %}
-        <!-- FIN INICIALIZACIÓN DE TOASTS DE DJANGO -->
 
+                // Toasts pendientes de sessionStorage
+                try {
+                    const toastPendiente = sessionStorage.getItem('toastPendiente');
+                    if (toastPendiente) {
+                        const datos = JSON.parse(toastPendiente);
+                        setTimeout(() => {
+                            this.mostrarToast(datos.mensaje, datos.tipo);
+                        }, 500); // Retraso para evitar conflictos con otros toasts
+                        sessionStorage.removeItem('toastPendiente');
+                    }
+                } catch (e) {
+                    console.error('Error cargando toast pendiente:', e);
+                }
+
+                // Toast desde template (si existe)
+                {% if toast_message %}
+                setTimeout(() => {
+                    {% if toast_message.text %}
+                        this.mostrarToast('{{ toast_message.text|escapejs }}', '{{ toast_message.type|default:"success" }}');
+                    {% else %}
+                        this.mostrarToast('{{ toast_message|escapejs }}', 'success');
+                    {% endif %}
+                }, 500);
+                {% endif %}
+            }
+        };
+
+        // Hacer funciones globales disponibles
+        window.mostrarToast = (mensaje, tipo) => ToastManager.mostrarToast(mensaje, tipo);
+        window.guardarToastParaRecarga = (mensaje, tipo) => ToastManager.guardarParaRecarga(mensaje, tipo);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof ToastManager !== 'undefined' && typeof ToastManager.inicializar === 'function') {
+                ToastManager.inicializar();
+            }
+        });
+    </script>
 </body>
 </html>

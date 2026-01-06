@@ -306,7 +306,6 @@
                   const modalInstance = bootstrap.Modal.getInstance(modal);
                   modalInstance.hide();
                   
-                  // Redirigir a la lista (el toast se mostrará desde la sesión)
                   setTimeout(() => {
                       window.location.href = data.redirect_url || "{% url 'gerencia:lista_solicitudes_relevamiento' %}";
                   }, 300);

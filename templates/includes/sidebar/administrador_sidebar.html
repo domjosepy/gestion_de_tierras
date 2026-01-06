@@ -42,12 +42,34 @@
       </a>
       <div id="collapseUsers" class="collapse">
         <div class="collapse-inner">
-          <a class="collapse-item" href="{% url 'administrador:crear_usuario' %}">Crear Usuario</a>
-          <a class="collapse-item" href="{% url 'administrador:listar_roles' %}">Gestionar Roles</a>
+          <a class="collapse-item" href="{% url 'administrador:crear_usuario' %}">
+            <i class="fas fa-user-plus me-2"></i>Crear Usuario</a>
         </div>
       </div>
     </li>
-
+     <!-- Gestión de Permisos -->
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
+               data-bs-target="#collapsePermisos" aria-expanded="false" aria-controls="collapsePermisos"
+               title="Gestión de Permisos">
+                <i class="fas fa-key"></i>
+                <span>Gestión de Permisos</span>
+                
+            </a>
+            <div id="collapsePermisos" class="collapse">
+                <div class="collapse-inner">
+                  <a class="collapse-item" href="{% url 'administrador:gestion_masiva' %}">
+                        <i class="fas fa-users-cog me-2"></i>Asignación Masiva
+                    </a>
+                    <a class="collapse-item" href="{% url 'administrador:listar_roles' %}">
+                        <i class="fas fa-tags me-2"></i>Roles y Permisos
+                    </a>
+                    <a class="collapse-item" href="{% url 'administrador:reporte_permisos' %}">
+                        <i class="fas fa-chart-bar me-2"></i>Reporte de Permisos
+                    </a>
+                </div>
+            </div>
+        </li>
     <div class="sidebar-heading">Módulos</div>
     <li class="nav-item">
       <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAnalisis" aria-expanded="false" aria-controls="collapseAnalisis" title="Análisis">
