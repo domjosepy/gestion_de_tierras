@@ -1,0 +1,101 @@
+<!-- === sig_sidebar.html (menú de sig) === -->
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'sig:sig_dashboard' %}">
+    <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+    <span class="justify-content-center">Panel de Control</span>
+  </a>
+</li>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small px-3">
+  <i class="fa-solid fa-compass-drafting"></i>
+  SIG
+</div>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small px-3">
+  Módulos
+</div>
+<!-- sidebar.html -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-map-marked-alt"></i>
+    </div>
+    <div class="sidebar-brand-text">SRT</div>
+  </div>
+
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link active"  title="Panel de Control" data-bs-toggle="tooltip" href="{% url 'sig:sig_dashboard' %}">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Panel de Control</span>
+      </a>
+    </li>
+
+    <div class="sidebar-heading"><i class="fa-solid fa-compass-drafting me-2"></i>SIG</div>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers" title="Gestión de Usuarios">
+        <i class="fa-solid fa-file-signature"></i>
+        <span>Gestión de solicitudes</span>
+      </a>
+      <div id="collapseUsers" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fa-solid fa-file-circle-plus me-2"></i>Solicitudes Nuevas</a>
+          <a class="collapse-item" href="#">
+            <i class="fa-solid fa-file-circle-check me-2"></i>Solicitudes Aprobadas</a>
+          
+        </div>
+      </div>
+      
+    </li>
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+    <!-- Heading objetivos-->
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers" title="Gestión de Usuarios">
+        <i class="fa-solid fa-arrow-up-wide-short"></i>
+        <span>Objetivos</span>
+      </a>
+      <div id="collapseUsers" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fas fa-user-plus me-2"></i>Alcanzados</a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-user-plus me-2"></i>En proceso</a>
+        </div>
+      </div>
+      
+    </li>
+     
+    <div class="sidebar-heading">Módulos</div>
+    <li class="nav-item">
+      
+      <div id="collapseAnalisis" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">Reportes</a>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link" href="#" title="Configuración">
+        <i class="fas fa-cogs"></i>
+        <span>Configuración</span>
+      </a>
+    </li>
+  </ul>
+
+  <button id="sidebarToggle">
+    <i class="fas fa-angle-double-right"></i>
+  </button>
+</div>
+
+<!-- content wrapper -->
+<div id="content-wrapper">
+  {% block content %}
+  {% endblock %}
+</div>

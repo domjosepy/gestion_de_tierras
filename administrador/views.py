@@ -50,6 +50,11 @@ class LoginView(DjangoLoginView):
         # --- MAPEO de roles a namespaces reales ---
         namespace_por_rol = {
             "gerente": "gerencia",
+            "sig": "sig",
+            "digitalizador": "digitalizador",
+            "administrador": "administrador",
+            "invitado": "invitado",
+            "analista": "analista",
 
             # por ejemplo
             # podés agregar más roles aquí
@@ -79,7 +84,6 @@ class LoginView(DjangoLoginView):
 
 
 # MUESTRA LA VISTA DEL HOME
-
 
 class HomeView(LoginRequiredMixin, TemplateView):
     template_name = 'home.html'

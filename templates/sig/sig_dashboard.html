@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Panel de SIG{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h2 class="h3 mb-0 text-primary fw-bold">
+            <i class="fa-solid fa-compass-drafting me-2"></i>SISTEMA DE INFORMACIÓN GEOGRÁFICA (SIG)
+        </h2>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Solicitudes</div>
+                            <div class="h5 mb-0 fw-bold text-primary">{{ estadisticas.total }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes Asignación</div>
+                            <div class="h5 mb-0 fw-bold text-warning">{{ estadisticas.pendientes_asignacion }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-clock fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">En Digitalización</div>
+                            <div class="h5 mb-0 fw-bold text-info">{{ estadisticas.en_proceso }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-draw-polygon fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col me-2">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Pendientes Revisión</div>
+                            <div class="h5 mb-0 fw-bold text-success">{{ estadisticas.pendientes_revision }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-double fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+            <ul class="nav nav-tabs card-header-tabs" id="sigTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i> Por Asignar
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold" id="proceso-tab" data-bs-toggle="tab" data-bs-target="#proceso" type="button" role="tab">
+                        <i class="fas fa-spinner me-1"></i> En Proceso
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-secondary btn-sm" title="Exportar">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="tab-content" id="sigTabsContent">
+                <div class="tab-pane fade show active" id="pendientes" role="tabpanel">
+                    {% if solicitudes_pendientes %}
+                    <div class="table-responsive">
+                        <table class="beautiful-table" id="tablaSolicitudesPendientes" width="100%" cellspacing="0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Colonia</th>
+                                    <th>Tipo</th>
+                                    <th>Solicitante</th>
+                                    <th>Fecha</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for solicitud in solicitudes_pendientes %}
+                                <tr>
+                                    <td class="fw-bold text-primary">#{{ solicitud.id }}</td>
+                                    <td>
+                                        <div class="fw-bold">{{ solicitud.colonia.nombre }}</div>
+                                        <small class="text-muted">Cód: {{ solicitud.colonia.codigo }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %}">
+                                            {{ solicitud.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ solicitud.creado_por.get_full_name|default:solicitud.creado_por.username }}</td>
+                                    <td>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-primary btn-asignar shadow-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#modalAsignar"
+                                                data-solicitud-id="{{ solicitud.id }}">
+                                            <i class="fas fa-user-plus me-1"></i> Asignar
+                                        </button>
+                                        <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" class="btn btn-sm btn-light border shadow-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <img src="{% static 'img/empty.svg' %}" alt="No hay datos" style="width: 150px;" class="mb-3 opacity-50">
+                        <p class="text-muted">No hay solicitudes esperando asignación.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="proceso" role="tabpanel">
+                    <div class="table-responsive text-muted">
+                        <p class="text-center py-4 italic">Listado de solicitudes actualmente en manos de digitalizadores...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAsignar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-user-tag me-2"></i>Asignar Digitalizador
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="formAsignar">
+                    {% csrf_token %}
+                    <input type="hidden" id="solicitudId" name="solicitud_id">
+                    
+                    <div class="mb-4">
+                        <label for="digitalizadorSelect" class="form-label fw-bold">Técnico Digitalizador:</label>
+                        <select class="form-select form-select-lg" id="digitalizadorSelect" name="digitalizador_id" required>
+                            <option value="">-- Seleccione un técnico --</option>
+                            {% for digitalizador in digitalizadores %}
+                            <option value="{{ digitalizador.id }}">
+                                {{ digitalizador.get_full_name|default:digitalizador.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-light border-start border-info border-4">
+                        <div class="d-flex">
+                            <i class="fas fa-info-circle text-info me-3 mt-1"></i>
+                            <div>
+                                <small class="text-muted d-block">Nota de proceso:</small>
+                                <strong>La solicitud será notificada al técnico y cambiará su estado a "Asignado".</strong>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light px-4 py-3">
+                <button type="button" class="btn btn-white border shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-4 shadow" id="btnConfirmarAsignacion">
+                    Confirmar Asignación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    new simpleDatatables.DataTable('#tablaSolicitudesPendientes', {
+        perPage: 10,
+        labels: {
+            placeholder: "Buscar...",
+            perPage: "Registros por página",
+            noRows: "No se encontraron Solicitudes registradas",
+            info: "Mostrando {start} a {end} de {rows} Solicitudes"
+        }
+    });
+    
+    // Inicializar tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar modal de asignación
+    const modalAsignar = document.getElementById('modalAsignar');
+    if (modalAsignar) {
+        modalAsignar.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            
+            const modalTitle = modalAsignar.querySelector('.modal-title');
+            const inputSolicitudId = modalAsignar.querySelector('#solicitudId');
+            
+            modalTitle.textContent = `Asignar Digitalizador - ${coloniaNombre}`;
+            inputSolicitudId.value = solicitudId;
+        });
+    }
+
+    // Confirmar asignación
+    document.getElementById('btnConfirmarAsignacion').addEventListener('click', function() {
+        const solicitudId = document.getElementById('solicitudId').value;
+        const digitalizadorId = document.getElementById('digitalizadorSelect').value;
+        
+        if (!digitalizadorId) {
+            alert('Por favor seleccione un digitalizador');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('solicitud_id', solicitudId);
+        formData.append('digitalizador_id', digitalizadorId);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        fetch(`/sig/solicitud/${solicitudId}/asignar/`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Error al asignar');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión');
+        });
+    });
+});
+</script>
+{% endblock %}

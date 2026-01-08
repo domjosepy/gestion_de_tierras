@@ -23,13 +23,18 @@ from administrador import views as admin_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('administrador/cambiar_estado_usuario/', admin_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
+    path('administrador/cambiar_estado_usuario/',
+         admin_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
     path('', include('administrador.urls', namespace='administrador')),
     path('', RedirectView.as_view(url='/login/', permanent=False)),
-    path("notificaciones/", include("core.notificaciones.urls", namespace="notificaciones")),  
+    path("notificaciones/", include("core.notificaciones.urls",
+         namespace="notificaciones")),
     path("core/", include("core.urls", namespace="core")),
     path("gerencia/", include("gerencia.urls", namespace="gerencia")),
-    #path("coordinacion/", include("coordinacion.urls", namespace="coordinacion")),
-    #path("relevamiento/", include("relevamiento.urls", namespace="relevamiento")),
+    path("sig/", include("sig.urls", namespace="sig")),
+    path("digitalizador/", include("digitalizador.urls",
+         namespace="digitalizador")),
+    # path("coordinacion/", include("coordinacion.urls", namespace="coordinacion")),
+    # path("relevamiento/", include("relevamiento.urls", namespace="relevamiento")),
 
 ]

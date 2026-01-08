@@ -44,13 +44,14 @@ INSTALLED_APPS = [
     'core.notificaciones',
     'administrador.apps.AdministradorConfig',
 
-    
+    'sig.apps.SigConfig',
+    'digitalizador.apps.DigitalizadorConfig',
     'analisis.apps.AnalisisConfig',
     'coordinacion.apps.CoordinacionConfig',
     'expedienteo.apps.ExpedienteoConfig',
     'gerencia.apps.GerenciaConfig',
     'relevamiento.apps.RelevamientoConfig',
-    'sig.apps.SigConfig',
+
     'titulacion.apps.TitulacionConfig',
 ]
 
@@ -69,7 +70,8 @@ CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS':  [os.path.join(BASE_DIR, 'templates')],  # Directorio de templates
+        # Directorio de templates
+        'DIRS':  [os.path.join(BASE_DIR, 'templates')],
 
         'APP_DIRS': True,
         'OPTIONS': {
@@ -78,7 +80,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.notificaciones.context_processors.notificaciones_context',  # Context processor para notificaciones-- agregado el 22/09/2025
+                # Context processor para notificaciones-- agregado el 22/09/2025
+                'core.notificaciones.context_processors.notificaciones_context',
             ],
         },
     },
@@ -119,17 +122,17 @@ AUTH_PASSWORD_VALIDATORS = [
     # ------------------------------------------------------------
     # Validadores **deshabilitados** (comentados para desarrollo):
     # ------------------------------------------------------------
-    
+
     # 1. Evita que la contraseña sea similar a atributos del usuario (nombre, email, etc.)
     # {
     #     'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     # },
-    
+
     # 2. Evita contraseñas comunes (ej: "password123")
     # {
     #     'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     # },
-    
+
     # 3. Evita contraseñas 100% numéricas (ej: "123456")
     # {
     #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',

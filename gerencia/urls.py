@@ -6,11 +6,8 @@ from core.views import (
     ColoniaListView, crear_colonia, editar_colonia, eliminar_colonia
 )
 from gerencia.views import (
-    lista_solicitudes_relevamiento,
-    obtener_datos_solicitud,
-    crear_solicitud_relevamiento,
-    editar_solicitud_relevamiento,
-    eliminar_solicitud_relevamiento
+    lista_solicitudes_relevamiento, obtener_datos_solicitud, crear_solicitud_relevamiento,
+    editar_solicitud_relevamiento, eliminar_solicitud_relevamiento
 )
 
 app_name = "gerencia"
