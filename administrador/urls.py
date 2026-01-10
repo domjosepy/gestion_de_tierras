@@ -61,6 +61,5 @@ urlpatterns = [
     path('permisos/reporte/', reporte_permisos, name='reporte_permisos'),
     path('roles/detalles/<int:rol_id>/',
          detalles_rol_api, name='detalles_rol_api'),
-    # urls.py (temporal)
-    path('test-ajax/', test_ajax, name='test_ajax'),
+
 ]

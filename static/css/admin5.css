@@ -28,7 +28,8 @@
   --color-warning: #f59e0b;    /* Ámbar */
   --color-danger: #ef4444;     /* Rojo coral */
   --color-info: #0ea5e9;       /* Azul cielo */
-
+  --color-purple: #8b5cf6;     /* Púrpura */
+  --color-orange: #f97316;     /* Naranja */
   /* Tonos neutros */
   --color-dark: #111827;
   --color-gray: #6b7280;
@@ -45,6 +46,10 @@
 .text-danger { color: var(--color-danger) !important; }
 .text-info { color: var(--color-info) !important; }
 .text-muted { color: var(--color-gray) !important; }
+.text-purple { color: var(--color-purple) !important; }
+.bg-purple { background-color: var(--color-purple); }
+.text-orange { color: var(--color-orange) !important; }
+.bg-orange { background-color: var(--color-orange); } 
 
 /* Hover suave */
 .text-hover:hover {

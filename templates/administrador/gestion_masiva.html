@@ -281,62 +281,28 @@
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script>
 // ============================================
-// FUNCIÓN TOAST ESPECÍFICA PARA ESTA PÁGINA
+// FUNCIÓN DE UTILIDAD PARA USAR TOASTMANAGER
 // ============================================
-function mostrarToastGestion(mensaje, tipo = "success") {
-    // Mapear tipos a clases de Bootstrap
-    const tipoBootstrap = tipo === 'error' ? 'danger' : tipo;
-    
-    // Iconos según tipo
-    const iconos = {
-        'success': 'fa-check-circle',
-        'error': 'fa-exclamation-circle',
-        'warning': 'fa-exclamation-triangle',
-        'info': 'fa-info-circle'
-    };
-    const icono = iconos[tipo] || 'fa-info-circle';
-    
-    // Crear contenedor específico para esta página
-    let toastContainer = document.getElementById('toastContainerGestion');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toastContainerGestion';
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '1090';
-        document.body.appendChild(toastContainer);
+function mostrarToast(mensaje, tipo = 'success') {
+    if (typeof ToastManager !== 'undefined' && typeof ToastManager.mostrarToast === 'function') {
+        ToastManager.mostrarToast(mensaje, tipo);
+    } else if (typeof mostrarToastGestion === 'function') {
+        mostrarToastGestion(mensaje, tipo);
+    } else {
+        // Fallback simple
+        const toastEl = document.createElement('div');
+        toastEl.className = `alert alert-${tipo === 'error' ? 'danger' : tipo} position-fixed top-0 end-0 m-3`;
+        toastEl.style.zIndex = '9999';
+        toastEl.innerHTML = `<i class="fas fa-${tipo === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${mensaje}`;
+        document.body.appendChild(toastEl);
+        
+        setTimeout(() => {
+            toastEl.remove();
+        }, 3000);
     }
-
-    // Crear el toast
-    const toast = document.createElement("div");
-    toast.className = `toast align-items-center text-white bg-${tipoBootstrap} border-0`;
-    toast.role = "alert";
-    toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas ${icono} me-2"></i>
-                ${mensaje}
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" 
-                    data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>`;
-
-    toastContainer.appendChild(toast);
-
-    // Inicializar y mostrar toast de Bootstrap
-    const bsToast = new bootstrap.Toast(toast, { 
-        delay: 3000, 
-        autohide: true 
-    });
-    bsToast.show();
-
-    // Eliminar después de ocultar
-    toast.addEventListener('hidden.bs.toast', function() {
-        toast.remove();
-    });
 }
 
 // ============================================
@@ -354,15 +320,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Verificar que existan los elementos esenciales
     if (!form || !btnConfirmar || !btnProcesar) {
+        console.error('Elementos esenciales no encontrados');
         return;
     }
     
     // Modal de confirmación
     const confirmModalElement = document.getElementById('confirmModal');
     if (!confirmModalElement) {
+        console.error('Modal de confirmación no encontrado');
         return;
     }
     const confirmModal = new bootstrap.Modal(confirmModalElement);
+    
+    // Guardar el HTML ORIGINAL del cuerpo del modal para restablecerlo
+    const modalOriginalHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            <span id="confirmMessage">¿Estás seguro de realizar esta asignación?</span>
+        </div>
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            Esta acción no se puede deshacer automáticamente.
+        </div>
+    `;
     
     // ============================================
     // 2. FUNCIONES AUXILIARES
@@ -385,7 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Actualizar contador de permisos
-    // Actualizar contador de permisos - VERSIÓN CORREGIDA
     function actualizarPermisosContador() {
         const checkboxes = document.querySelectorAll('input[name="permisos"]:checked');
         const count = checkboxes.length;
@@ -401,7 +380,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tipoAsignacion && tipoAsignacion.value === 'permisos') {
             actualizarVistaPrevia();
         }
-        
     }
     
     // Actualizar vista previa
@@ -411,7 +389,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const usuariosCount = document.querySelectorAll('.usuario-checkbox:checked').length;
         
         if (!vistaPrevia || !detalles) return;
-        
         
         if (usuariosCount > 0) {
             vistaPrevia.classList.add('d-none');
@@ -453,6 +430,70 @@ document.addEventListener('DOMContentLoaded', function() {
             vistaPrevia.classList.remove('d-none');
             detalles.classList.add('d-none');
         }
+    }
+    
+    // Función para preparar y mostrar el modal con contenido actualizado
+    function prepararModalConfirmacion() {
+        // Restablecer el contenido del modal al original
+        const modalBody = confirmModalElement.querySelector('.modal-body');
+        if (modalBody) {
+            modalBody.innerHTML = modalOriginalHTML;
+        }
+        
+        const usuariosSeleccionados = document.querySelectorAll('.usuario-checkbox:checked');
+        const tipoAsignacion = document.querySelector('input[name="tipo_asignacion"]:checked');
+        
+        let mensaje = '¿Estás seguro de realizar esta asignación?';
+        let mensajeHTML = '';
+        
+        if (tipoAsignacion.value === 'rol') {
+            const rolSelect = document.getElementById('selectRol');
+            if (rolSelect && rolSelect.selectedIndex >= 0) {
+                const rolNombre = rolSelect.options[rolSelect.selectedIndex].text;
+                const permisosCount = rolSelect.options[rolSelect.selectedIndex].dataset.permisos || '0';
+                mensajeHTML = `
+                    <div class="mb-2">
+                        <strong>Tipo:</strong> Asignación de Rol
+                    </div>
+                    <div class="mb-2">
+                        <strong>Rol:</strong> ${rolNombre}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Permisos incluidos:</strong> ${permisosCount}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Usuarios afectados:</strong> ${usuariosSeleccionados.length}
+                    </div>
+                    <div class="mt-3">
+                        <strong>¿Confirmar esta asignación?</strong>
+                    </div>
+                `;
+            }
+        } else {
+            const permisosCount = document.querySelectorAll('input[name="permisos"]:checked').length;
+            mensajeHTML = `
+                <div class="mb-2">
+                    <strong>Tipo:</strong> Permisos Específicos
+                </div>
+                <div class="mb-2">
+                    <strong>Permisos seleccionados:</strong> ${permisosCount}
+                </div>
+                <div class="mb-2">
+                    <strong>Usuarios afectados:</strong> ${usuariosSeleccionados.length}
+                </div>
+                <div class="mt-3">
+                    <strong>¿Confirmar esta asignación?</strong>
+                </div>
+            `;
+        }
+        
+        // Actualizar el contenido del modal
+        const confirmMessageEl = document.getElementById('confirmMessage');
+        if (confirmMessageEl) {
+            confirmMessageEl.innerHTML = mensajeHTML;
+        }
+        
+        return true;
     }
     
     // ============================================
@@ -539,7 +580,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Detalles del rol seleccionado
-    // Mostrar detalles del rol seleccionado - VERSIÓN CORREGIDA
     const selectRol = document.getElementById('selectRol');
     if (selectRol) {
         selectRol.addEventListener('change', function() {
@@ -560,7 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // ACTUALIZAR VISTA PREVIA cuando cambia el rol
+            // Actualizar vista previa cuando cambia el rol
             const tipoAsignacion = document.querySelector('input[name="tipo_asignacion"]:checked');
             if (tipoAsignacion && tipoAsignacion.value === 'rol') {
                 actualizarVistaPrevia();
@@ -599,85 +639,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validar antes de mostrar modal
     btnConfirmar.addEventListener('click', function() {
         const usuariosSeleccionados = document.querySelectorAll('.usuario-checkbox:checked');
+        
         if (usuariosSeleccionados.length === 0) {
-            mostrarToastGestion('Debes seleccionar al menos un usuario', 'error');
+            mostrarToast('Debes seleccionar al menos un usuario', 'error');
             return;
         }
         
         const tipoAsignacion = document.querySelector('input[name="tipo_asignacion"]:checked');
         if (!tipoAsignacion) {
-            mostrarToastGestion('Debes seleccionar un tipo de asignación', 'error');
+            mostrarToast('Debes seleccionar un tipo de asignación', 'error');
             return;
         }
         
-        // Validar según tipo
         if (tipoAsignacion.value === 'rol') {
             const rolSelect = document.getElementById('selectRol');
             if (!rolSelect || !rolSelect.value) {
-                mostrarToastGestion('Debes seleccionar un rol', 'error');
+                mostrarToast('Debes seleccionar un rol', 'error');
                 return;
             }
         } else {
             const permisosSeleccionados = document.querySelectorAll('input[name="permisos"]:checked');
             if (permisosSeleccionados.length === 0) {
-                mostrarToastGestion('Debes seleccionar al menos un permiso', 'error');
+                mostrarToast('Debes seleccionar al menos un permiso', 'error');
                 return;
             }
         }
         
-        // Preparar mensaje de confirmación
-        const usuariosCount = usuariosSeleccionados.length;
-        let mensaje = '';
-        
-        if (tipoAsignacion.value === 'rol') {
-            const rolSelect = document.getElementById('selectRol');
-            if (rolSelect && rolSelect.selectedIndex >= 0) {
-                const rolNombre = rolSelect.options[rolSelect.selectedIndex].text;
-                const permisosCount = rolSelect.options[rolSelect.selectedIndex].dataset.permisos || '0';
-                mensaje = `
-                    <div class="mb-2">
-                        <strong>Tipo:</strong> Asignación de Rol
-                    </div>
-                    <div class="mb-2">
-                        <strong>Rol:</strong> ${rolNombre}
-                    </div>
-                    <div class="mb-2">
-                        <strong>Permisos incluidos:</strong> ${permisosCount}
-                    </div>
-                    <div class="mb-2">
-                        <strong>Usuarios afectados:</strong> ${usuariosCount}
-                    </div>
-                    <div class="mt-3">
-                        <strong>¿Confirmar esta asignación?</strong>
-                    </div>
-                `;
-            }
-        } else {
-            const permisosCount = document.querySelectorAll('input[name="permisos"]:checked').length;
-            mensaje = `
-                <div class="mb-2">
-                    <strong>Tipo:</strong> Permisos Específicos
-                </div>
-                <div class="mb-2">
-                    <strong>Permisos seleccionados:</strong> ${permisosCount}
-                </div>
-                <div class="mb-2">
-                    <strong>Usuarios afectados:</strong> ${usuariosCount}
-                </div>
-                <div class="mt-3">
-                    <strong>¿Confirmar esta asignación?</strong>
-                </div>
-            `;
+        // Preparar y mostrar modal
+        if (prepararModalConfirmacion()) {
+            confirmModal.show();
         }
-        
-        // Mostrar mensaje en el modal
-        const confirmMessageEl = document.getElementById('confirmMessage');
-        if (confirmMessageEl) {
-            confirmMessageEl.innerHTML = mensaje;
-        }
-        
-        // Mostrar modal
-        confirmModal.show();
     });
     
     // Procesar formulario (AJAX)
@@ -708,68 +699,58 @@ document.addEventListener('DOMContentLoaded', function() {
             // Procesar respuesta
             const data = await response.json();
             
-            
-           if (data.success) {
-                // 1. GUARDAR el mensaje en sessionStorage ANTES de recargar
-                sessionStorage.setItem('toast_mensaje', data.message);
-                sessionStorage.setItem('toast_tipo', 'success');
-                sessionStorage.setItem('toast_timestamp', new Date().getTime());
-                
-                // 2. RECARGAR inmediatamente
-                window.location.reload();
+            if (data.success) {
+                // Mostrar mensaje de éxito
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.reload();
+                }
             } else {
-                mostrarToastGestion(data.message || 'Error al procesar la solicitud', 'error');
+                // Mostrar error
+                mostrarToast(data.message || 'Error al procesar la solicitud', 'error');
+                message.error(data.message || 'Error al procesar la solicitud', 'error');
                 
                 // Reactivar botones en caso de error
                 btnConfirmar.disabled = false;
                 btnProcesar.disabled = false;
                 btnProcesar.innerHTML = btnProcesarOriginal;
+                
+                // Cerrar modal completamente
+                confirmModal.hide();
             }
             
         } catch (error) {
-            console.error(' Error en la petición:', error);
-            mostrarToastGestion('Error de conexión. Intenta nuevamente.', 'error');
+            console.error('Error en la petición:', error);
+            // Mostrar error
+            mostrarToast('Error de conexión. Intenta nuevamente.', 'error');
+            message.error('Error de conexión. Intenta nuevamente.', 'error');
             
             // Reactivar botones
             btnConfirmar.disabled = false;
             btnProcesar.disabled = false;
             btnProcesar.innerHTML = btnProcesarOriginal;
+            
+            // Cerrar modal completamente
+            confirmModal.hide();
         }
-        
     });
-    // ============================================
-    // 6. MOSTRAR TOAST DESPUÉS DE RECARGAR (SI APLICA)
-    // ============================================
-    // Verificar si hay un mensaje guardado en sessionStorage
-        const mensajeGuardado = sessionStorage.getItem('toast_mensaje');
-        const tipoGuardado = sessionStorage.getItem('toast_tipo');
-        const timestampGuardado = sessionStorage.getItem('toast_timestamp');
-
-        if (mensajeGuardado && tipoGuardado && timestampGuardado) {
-            // Verificar que el mensaje no sea muy viejo (menos de 5 segundos)
-            const ahora = new Date().getTime();
-            const diferencia = ahora - parseInt(timestampGuardado);
-            
-            if (diferencia < 5000) { // 5 segundos
-                // Esperar un poco para que la página termine de cargar
-                setTimeout(() => {
-                    mostrarToastGestion(mensajeGuardado, tipoGuardado);
-                }, 300); // Mostrar después de 5 segundos
-            }
-            
-            // Limpiar el sessionStorage después de mostrar
-            sessionStorage.removeItem('toast_mensaje');
-            sessionStorage.removeItem('toast_tipo');
-            sessionStorage.removeItem('toast_timestamp');
+    
+    // Escuchar eventos del modal para limpiar al cerrar
+    confirmModalElement.addEventListener('hidden.bs.modal', function () {
+        // Restablecer contenido del modal
+        const modalBody = confirmModalElement.querySelector('.modal-body');
+        if (modalBody) {
+            modalBody.innerHTML = modalOriginalHTML;
         }
+    });
+    
     // ============================================
-    // 7. INICIALIZACIÓN
+    // 6. INICIALIZACIÓN
     // ============================================
     actualizarContador();
     actualizarPermisosContador();
     actualizarVistaPrevia(); 
-
-    
-    });
+});
 </script>
 {% endblock %}

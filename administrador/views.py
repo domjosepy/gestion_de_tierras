@@ -575,9 +575,6 @@ def gestion_permisos_masiva(request):
                     if rol.grupo_django:
                         usuario.groups.add(rol.grupo_django)
 
-                    print(
-                        f"Asignado rol {rol.nombre} a usuario {usuario.username}")
-
                 else:  # tipo_asignacion == 'permisos'
                     # Asignar permisos directos
                     permisos = Permission.objects.filter(id__in=permisos_ids)
@@ -586,13 +583,16 @@ def gestion_permisos_masiva(request):
                         cambios += len(permisos)
                         usuarios_afectados.append(usuario.username)
 
+            # Crear mensaje de éxito
             success_msg = f'Se realizaron {cambios} cambios en {usuarios.count()} usuario(s)'
             if usuarios_afectados:
                 success_msg += f': {", ".join(usuarios_afectados[:3])}'
                 if len(usuarios_afectados) > 3:
                     success_msg += f' y {len(usuarios_afectados) - 3} más'
 
-            print(f"Operación exitosa: {success_msg}")
+            # AGREGAR MENSAJE DE ÉXITO usando Django messages
+            messages.success(
+                request, f'Se realizaron {cambios} cambios en {usuarios.count()} usuario(s).')
 
             if is_ajax:
                 return JsonResponse({
@@ -601,21 +601,16 @@ def gestion_permisos_masiva(request):
                     'redirect_url': reverse('administrador:gestion_masiva')
                 })
 
-            messages.success(request, success_msg)
             return redirect('administrador:gestion_masiva')
 
         except Rol.DoesNotExist:
             error_msg = 'El rol seleccionado no existe'
-            print(f"Error: {error_msg}")
             if is_ajax:
                 return JsonResponse({'success': False, 'message': error_msg})
             messages.error(request, error_msg)
             return redirect('administrador:gestion_masiva')
         except Exception as e:
             error_msg = f'Error al procesar la solicitud: {str(e)}'
-            print(f"Error inesperado: {str(e)}")
-            import traceback
-            traceback.print_exc()
             if is_ajax:
                 return JsonResponse({'success': False, 'message': error_msg})
             messages.error(request, error_msg)
