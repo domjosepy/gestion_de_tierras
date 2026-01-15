@@ -1,0 +1,134 @@
+<div class="modal fade modal-danger" id="eliminarGrupoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-exclamation-triangle me-2"></i>Eliminar Grupo
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formEliminarGrupo" method="POST">
+        {% csrf_token %}
+        <input type="hidden" id="eliminar_grupo_id" name="grupo_id">
+        
+        <div class="modal-body">
+          <div class="card border-danger">
+            <div class="card-body">
+              <h6 class="card-subtitle mb-2 text-muted">Grupo a eliminar:</h6>
+              <p class="card-text mb-1">
+                <strong>Nombre:</strong> <span id="eliminar_grupo_nombre" class="text-danger"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Líder:</strong> <span id="eliminar_grupo_lider"></span>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Tipo:</strong> <span id="eliminar_grupo_tipo"></span>
+              </p>
+              <p class="card-text mb-0">
+                <strong>Usuarios en este grupo:</strong> <span id="eliminar_grupo_usuarios_count"></span>
+              </p>
+            </div>
+          </div>
+
+          <div class="alert alert-warning d-none mt-3" id="alert_grupo_usuarios_info">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span id="mensaje_grupo_usuarios_info"></span>
+          </div>
+
+          <div id="eliminarGrupoError" class="alert alert-danger d-none mt-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-danger" id="btnEliminarGrupo">
+            <i class="fas fa-trash me-1"></i>Eliminar permanentemente
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalEliminar = document.getElementById('eliminarGrupoModal');
+    const formEliminar = document.getElementById('formEliminarGrupo');
+    const btnEliminar = document.getElementById('btnEliminarGrupo');
+    const errorDivEliminar = document.getElementById('eliminarGrupoError');
+
+    // Cargar datos al abrir modal
+    modalEliminar.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      const id = button.getAttribute('data-grupoid');
+      const nombre = button.getAttribute('data-gruponombre');
+      const lider = button.getAttribute('data-lider-nombre') || 'Sin líder';
+      const esDepto = button.getAttribute('data-grupodescripcion') === 'true';
+      const cantUsuarios = parseInt(button.getAttribute('data-grupousuarioscount') || '0');
+
+      // Llenar datos visuales
+      document.getElementById('eliminar_grupo_id').value = id;
+      document.getElementById('eliminar_grupo_nombre').textContent = nombre;
+      document.getElementById('eliminar_grupo_lider').textContent = lider;
+      document.getElementById('eliminar_grupo_tipo').textContent = esDepto ? 'Departamento' : 'Grupo de Trabajo';
+      document.getElementById('eliminar_grupo_usuarios_count').textContent = cantUsuarios + ' usuario(s)';
+
+      // Manejar restricción de eliminación si hay usuarios
+      const alertInfo = document.getElementById('alert_grupo_usuarios_info');
+      const mensajeInfo = document.getElementById('mensaje_grupo_usuarios_info');
+      
+      if (cantUsuarios > 0) {
+        mensajeInfo.textContent = `Este grupo tiene ${cantUsuarios} usuario(s). Debe vaciar el grupo antes de poder eliminarlo.`;
+        alertInfo.classList.remove('d-none');
+        btnEliminar.disabled = true;
+      } else {
+        alertInfo.classList.add('d-none');
+        btnEliminar.disabled = false;
+      }
+
+      // Configurar URL de acción
+      formEliminar.action = "{% url 'administrador:eliminar_grupo' 0 %}".replace('0', id);
+      errorDivEliminar.classList.add('d-none');
+    });
+
+    // Enviar formulario vía AJAX
+    formEliminar.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(formEliminar);
+      const oldText = btnEliminar.innerHTML;
+
+      btnEliminar.disabled = true;
+      btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Eliminando...';
+
+      fetch(formEliminar.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modalEliminar).hide();
+          location.reload();
+        } else {
+          errorDivEliminar.textContent = data.message || 'No se pudo eliminar el grupo.';
+          errorDivEliminar.classList.remove('d-none');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        errorDivEliminar.textContent = 'Error en el servidor al intentar eliminar.';
+        errorDivEliminar.classList.remove('d-none');
+      })
+      .finally(() => {
+        btnEliminar.disabled = (document.getElementById('alert_grupo_usuarios_info').classList.contains('d-none')) ? false : true;
+        btnEliminar.innerHTML = oldText;
+      });
+    });
+  });
+</script>

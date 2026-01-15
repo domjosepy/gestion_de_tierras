@@ -1,0 +1,228 @@
+<div class="modal fade modal-warning" id="editarGrupoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="formEditarGrupo" method="post" action="" novalidate>
+      {% csrf_token %}
+      <input type="hidden" id="grupoIdEditar" name="grupo_id">
+      
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-edit me-2"></i> Editar Grupo
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="nombreEditar" class="form-label fw-bold">Nombre del Grupo</label>
+                <input type="text" class="form-control" id="nombreEditar" name="nombre" 
+                       maxlength="100" minlength="3" required>
+                <div id="errorNombreEditar" class="text-danger small mt-2"></div>
+              </div>
+
+              <div class="mb-3">
+                <label for="descripcionEditar" class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control" id="descripcionEditar" name="descripcion" 
+                          rows="3" maxlength="500"></textarea>
+                <div id="errorDescripcionEditar" class="text-danger small mt-2"></div>
+              </div>
+
+              <div class="row">
+                <div class="col-6">
+                  <div class="mb-3">
+                    <label for="colorEditar" class="form-label fw-bold">Color</label>
+                    <input type="color" class="form-control form-control-color color-btn" 
+                           id="colorEditar" name="color" style="width: 50px; height: 50px;">
+                    <div id="errorColorEditar" class="text-danger small mt-2"></div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="mb-3">
+                    <label for="liderEditar" class="form-label fw-bold">Líder</label>
+                    <select class="form-select" id="liderEditar" name="lider">
+                      <option value="">Seleccione un líder</option>
+                      {% for usuario in usuarios %}
+                        <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="errorLiderEditar" class="text-danger small mt-2"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-6">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="es_departamentoEditar" name="es_departamento">
+                    <label class="form-check-label fw-bold" for="es_departamentoEditar">¿Es departamento?</label>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="activoEditar" name="activo">
+                    <label class="form-check-label fw-bold" for="activoEditar">Activo</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label fw-bold">Usuarios</label>
+                <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;" id="usuariosContainerEditar">
+                  {% for usuario in usuarios %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="usuarioEditar_{{ usuario.id }}" 
+                           name="usuarios" value="{{ usuario.id }}">
+                    <label class="form-check-label" for="usuarioEditar_{{ usuario.id }}" style="font-size: 0.9rem;">
+                      {{ usuario.username }}
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div id="errorUsuariosEditar" class="text-danger small mt-2"></div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold">Roles asociados</label>
+                <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;" id="rolesContainerEditar">
+                  {% for rol in roles %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="rolEditar_{{ rol.id }}" 
+                           name="roles_asociados" value="{{ rol.id }}">
+                    <label class="form-check-label" for="rolEditar_{{ rol.id }}" style="font-size: 0.9rem;">
+                      {{ rol.nombre }}
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div id="errorRolesAsociadosEditar" class="text-danger small mt-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="editarGrupoError" class="alert alert-danger d-none mt-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Actualizar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editarGrupoModal');
+    const form = document.getElementById('formEditarGrupo');
+    const errorDiv = document.getElementById('editarGrupoError');
+
+    function limpiarErroresEditar() {
+      form.querySelectorAll('.is-invalid').forEach(input => input.classList.remove('is-invalid'));
+      form.querySelectorAll('.text-danger').forEach(div => div.textContent = '');
+      errorDiv.classList.add('d-none');
+    }
+
+    function mostrarErrorEditar(campo, mensaje) {
+      // Convierte snake_case a CamelCase para el ID del error
+      const idCampo = campo.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+      const errorElement = document.getElementById(`error${idCampo}Editar`);
+      const inputElement = document.getElementById(`${campo.toLowerCase()}Editar`);
+      
+      if (errorElement) errorElement.textContent = mensaje;
+      if (inputElement) inputElement.classList.add('is-invalid');
+    }
+
+    modal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      
+      // Obtener datos del botón
+      const id = button.getAttribute('data-id');
+      const nombre = button.getAttribute('data-nombre');
+      const descripcion = button.getAttribute('data-descripcion');
+      const color = button.getAttribute('data-color');
+      const lider = button.getAttribute('data-lider');
+      const esDepto = button.getAttribute('data-es-departamento') === 'true';
+      const activo = button.getAttribute('data-activo') === 'true';
+      const usuarios = JSON.parse(button.getAttribute('data-usuarios') || '[]');
+      const roles = JSON.parse(button.getAttribute('data-roles') || '[]');
+
+      // Configurar Formulario
+      form.action = "{% url 'administrador:editar_grupo' 0 %}".replace('0', id);
+      document.getElementById('grupoIdEditar').value = id;
+      document.getElementById('nombreEditar').value = nombre;
+      document.getElementById('descripcionEditar').value = descripcion || '';
+      document.getElementById('colorEditar').value = color || '#6c757d';
+      document.getElementById('liderEditar').value = lider || '';
+      document.getElementById('es_departamentoEditar').checked = esDepto;
+      document.getElementById('activoEditar').checked = activo;
+
+      // Checkboxes Usuarios
+      document.querySelectorAll('#usuariosContainerEditar input').forEach(cb => {
+        cb.checked = usuarios.includes(parseInt(cb.value));
+      });
+
+      // Checkboxes Roles
+      document.querySelectorAll('#rolesContainerEditar input').forEach(cb => {
+        cb.checked = roles.includes(parseInt(cb.value));
+      });
+
+      limpiarErroresEditar();
+    });
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      limpiarErroresEditar();
+
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const oldText = btnSubmit.innerHTML;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modal).hide();
+          location.reload();
+        } else if (data.errors) {
+          for (const [field, messages] of Object.entries(data.errors)) {
+            if (field === '__all__') {
+              errorDiv.textContent = messages.join(' ');
+              errorDiv.classList.remove('d-none');
+            } else {
+              mostrarErrorEditar(field, messages.join(' '));
+            }
+          }
+        }
+      })
+      .catch(() => {
+        errorDiv.textContent = 'Error de conexión.';
+        errorDiv.classList.remove('d-none');
+      })
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = oldText;
+      });
+    });
+  });
+</script>

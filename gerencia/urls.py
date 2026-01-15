@@ -7,7 +7,8 @@ from core.views import (
 )
 from gerencia.views import (
     lista_solicitudes_relevamiento, obtener_datos_solicitud, crear_solicitud_relevamiento,
-    editar_solicitud_relevamiento, eliminar_solicitud_relevamiento
+    editar_solicitud_relevamiento, eliminar_solicitud_relevamiento, detalle_solicitud,
+    asignar_grupo, asignar_usuario, cambiar_estado, api_info_colonia
 )
 
 app_name = "gerencia"
@@ -55,14 +56,31 @@ urlpatterns = [
          name='lista_solicitudes_relevamiento'),
     path('solicitudes-relevamiento/<int:pk>/datos/',
          obtener_datos_solicitud, name='obtener_datos_solicitud'),
+    # urls.py de gerencia
     path('solicitudes-relevamiento/crear/<int:colonia_id>/',
-         crear_solicitud_relevamiento, name='crear_solicitud_relevamiento'),
+         crear_solicitud_relevamiento,
+         name='crear_solicitud_relevamiento'),
     path('solicitudes-relevamiento/<int:pk>/editar/',
          editar_solicitud_relevamiento, name='editar_solicitud_relevamiento'),
     path('solicitudes-relevamiento/<int:pk>/eliminar/',
          eliminar_solicitud_relevamiento, name='eliminar_solicitud_relevamiento'),
     # ------------------------------------
-    # 6. API endpoints
-    path('api/colonias/<int:colonia_id>/info/',
-         views.api_info_colonia, name='api_info_colonia'),
+    path('solicitudes-relevamiento/datos/<int:pk>/',
+         obtener_datos_solicitud, name='obtener_datos_solicitud'),
+    # 6. API para obtener info de colonia
+    path('solicitudes-relevamiento/api-info-colonia/<int:colonia_id>/',
+         api_info_colonia, name='api_info_colonia'),
+
+    # Nuevas URLs para gestión con grupos
+    path('solicitudes/<int:solicitud_id>/',
+         detalle_solicitud, name='detalle_solicitud'),
+
+    path('solicitudes/<int:solicitud_id>/asignar-grupo/',
+         asignar_grupo, name='asignar_grupo'),
+
+    path('solicitudes/<int:solicitud_id>/asignar-usuario/',
+         asignar_usuario, name='asignar_usuario'),
+
+    path('solicitudes/<int:solicitud_id>/cambiar-estado/',
+         cambiar_estado, name='cambiar_estado'),
 ]

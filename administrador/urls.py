@@ -1,13 +1,13 @@
 from django.urls import path
+from django.contrib.auth.views import LogoutView
 from .views import (
     LoginView, HomeView, AdminView, InvitadoView, SignUpView,
     CustomPasswordChangeView, edit_profile, test_toast,
     SimpleUserCreateView,
     asignar_rol_usuario, cambiar_estado_usuario,
     listar_roles, crear_rol, editar_rol, eliminar_rol,
-    gestion_permisos_masiva, reporte_permisos, detalles_rol_api, test_ajax
-)
-from django.contrib.auth.views import LogoutView
+    gestion_permisos_masiva, reporte_permisos, detalles_rol_api, test_ajax,
+    listar_grupos, crear_grupo, editar_grupo, eliminar_grupo, detalles_grupo_api, asignar_usuario_grupo)
 
 app_name = 'administrador'
 
@@ -32,7 +32,6 @@ urlpatterns = [
          name='administrador_dashboard'),
     path('invitado-dashboard/', InvitadoView.as_view(), name='invitado_dashboard'),
 
-
     # ------------------------------------
     # 3. Vistas de Roles
     # ------------------------------------
@@ -41,6 +40,18 @@ urlpatterns = [
     path('roles/editar/<int:rol_id>/', editar_rol, name='editar_rol'),
     path('roles/eliminar/<int:rol_id>/', eliminar_rol, name='eliminar_rol'),
 
+    # ------------------------------------
+    # 6. Vistas de Grupos
+    # ------------------------------------
+    path('grupos/', listar_grupos, name='listar_grupos'),
+    path('grupos/crear/', crear_grupo, name='crear_grupo'),
+    path('grupos/editar/<int:grupo_id>/', editar_grupo, name='editar_grupo'),
+    path('grupos/eliminar/<int:grupo_id>/',
+         eliminar_grupo, name='eliminar_grupo'),
+    path('grupos/detalles/<int:grupo_id>/',
+         detalles_grupo_api, name='detalles_grupo_api'),
+    path('grupos/asignar-usuario/', asignar_usuario_grupo,
+         name='asignar_usuario_grupo'),
 
     # ---------------------------------------------
     # 4. Vistas de Crear usuario Form desde admin

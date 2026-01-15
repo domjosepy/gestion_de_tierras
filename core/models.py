@@ -8,6 +8,8 @@ User = settings.AUTH_USER_MODEL
 # ===============================
 # MODELO: DEPARTAMENTO
 # ===============================
+
+
 class Departamento(models.Model):
     nombre = models.CharField(max_length=200, unique=True, db_index=True)
     codigo = models.PositiveIntegerField(blank=True, null=True, unique=True)
@@ -16,7 +18,6 @@ class Departamento(models.Model):
         verbose_name = "Departamento"
         verbose_name_plural = "Departamentos"
         ordering = ["codigo", "nombre"]
-        
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -47,8 +48,9 @@ class Distrito(models.Model):
     departamento = models.ForeignKey(
         Departamento, on_delete=models.PROTECT, related_name="distritos"
     )
-    codigo = models.PositiveIntegerField(blank=True, null=True, unique=False) # No es único globalmente !!antes unique=True
-    
+    # No es único globalmente !!antes unique=True
+    codigo = models.PositiveIntegerField(blank=True, null=True, unique=False)
+
     class Meta:
         unique_together = ("nombre", "departamento")
         unique_together = ("codigo", "departamento")
@@ -72,7 +74,7 @@ class Colonia(models.Model):
     distritos = models.ManyToManyField(Distrito, related_name="colonias")
     estado = models.CharField(
         max_length=20, choices=ESTADO_CHOICES, default="activo")
-    codigo = models.PositiveIntegerField(blank=True, null=True) 
+    codigo = models.PositiveIntegerField(blank=True, null=True)
 
     tiene_relevamiento = models.BooleanField(
         default=False,
@@ -83,7 +85,6 @@ class Colonia(models.Model):
         verbose_name = "Colonia"
         verbose_name_plural = "Colonias"
         ordering = ["nombre"]
-    
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -106,11 +107,3 @@ class Colonia(models.Model):
 
     def __str__(self):
         return self.nombre
-
-
-# areas de trabajo 
-#objetivos de anuales
-
-# Solicitud (coordinación)
-
-# extraido de core/relevamiento_models.py

@@ -18,10 +18,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView, CreateView, ListView
 from core.notificaciones.utils import notificar_a_admins
-
+from administrador.models import Grupo
 
 # Local application imports
-from .forms import CustomUserCreationForm, CustomPasswordChangeForm, SimpleUserCreationForm, RolForm, AsignacionPermisosForm
+from .forms import (CustomUserCreationForm, CustomPasswordChangeForm,
+                    SimpleUserCreationForm, RolForm, AsignacionPermisosForm, GrupoForm)
 from .models import User, Rol
 
 # VISTA DE INICIO DE SESION PERSONALIZADA
@@ -55,8 +56,11 @@ class LoginView(DjangoLoginView):
             "administrador": "administrador",
             "invitado": "invitado",
             "analista": "analista",
+            "tecnico": "tecnico",
+            "supervisor": "supervisor",
+            "coordinador": "coordinador",
 
-            # por ejemplo
+            # por ejemplo, si tenés un rol llamado "ventas"
             # podés agregar más roles aquí
         }
 
@@ -214,6 +218,229 @@ class CustomPasswordChangeView(PasswordChangeView):
         return super().form_valid(form)
 
 # ======================================
+# Vistas para Grupos
+# ======================================
+
+
+@login_required
+def listar_grupos(request):
+    """Lista todos los grupos con usuarios y roles pre-cargados"""
+    grupos = Grupo.objects.prefetch_related(
+        'usuarios', 'roles_asociados').all()
+    usuarios = User.objects.filter(estado='ACTIVO')
+    roles = Rol.objects.all()
+
+    return render(request, 'includes/administrador/tablas/listar_grupos.html', {
+        'grupos': grupos,
+        'usuarios': usuarios,
+        'roles': roles,
+        'title': 'Gestión de Grupos'
+    })
+
+
+@require_POST
+@login_required
+def crear_grupo(request):
+    """Crea un nuevo grupo con validaciones AJAX"""
+    form = GrupoForm(request.POST, request=request)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if form.is_valid():
+        grupo = form.save()
+
+        # Notificar a administradores
+        notificar_a_admins(
+            mensaje=f'Se ha creado un nuevo grupo: "{grupo.nombre}".',
+            tipo="INFO",
+            exclude_user=request.user,
+            link=reverse("administrador:listar_grupos")
+        )
+
+        messages.success(
+            request, f'Grupo "{grupo.nombre}" creado exitosamente!')
+
+        if is_ajax:
+            return JsonResponse({'success': True})
+
+        return redirect('administrador:listar_grupos')
+
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field}: {error}")
+
+    return redirect('administrador:listar_grupos')
+
+
+@require_POST
+@login_required
+def editar_grupo(request, grupo_id):
+    """Edita un grupo existente con validaciones AJAX"""
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+    form = GrupoForm(request.POST, instance=grupo, request=request)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    if form.is_valid():
+        grupo = form.save()
+
+        # Notificar a administradores
+        notificar_a_admins(
+            mensaje=f'El grupo "{grupo.nombre}" fue editado.',
+            tipo="WARNING",
+            exclude_user=request.user,
+            link=reverse("administrador:listar_grupos")
+        )
+
+        messages.success(
+            request, f'Grupo "{grupo.nombre}" actualizado exitosamente!')
+
+        if is_ajax:
+            return JsonResponse({'success': True})
+
+        return redirect('administrador:listar_grupos')
+
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field}: {error}")
+
+    return redirect('administrador:listar_grupos')
+
+
+@require_POST
+@login_required
+def eliminar_grupo(request, grupo_id):
+    """Elimina un grupo si no tiene usuarios asociados"""
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # Verificar si tiene usuarios asociados
+    if grupo.usuarios.exists():
+        msg = f'No se puede eliminar el grupo "{grupo.nombre}" porque tiene {grupo.usuarios.count()} usuario(s) asociado(s).'
+
+        if is_ajax:
+            return JsonResponse({
+                'success': False,
+                'message': msg
+            }, status=400)
+
+        messages.error(request, msg)
+        return redirect('administrador:listar_grupos')
+
+    nombre_grupo = grupo.nombre
+    grupo.delete()
+
+    # Notificar a administradores
+    notificar_a_admins(
+        mensaje=f'El grupo "{nombre_grupo}" fue eliminado.',
+        tipo="DANGER",
+        exclude_user=request.user,
+        link=reverse("administrador:listar_grupos")
+    )
+
+    msg = f'El grupo "{nombre_grupo}" fue eliminado exitosamente.'
+    messages.info(request, msg)
+
+    if is_ajax:
+        return JsonResponse({
+            'success': True,
+            'message': msg
+        })
+
+    messages.success(request, msg)
+    return redirect('administrador:listar_grupos')
+
+
+@login_required
+def detalles_grupo_api(request, grupo_id):
+    """API para obtener detalles de un grupo"""
+    try:
+        grupo = Grupo.objects.get(id=grupo_id)
+
+        # Obtener usuarios del grupo
+        usuarios = grupo.usuarios.all().values('id', 'username', 'email', 'estado')
+
+        # Obtener roles asociados
+        roles = grupo.roles_asociados.all().values('id', 'nombre', 'color')
+
+        data = {
+            'nombre': grupo.nombre,
+            'descripcion': grupo.descripcion,
+            'color': grupo.color,
+            'lider': grupo.lider.username if grupo.lider else None,
+            'lider_id': grupo.lider.id if grupo.lider else None,
+            'es_departamento': grupo.es_departamento,
+            'activo': grupo.activo,
+            'fecha_creacion': grupo.fecha_creacion.strftime('%d/%m/%Y %H:%M'),
+            'usuarios_count': usuarios.count(),
+            'roles_count': roles.count(),
+            'usuarios': list(usuarios),
+            'roles': list(roles)
+        }
+
+        return JsonResponse(data)
+
+    except Grupo.DoesNotExist:
+        return JsonResponse({'error': 'Grupo no encontrado'}, status=404)
+
+
+@require_POST
+@login_required
+def asignar_usuario_grupo(request):
+    """Asigna o remueve usuarios de grupos (AJAX)"""
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+        grupo_id = data.get("grupo_id")
+        usuario_id = data.get("usuario_id")
+        accion = data.get("accion")  # 'agregar' o 'remover'
+
+        grupo = get_object_or_404(Grupo, id=grupo_id)
+        usuario = get_object_or_404(User, id=usuario_id)
+
+        if accion == 'agregar':
+            grupo.usuarios.add(usuario)
+            mensaje = f'Usuario {usuario.username} agregado al grupo {grupo.nombre}'
+        elif accion == 'remover':
+            grupo.usuarios.remove(usuario)
+            mensaje = f'Usuario {usuario.username} removido del grupo {grupo.nombre}'
+        else:
+            return JsonResponse({"success": False, "message": "Acción no válida"})
+
+        # Notificar
+        notificar_a_admins(
+            mensaje=f'{usuario.username} fue {accion} del grupo "{grupo.nombre}".',
+            tipo="INFO",
+            exclude_user=request.user
+        )
+
+        return JsonResponse({"success": True, "message": mensaje})
+
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"Error: {str(e)}"})
+
+# ======================================
 # Vistas para Roles (Actualizadas)
 # ======================================
 
@@ -225,7 +452,7 @@ def listar_roles(request):
     permisos = Permission.objects.select_related('content_type').order_by(
         'content_type__app_label', 'name'
     )
-    return render(request, 'administrador/listar_roles.html', {
+    return render(request, 'includes/administrador/tablas/listar_roles.html', {
         'roles': roles,
         'permisos': permisos
     })

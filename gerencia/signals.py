@@ -1,43 +1,50 @@
-# gerencia/signals.py
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model
 from .models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 
-@receiver(pre_save, sender=SolicitudRelevamiento)
-def solicitud_prev_state(sender, instance, **kwargs):
-    """
-    Guarda el estado previo antes de actualizar la solicitud.
-    """
-    if not instance.pk:
-        instance._prev_estado = None
-    else:
-        try:
-            prev = SolicitudRelevamiento.objects.get(pk=instance.pk)
-            instance._prev_estado = prev.estado
-        except SolicitudRelevamiento.DoesNotExist:
-            instance._prev_estado = None
+User = get_user_model()
 
-@receiver(post_save, sender=SolicitudRelevamiento)
-def solicitud_audit(sender, instance, created, **kwargs):
-    """
-    Crea un registro de auditoría cada vez que se crea o cambia el estado.
-    """
-    prev = getattr(instance, "_prev_estado", None)
-    if created:
-        SolicitudRelevamientoAudit.objects.create(
-            solicitud=instance,
-            previo="(nuevo)",
-            nuevo=instance.estado,
-            cambiado_por=instance.creado_por,
-            comentario="Creada"
-        )
-    else:
-        if prev is not None and prev != instance.estado:
-            changed_by = getattr(instance, "_changed_by", None)
-            SolicitudRelevamientoAudit.objects.create(
-                solicitud=instance,
-                previo=prev,
-                nuevo=instance.estado,
-                cambiado_por=changed_by,
-                comentario=f"Estado cambiado de {prev} a {instance.estado}"
-            )
+
+@receiver(pre_save, sender=SolicitudRelevamiento)
+def auditar_cambios_solicitud(sender, instance, **kwargs):
+    """Crear registro de auditoría para cambios importantes"""
+    if not instance.pk:  # Si es nuevo, no hay auditoría previa
+        return
+
+    try:
+        original = sender.objects.get(pk=instance.pk)
+
+        # Comparar campos importantes
+        campos_a_auditar = ['estado', 'grupo_asignado',
+                            'usuario_asignado', 'motivo_rechazo']
+
+        for campo in campos_a_auditar:
+            valor_original = getattr(original, campo, None)
+            valor_nuevo = getattr(instance, campo, None)
+
+            # Convertir objetos a string si es necesario
+            if hasattr(valor_original, 'pk'):
+                valor_original = str(valor_original)
+            if hasattr(valor_nuevo, 'pk'):
+                valor_nuevo = str(valor_nuevo)
+
+            if valor_original != valor_nuevo:
+                # Crear registro de auditoría
+                auditoria = SolicitudRelevamientoAudit(
+                    solicitud=instance,
+                    campo=campo,
+                    valor_anterior=str(
+                        valor_original) if valor_original else '',
+                    valor_nuevo=str(valor_nuevo) if valor_nuevo else '',
+                    cambiado_por=instance.creado_por,  # Temporal
+                    comentario=f"Cambio en {campo}"
+                )
+                auditoria.save()
+
+    except sender.DoesNotExist:
+        pass
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error en auditoría: {e}")

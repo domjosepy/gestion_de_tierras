@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'model_utils',  # Para FieldTracker
     'django.contrib.humanize',  # Para timesince
     'widget_tweaks',  # Permite modificar fácilmente los atributos de los widgets de formularios en tus templates
     'core.apps.CoreConfig',
@@ -144,7 +145,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = 'logout'
+LOGOUT_REDIRECT_URL = '/'
 
 LANGUAGE_CODE = 'en-us'
 

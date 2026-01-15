@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Grupos{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h2 class="text-primary fw-bold mb-0">
+            <i class="fa-solid fa-users me-3"></i>Grupos
+        </h2>
+        
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearGrupoModal">
+            <i class="fas fa-plus me-1"></i> Crear Nuevo Grupo
+        </button>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-container">
+                <table class="beautiful-table" id="gruposTable" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">Nombre</th>
+                            <th class="text-center">Descripción</th>
+                            <th class="text-center">Líder</th>
+                            <th class="text-center">Usuarios</th>
+                            <th class="text-center">Roles Asociados</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grupo in grupos %}
+                        <tr>
+                            <td class="text-uppercase">
+                                {% if grupo.es_departamento %}
+                                    <span class="badge bg-info ms-1">Departamento</span>
+                                {% endif %}
+                                <span style="color: {{ grupo.color|default:'#6c757d' }}; font-weight: bold;">
+                                    {{ grupo.nombre }}
+                                </span>
+                                
+                            </td>
+                            <td>{{ grupo.descripcion|default:"Sin descripción"|truncatechars:50 }}</td>
+                            <td class="text-center">
+                                {% if grupo.lider %}
+                                    <span class="badge bg-primary">{{ grupo.lider.username }}</span>
+                                {% else %}
+                                    <span class="text-muted">Sin líder</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {% if grupo.usuarios.count > 0 %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                                    <i class="fas fa-user me-1"></i>
+                                    {{ grupo.usuarios.count }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if grupo.roles_asociados.all %}
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                        {% for rol in grupo.roles_asociados.all|slice:":2" %}
+                                            <span class="badge" style="background-color: {{ rol.color|default:'#6c757d' }}; font-size: 0.7rem;">
+                                                {{ rol.nombre|truncatechars:15 }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if grupo.roles_asociados.count > 2 %}
+                                            <span class="badge bg-secondary" style="font-size: 0.7rem;">
+                                                +{{ grupo.roles_asociados.count|add:"-2" }} más
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Sin roles</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if grupo.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <!-- Botón editar -->
+                                <button type="button" class="btn btn-sm btn-warning" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editarGrupoModal"
+                                    data-id="{{ grupo.id }}"
+                                    data-nombre="{{ grupo.nombre }}"
+                                    data-descripcion="{{ grupo.descripcion }}"
+                                    data-color="{{ grupo.color }}"
+                                    data-lider="{{ grupo.lider.id }}"
+                                    data-es-departamento="{{ grupo.es_departamento|yesno:'true,false' }}"
+                                    data-activo="{{ grupo.activo|yesno:'true,false' }}"
+                                    data-usuarios='[{% for u in grupo.usuarios.all %}{{ u.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'
+                                    data-roles='[{% for r in grupo.roles_asociados.all %}{{ r.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <!-- Botón eliminar -->
+                                {% if not grupo.usuarios.exists %}
+                                <button 
+                                    class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#eliminarGrupoModal"
+                                    data-grupoid="{{ grupo.id }}"
+                                    data-gruponombre="{{ grupo.nombre }}"
+                                    data-grupodescripcion="{{ grupo.descripcion|default:'Sin descripción' }}"
+                                    data-grupousuarioscount="{{ grupo.usuarios.count }}"
+                                    title="Eliminar grupo">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% else %}
+                                <button 
+                                    class="btn btn-sm btn-danger"
+                                    disabled
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="No se puede eliminar un grupo con usuarios asignados">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No hay grupos registrados</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales -->
+{% include 'includes/administrador/modal/grupos/crear_grupo_modal.html' %}
+{% include 'includes/administrador/modal/grupos/editar_grupo_modal.html' %}
+{% include 'includes/administrador/modal/grupos/eliminar_grupo_modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTable
+    new simpleDatatables.DataTable('#gruposTable', {
+        perPage: 10,
+        labels: {
+            placeholder: "Buscar...",
+            perPage: "Registros por página",
+            noRows: "No se encontraron grupos",
+            info: "Mostrando {start} a {end} de {rows} grupos"
+        }
+    });
+
+    // Inicializar tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+});
+</script>
+{% endblock %}

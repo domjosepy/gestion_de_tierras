@@ -200,3 +200,173 @@ class User(AbstractUser):
     def tiene_permiso(self, permiso_codename):
         """Verifica si usuario tiene un permiso específico"""
         return any(p.codename == permiso_codename for p in self.permisos_combinados)
+
+
+class Grupo(models.Model):
+    """
+    Modelo para grupos organizacionales (no para permisos).
+    Ej: 'Marketing', 'Desarrollo', 'Soporte Técnico'
+    """
+    nombre = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='Nombre del Grupo'
+    )
+
+    descripcion = models.TextField(
+        blank=True,
+        verbose_name='Descripción',
+        help_text='Propósito u objetivo del grupo'
+    )
+
+    # Relación con usuarios (muchos a muchos)
+    usuarios = models.ManyToManyField(
+        User,
+        related_name='grupos_pertenece',
+        blank=True,
+        verbose_name='Usuarios en el grupo',
+        help_text='Selecciona los usuarios que pertenecen a este grupo'
+    )
+
+    # Relación con roles (opcional pero útil)
+    roles_asociados = models.ManyToManyField(
+        Rol,
+        related_name='grupos_asociados',
+        blank=True,
+        verbose_name='Roles comúnmente asignados',
+        help_text='Roles que suelen tener los usuarios de este grupo'
+    )
+
+    lider = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='grupos_liderados',
+        verbose_name='Líder del grupo',
+        help_text='Usuario responsable del grupo'
+    )
+
+    color = models.CharField(
+        max_length=20,
+        default='#6c757d',
+        help_text='Color identificativo (formato hexadecimal)'
+    )
+
+    es_departamento = models.BooleanField(
+        default=False,
+        verbose_name='¿Es departamento?',
+        help_text='Marcar si representa un departamento organizacional'
+    )
+
+    activo = models.BooleanField(
+        default=True,
+        verbose_name='Activo'
+    )
+
+    creado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='grupos_creados',
+        verbose_name='Creado por'
+    )
+
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Grupo'
+        verbose_name_plural = 'Grupos'
+        ordering = ['nombre']
+        permissions = [
+            ("gestionar_grupos", "Puede gestionar grupos y asignaciones"),
+        ]
+
+    def __str__(self):
+        return self.nombre
+
+    @property
+    def cantidad_usuarios(self):
+        """Retorna la cantidad de usuarios en el grupo"""
+        return self.usuarios.count()
+
+    @property
+    def cantidad_roles_asociados(self):
+        """Retorna la cantidad de roles asociados"""
+        return self.roles_asociados.count()
+
+    def get_usuarios_activos(self):
+        """Retorna solo los usuarios activos del grupo"""
+        return self.usuarios.filter(estado='ACTIVO', is_active=True)
+
+    def save(self, *args, **kwargs):
+        # Si no se especifica quién creó el grupo, usar el usuario actual
+        if not self.creado_por and hasattr(self, '_current_user'):
+            self.creado_por = self._current_user
+        super().save(*args, **kwargs)
+
+
+class FlujoTrabajo(models.Model):
+    """Define qué grupo maneja cada estado del flujo"""
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True)
+
+    # Estados y sus grupos asignados
+    grupo_sig = models.ForeignKey(
+        'Grupo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='flujos_sig',
+        verbose_name='Grupo para SIG'
+    )
+
+    grupo_analisis = models.ForeignKey(
+        'Grupo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='flujos_analisis',
+        verbose_name='Grupo para Análisis'
+    )
+
+    grupo_monitoreo = models.ForeignKey(
+        'Grupo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='flujos_monitoreo',
+        verbose_name='Grupo para Monitoreo'
+    )
+
+    grupo_campo = models.ForeignKey(
+        'Grupo',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='flujos_campo',
+        verbose_name='Grupo para Campo'
+    )
+
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Flujo de Trabajo'
+        verbose_name_plural = 'Flujos de Trabajo'
+
+    def __str__(self):
+        return self.nombre
+
+    def obtener_grupo_por_estado(self, estado):
+        """Devuelve el grupo correspondiente a un estado"""
+        if 'sig' in estado:
+            return self.grupo_sig
+        elif 'analista' in estado or 'analisis' in estado:
+            return self.grupo_analisis
+        elif 'aprobado' in estado:
+            return self.grupo_monitoreo
+        elif 'campo' in estado:
+            return self.grupo_campo
+        return None

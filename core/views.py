@@ -5,7 +5,7 @@ import re
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -17,6 +17,7 @@ from django.views.generic import ListView, CreateView
 # Local imports
 from .forms import DepartamentoForm, DistritoForm, ColoniaForm
 from .models import Departamento, Distrito, Colonia
+from gerencia.models import SolicitudRelevamiento
 from core.notificaciones.utils import notificar_a_admins
 
 
@@ -280,9 +281,20 @@ class ColoniaListView(LoginRequiredMixin, ListView):
     context_object_name = 'colonias'
 
     def get_queryset(self):
-        # Optimizar consultas relacionadas
-        qs = Colonia.objects.prefetch_related('distritos').all()
+        # Anotar cada colonia con el conteo de solicitudes activas
+        qs = Colonia.objects.annotate(
+            num_solicitudes_activas=Count(
+                'solicitudes_relevamiento',
+                filter=Q(
+                    solicitudes_relevamiento__estado__in=[
+                        estado for estado, _ in SolicitudRelevamiento.ESTADOS
+                        if estado not in ["rechazado", "finalizado"]
+                    ]
+                )
+            )
+        ).prefetch_related('distritos', 'distritos__departamento')
 
+        # Aplicar filtros
         q = self.request.GET.get('q')
         estado = self.request.GET.get('estado')
         distrito_id = self.request.GET.get('distrito')
@@ -299,9 +311,9 @@ class ColoniaListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['distritos'] = Distrito.objects.select_related(
-            'departamento').order_by('departamento__nombre', 'nombre')
-        context['departamentos'] = Departamento.objects.all().order_by(
-            'nombre')  # Agregar departamentos para filtros
+            'departamento'
+        ).order_by('departamento__nombre', 'nombre')
+        context['departamentos'] = Departamento.objects.all().order_by('nombre')
         context['estado_choices'] = Colonia.ESTADO_CHOICES
         return context
 

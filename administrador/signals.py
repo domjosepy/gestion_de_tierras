@@ -1,7 +1,7 @@
 from django.db.models.signals import post_migrate, post_save, post_delete, m2m_changed
 from django.dispatch import receiver
 from django.contrib.auth.models import Permission, Group
-from .models import User, Rol
+from .models import User, Rol, Grupo
 
 
 @receiver(post_migrate)

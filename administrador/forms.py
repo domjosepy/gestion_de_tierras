@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm, UserCreationForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Rol
+from .models import Rol, Grupo
 from django.contrib.auth.models import Permission
 import re
 
@@ -300,3 +300,127 @@ class BusquedaUsuariosForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+
+class GrupoForm(forms.ModelForm):
+    usuarios = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(estado='ACTIVO'),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Usuarios'
+    )
+
+    roles_asociados = forms.ModelMultipleChoiceField(
+        queryset=Rol.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Roles asociados'
+    )
+
+    class Meta:
+        model = Grupo
+        fields = ['nombre', 'descripcion', 'color', 'lider',
+                  'es_departamento', 'activo', 'usuarios', 'roles_asociados']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Nombre del grupo',
+                'autocomplete': 'off'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del grupo',
+                'maxlength': '500'
+            }),
+            'color': forms.TextInput(attrs={
+                'type': 'color',
+                'class': 'form-control form-control-color',
+                'style': 'width: 50px; height: 50px;'
+            }),
+            'lider': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'es_departamento': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'activo': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+        # Ordenar usuarios por nombre
+        self.fields['usuarios'].queryset = User.objects.filter(
+            estado='ACTIVO').order_by('username')
+        # Ordenar roles por nombre
+        self.fields['roles_asociados'].queryset = Rol.objects.all().order_by(
+            'nombre')
+        # Ordenar líderes por nombre (solo usuarios activos)
+        self.fields['lider'].queryset = User.objects.filter(
+            estado='ACTIVO').order_by('username')
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+
+        if not nombre:
+            raise forms.ValidationError("El nombre del grupo es obligatorio.")
+
+        if len(nombre) < 3:
+            raise forms.ValidationError(
+                "El nombre debe tener al menos 3 caracteres.")
+
+        # Validar que solo contenga letras, números, espacios y algunos caracteres especiales
+        patron = r"^[A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\-_]+$"
+        if not re.match(patron, nombre):
+            raise forms.ValidationError(
+                "El nombre solo puede contener letras, números, espacios, guiones y guiones bajos."
+            )
+
+        # Verificar unicidad (si estamos editando, excluir el grupo actual)
+        queryset = Grupo.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
+
+        if queryset.exists():
+            raise forms.ValidationError(
+                f'Ya existe un grupo con el nombre "{nombre}".')
+
+        return nombre
+
+    def clean_descripcion(self):
+        descripcion = self.cleaned_data.get('descripcion', '').strip()
+
+        if descripcion and len(descripcion) < 10:
+            raise forms.ValidationError(
+                "La descripción debe tener al menos 10 caracteres si se proporciona."
+            )
+
+        return descripcion
+
+    def clean_color(self):
+        color = self.cleaned_data.get('color', '').strip()
+
+        if color:
+            # Validar formato hexadecimal (ej: #FF0000)
+            patron = r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+            if not re.match(patron, color):
+                raise forms.ValidationError(
+                    "El color debe estar en formato hexadecimal válido (ej: #FF0000 o #F00)."
+                )
+        else:
+            color = '#6c757d'  # Color por defecto
+
+        return color
+
+    def save(self, commit=True):
+        grupo = super().save(commit=False)
+        # Asignar el usuario actual como creador si es nuevo
+        if not grupo.pk and self.request and self.request.user.is_authenticated:
+            grupo.creado_por = self.request.user
+        if commit:
+            grupo.save()
+            self.save_m2m()  # Guardar relaciones ManyToMany
+        return grupo

@@ -1,3 +1,4 @@
+<!-- templates/includes/gerencia/tablas/listar_solicitud_relevamiento.html -->
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Gerencia - Solicitudes de Relevamiento{% endblock %}
@@ -12,6 +13,116 @@
             <i class="fas fa-tractor me-3"></i>Colonias
         </a>
     </div>
+    <!-- Al inicio del template, después del título -->
+    <div class="row mb-4">
+        <!-- Tarjeta Total -->
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.total }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Activas -->
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Activas</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.activas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Finalizadas -->
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Finalizadas</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.finalizadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Rechazadas -->
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Rechazadas</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.rechazadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Relevamientos -->
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Relevamientos</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.relevamientos }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-map-marked-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Actualizaciones -->
+        <div class="col-xl-2 col-md-4 mb-4">
+            <div class="card border-left-secondary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                Actualizaciones</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.actualizaciones }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-sync-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <div class="card shadow mb-4">
         <div class="card-body">
@@ -23,6 +134,8 @@
                             <th>Departamento / Distrito / Colonia</th>
                             <th>Tipo</th>
                             <th>Estado</th>
+                            <th>Grupo Asignado</th>
+                            <th>Usuario Asignado</th>
                             <th>Observación</th>
                             <th>Fecha</th>
                             <th>Acciones</th>
@@ -32,7 +145,15 @@
                         {% for solicitud in solicitudes %}
                         <tr>
                             <td class="text-center">{{ forloop.counter }}</td>
-                            <td>{{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }} / {{ solicitud.colonia.nombre }}</td>
+                            <td>
+                                {% if solicitud.departamento and solicitud.distrito %}
+                                    {{ solicitud.departamento.nombre }} / 
+                                    {{ solicitud.distrito.nombre }} / 
+                                    <strong>{{ solicitud.colonia.nombre }}</strong>
+                                {% else %}
+                                    <strong>{{ solicitud.colonia.nombre }}</strong>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
                                 <span class="badge 
                                     {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
@@ -40,21 +161,43 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="badge 
-                                    {% if solicitud.estado == 'aprobado_para_campo' %}bg-success
-                                    {% elif solicitud.estado == 'rechazado' %}bg-danger
-                                    {% elif solicitud.estado == 'en_ejecucion_campo' %}bg-primary
-                                    {% else %}bg-secondary{% endif %}">
+                                <span class="badge estado-badge" data-estado="{{ solicitud.estado }}">
                                     {{ solicitud.get_estado_display }}
                                 </span>
                             </td>
-                            <td>{{ solicitud.observaciones|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if solicitud.grupo_asignado %}
+                                    <span class="badge" style="background-color: {{ solicitud.grupo_asignado.color|default:'#6c757d' }}">
+                                        <i class="fas fa-users me-1"></i>
+                                        {{ solicitud.grupo_asignado.nombre }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-question me-1"></i>
+                                        Sin asignar
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if solicitud.usuario_asignado %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-user me-1"></i>
+                                        {{ solicitud.usuario_asignado.username }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-user-slash me-1"></i>
+                                        Sin asignar
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ solicitud.observaciones|default:"-"|truncatechars:30 }}</td>
                             <td class="text-center">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
                             <td class="text-center">
-                                <!-- Botón ver detalles -->
+                                <!-- Botón ver detalles (opcional) -->
                                 <button class="btn btn-sm btn-info me-1" 
-                                        title="Ver detalles"
-                                        onclick="window.location.href='#'">
+                                        onclick="verDetalleSolicitud({{ solicitud.id }})"
+                                        title="Ver detalles">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 
@@ -67,13 +210,13 @@
                                         data-coloniacodigo="{{ solicitud.colonia.codigo }}"
                                         data-tipo="{{ solicitud.get_tipo_display }}"
                                         data-estado="{{ solicitud.get_estado_display }}"
+                                        data-observaciones="{{ solicitud.observaciones|default:'' }}"
                                         title="Editar Solicitud">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 {% endif %}
                                 
                                 {% if solicitud.puede_borrar %}
-                                <!-- Botón eliminar -->
                                 <button class="btn btn-sm btn-danger me-1" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#eliminarSolicitudRelevModal"
@@ -90,7 +233,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center">No hay solicitudes registradas.</td>
+                            <td colspan="9" class="text-center">No hay solicitudes registradas.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -100,14 +243,31 @@
     </div>
 </div>
 
-<!-- Incluir modales -->
+<!-- Incluir modales existentes -->
 {% include 'includes/gerencia/modal/solicitudes_relevamiento/editar_solicitud_relev_modal.html' %}
 {% include 'includes/gerencia/modal/solicitudes_relevamiento/eliminar_solicitud_relev_modal.html' %}
+
+<!-- Modal simple para ver detalles (opcional) -->
+<div class="modal fade" id="detalleSolicitudModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">Detalles de Solicitud</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="detalleSolicitudContent">
+        <!-- Contenido cargado por JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTable
     new simpleDatatables.DataTable('#solicitudesTable', {
         perPage: 10,
         labels: {
@@ -118,10 +278,61 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Colorear badges de estado automáticamente
+    document.querySelectorAll('.estado-badge').forEach(badge => {
+        const estado = badge.getAttribute('data-estado');
+        let color = 'bg-secondary';
+        
+        if (estado.includes('pendiente')) color = 'bg-warning';
+        if (estado.includes('asignado')) color = 'bg-info';
+        if (estado.includes('proceso')) color = 'bg-primary';
+        if (estado.includes('revision')) color = 'bg-purple';
+        if (estado.includes('analisis')) color = 'bg-indigo';
+        if (estado.includes('aprobado')) color = 'bg-success';
+        if (estado.includes('rechazado')) color = 'bg-danger';
+        if (estado.includes('ejecucion')) color = 'bg-orange';
+        if (estado.includes('finalizado')) color = 'bg-dark';
+        
+        badge.classList.add(color);
+    });
+    
     // Inicializar tooltips
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
         new bootstrap.Tooltip(el);
     });
 });
+
+// Función para ver detalles (opcional)
+function verDetalleSolicitud(solicitudId) {
+    fetch(`/gerencia/solicitudes-relevamiento/datos/${solicitudId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const content = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Colonia:</strong> ${data.colonia.nombre}</p>
+                            <p><strong>Departamento:</strong> ${data.departamento.nombre}</p>
+                            <p><strong>Distrito:</strong> ${data.distrito.nombre}</p>
+                            <p><strong>Tipo:</strong> ${data.tipo_display}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Estado:</strong> ${data.estado_display}</p>
+                            <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Observaciones:</strong> ${data.observaciones || '-'}</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detalleSolicitudContent').innerHTML = content;
+                new bootstrap.Modal(document.getElementById('detalleSolicitudModal')).show();
+            }
+        });
+}
 </script>
+
+<style>
+.bg-purple { background-color: #6f42c1 !important; }
+.bg-indigo { background-color: #6610f2 !important; }
+.bg-orange { background-color: #fd7e14 !important; }
+</style>
 {% endblock %}

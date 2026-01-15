@@ -1,0 +1,258 @@
+<!-- Modal Crear Grupo -->
+<div class="modal fade modal-primary" id="crearGrupoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="formCrearGrupo" method="post" action="{% url 'administrador:crear_grupo' %}" novalidate>
+      {% csrf_token %}
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <!-- Encabezado -->
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-plus-circle me-2"></i> Crear Nuevo Grupo
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <!-- Cuerpo -->
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <!-- Nombre -->
+              <div class="mb-3">
+                <label for="nombre" class="form-label fw-bold">Nombre del Grupo</label>
+                <input type="text" class="form-control text-uppercase" id="nombre" name="nombre" 
+                       maxlength="100" minlength="3" required>
+                <div id="errorNombre" class="text-danger small mt-2"></div>
+                <small class="text-muted">Mínimo 3 caracteres.</small>
+              </div>
+
+              <!-- Descripción -->
+              <div class="mb-3">
+                <label for="descripcion" class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" 
+                         rows="3" maxlength="500"></textarea>
+                <div id="errorDescripcion" class="text-danger small mt-2"></div>
+                <small class="text-muted">Opcional. Mínimo 10 caracteres si se proporciona.</small>
+              </div>
+
+              <!-- Color y Líder -->
+              <div class="row">
+                <div class="col-6">
+                  <div class="mb-3">
+                    <label for="color" class="form-label fw-bold">Color</label>
+                    <input type="color" class="form-control form-control-color color-btn" 
+                          id="color" name="color" value="#6c757d"
+                          style="width: 50px; height: 50px;">
+                    <div id="errorColor" class="text-danger small mt-2"></div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="mb-3">
+                    <label for="lider" class="form-label fw-bold">Líder</label>
+                    <select class="form-select" id="lider" name="lider">
+                      <option value="">Seleccione un líder</option>
+                      {% for usuario in usuarios %}
+                        <option value="{{ usuario.id }}">{{ usuario.username }}</option>
+                      {% endfor %}
+                    </select>
+                    <div id="errorLider" class="text-danger small mt-2"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Checkboxes -->
+              <div class="row">
+                <div class="col-6">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="es_departamento" name="es_departamento">
+                    <label class="form-check-label fw-bold" for="es_departamento">¿Es departamento?</label>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="activo" name="activo" checked>
+                    <label class="form-check-label fw-bold" for="activo">Activo</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <!-- Usuarios -->
+              <div class="mb-3">
+                <label class="form-label fw-bold">Usuarios</label>
+                <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                  {% for usuario in usuarios %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                          id="usuario_{{ usuario.id }}" 
+                          name="usuarios" value="{{ usuario.id }}">
+                    <label class="form-check-label" for="usuario_{{ usuario.id }}" style="font-size: 0.9rem;">
+                      <strong>{{ usuario.username }}</strong> 
+                      <small class="text-muted d-block">({{ usuario.email|default:"Sin email" }})</small>
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div id="errorUsuarios" class="text-danger small mt-2"></div>
+                <small class="text-muted">Seleccione los usuarios que pertenecen al grupo.</small>
+              </div>
+
+              <!-- Roles asociados -->
+              <div class="mb-3">
+                <label class="form-label fw-bold">Roles asociados</label>
+                <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                  {% for rol in roles %}
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                          id="rol_{{ rol.id }}" 
+                          name="roles_asociados" value="{{ rol.id }}">
+                    <label class="form-check-label" for="rol_{{ rol.id }}" style="font-size: 0.9rem;">
+                      <strong>{{ rol.nombre }}</strong> 
+                    </label>
+                  </div>
+                  {% endfor %}
+                </div>
+                <div id="errorRolesAsociados" class="text-danger small mt-2"></div>
+                <small class="text-muted">Seleccione los roles comúnmente asociados al grupo (opcional).</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Errores generales -->
+          <div id="crearGrupoError" class="alert alert-danger d-none mt-3"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-primary">
+            <i class="fas fa-save me-1"></i> Guardar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalGrupo = document.getElementById('crearGrupoModal');
+    const formGrupo = document.getElementById('formCrearGrupo');
+    const errorDivGrupo = document.getElementById('crearGrupoError');
+
+    // Función para limpiar errores específica para este formulario
+    function limpiarErroresGrupo() {
+      formGrupo.querySelectorAll('.is-invalid').forEach(input => {
+        input.classList.remove('is-invalid');
+      });
+      formGrupo.querySelectorAll('.text-danger').forEach(div => {
+        div.textContent = '';
+      });
+      errorDivGrupo.classList.add('d-none');
+      errorDivGrupo.textContent = '';
+    }
+
+    // Función para mostrar error en un campo (maneja camelCase para IDs)
+    function mostrarErrorGrupo(campo, mensaje) {
+      // Intentamos encontrar el elemento por ID exacto o capitalizado
+      const idPosible = campo.charAt(0).toUpperCase() + campo.slice(1);
+      const errorElement = document.getElementById(`error${idPosible}`);
+      const inputElement = document.getElementById(campo.toLowerCase());
+      
+      if (errorElement) {
+        errorElement.textContent = mensaje;
+      }
+      if (inputElement) {
+        inputElement.classList.add('is-invalid');
+      }
+    }
+
+    // Reset al abrir modal
+    modalGrupo.addEventListener('show.bs.modal', function() {
+      formGrupo.reset();
+      limpiarErroresGrupo();
+      // Restablecer valores por defecto manuales si es necesario
+      document.getElementById('color').value = '#6c757d';
+      document.getElementById('activo').checked = true;
+    });
+
+    // Reset al cerrar modal
+    modalGrupo.addEventListener('hidden.bs.modal', function() {
+      formGrupo.reset();
+      limpiarErroresGrupo();
+    });
+
+    // Enviar formulario vía AJAX
+    formGrupo.addEventListener('submit', function(e) {
+      e.preventDefault();
+      limpiarErroresGrupo();
+
+      const formData = new FormData(formGrupo);
+      const btnSubmit = formGrupo.querySelector('button[type="submit"]');
+      const oldText = btnSubmit.innerHTML;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+
+      fetch(formGrupo.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw errorData;
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          const modalInstance = bootstrap.Modal.getInstance(modalGrupo);
+          if (modalInstance) modalInstance.hide();
+          location.reload();
+        } else {
+          manejarErrores(data);
+        }
+      })
+      .catch(errorData => {
+        manejarErrores(errorData);
+      })
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = oldText;
+      });
+
+      function manejarErrores(data) {
+        if (data.errors) {
+          for (const [field, messages] of Object.entries(data.errors)) {
+            if (field === '__all__') {
+              errorDivGrupo.textContent = messages.join(' ');
+              errorDivGrupo.classList.remove('d-none');
+            } else {
+              // Adaptación para campos con guiones bajos en el backend (ej: roles_asociados -> errorRolesAsociados)
+              let campoFormateado = field.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+              ).join('');
+              
+              mostrarErrorGrupo(campoFormateado, messages.join(' '));
+            }
+          }
+        } else if (data.message) {
+          errorDivGrupo.textContent = data.message;
+          errorDivGrupo.classList.remove('d-none');
+        } else {
+          console.error('Error:', data);
+          errorDivGrupo.textContent = 'Ocurrió un error inesperado.';
+          errorDivGrupo.classList.remove('d-none');
+        }
+      }
+    });
+  });
+</script>
