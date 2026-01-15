@@ -1,0 +1,336 @@
+<!-- Reemplaza tu modal actual con este: -->
+<div class="modal fade modal-info" id="detalleSolicitudModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-clipboard-list me-2"></i>
+          <i class="fas fa-search me-2"></i>
+          Detalles de Solicitud de Relevamiento
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="detalleSolicitudContent">
+        <!-- Contenido cargado por JS -->
+        <div class="text-center">
+          <div class="spinner-border text-info" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información de la solicitud...</p>
+        </div>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cerrar
+        </button>
+        <button type="button" class="btn btn-outline-warning" id="btnEditarDetalle">
+          <i class="fas fa-edit me-1"></i>Editar Solicitud
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Función para ver detalles
+function verDetalleSolicitud(solicitudId) {
+    // Mostrar spinner
+    document.getElementById('detalleSolicitudContent').innerHTML = `
+        <div class="text-center">
+          <div class="spinner-border text-info" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2">Cargando información de la solicitud...</p>
+        </div>
+    `;
+    
+    // Mostrar modal inmediatamente
+    const modal = new bootstrap.Modal(document.getElementById('detalleSolicitudModal'));
+    modal.show();
+    
+    // Obtener datos
+    fetch(`/gerencia/solicitudes-relevamiento/datos/${solicitudId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Determinar color del badge de estado
+                let estadoColor = 'secondary';
+                if (data.solicitud.estado.includes('pendiente')) estadoColor = 'warning';
+                if (data.solicitud.estado.includes('asignado')) estadoColor = 'info';
+                if (data.solicitud.estado.includes('proceso')) estadoColor = 'primary';
+                if (data.solicitud.estado.includes('revision')) estadoColor = 'purple';
+                if (data.solicitud.estado.includes('analisis')) estadoColor = 'indigo';
+                if (data.solicitud.estado.includes('aprobado')) estadoColor = 'success';
+                if (data.solicitud.estado.includes('rechazado')) estadoColor = 'danger';
+                if (data.solicitud.estado.includes('ejecucion')) estadoColor = 'orange';
+                if (data.solicitud.estado.includes('finalizado')) estadoColor = 'dark';
+                
+                // Determinar color del badge de tipo
+                let tipoColor = data.solicitud.tipo === 'relevamiento' ? 'info' : 'warning';
+                
+                const content = `
+                    <!-- Encabezado con ID y estado -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <div class="p-3 me-3">
+                                    <i class="fas fa-clipboard-list fa-2x text-info"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0">Solicitud #${data.solicitud.id}</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="badge bg-${estadoColor} fs-6 py-2 px-3">
+                                <i class="fas fa-flag me-1"></i>
+                                ${data.solicitud.estado_display}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Información geográfica -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0 text-white"><i class="fas fa-map-marked-alt me-2"></i>Ubicación</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="p-2 me-3">
+                                            <i class="fas fa-map-marker-alt text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block">Departamento</small>
+                                            <strong>${data.departamento.nombre}</strong>
+                                            ${data.departamento.codigo ? `<br><small class="text-muted">Código: ${data.departamento.codigo}</small>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="p-2 me-3">
+                                            <i class="fas fa-map text-success"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block">Distrito</small>
+                                            <strong>${data.distrito.nombre}</strong>
+                                            ${data.distrito.codigo ? `<br><small class="text-muted">Código: ${data.distrito.codigo}</small>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="p-2 me-3">
+                                            <i class="fas fa-tractor text-warning"></i>
+                                        </div>
+                                        <div>
+                                            <small class="text-muted d-block">Colonia</small>
+                                            <strong>${data.colonia.nombre}</strong>
+                                            <br>
+                                            <small class="text-muted">Código: ${data.colonia.codigo}</small>
+                                            <br>
+                                            <span class="badge ${data.colonia.tiene_relevamiento ? 'bg-success' : 'bg-secondary'}">
+                                                <i class="fas fa-${data.colonia.tiene_relevamiento ? 'check' : 'times'} me-1"></i>
+                                                ${data.colonia.tiene_relevamiento ? 'Con relevamiento' : 'Sin relevamiento'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Información de la solicitud -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-white"><i class="fas fa-info-circle me-2"></i>Detalles</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Tipo de estudio</small>
+                                        <span class="badge bg-${tipoColor}">
+                                            <i class="fas fa-${data.solicitud.tipo === 'relevamiento' ? 'map-marked-alt' : 'sync-alt'} me-1"></i>
+                                            ${data.solicitud.tipo_display}
+                                        </span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Creado por</small>
+                                        <div class="d-flex align-items-center">
+                                            <div class="p-1 me-2">
+                                                <i class="fas fa-user text-secondary"></i>
+                                            </div>
+                                            <span>${data.solicitud.creado_por}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Fecha de creación</small>
+                                        <div class="d-flex align-items-center">
+                                            <div class="p-1 me-2">
+                                                <i class="fas fa-calendar-plus text-info"></i>
+                                            </div>
+                                            <span>${data.solicitud.fecha_creacion}</span>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block">Última modificación</small>
+                                        <div class="d-flex align-items-center">
+                                            <div class="p-1 me-2">
+                                                <i class="fas fa-calendar-alt text-warning"></i>
+                                            </div>
+                                            <span>${data.solicitud.fecha_modificacion}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-white"><i class="fas fa-users me-2"></i>Asignaciones</h6>
+                                </div>
+                                <div class="card-body">
+                                    ${data.grupo_info ? `
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Grupo asignado</small>
+                                            <div class="d-flex align-items-center">
+                                                <div class="p-1 me-2">
+                                                    <i class="fas fa-users" style="color: ${data.grupo_info.color || '#6c757d'}"></i>
+                                                </div>
+                                                <div>
+                                                    <strong>${data.grupo_info.nombre}</strong>
+                                                    ${data.grupo_info.lider ? `<br><small class="text-muted">Líder: ${data.grupo_info.lider}</small>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Grupo asignado</small>
+                                            <div class="d-flex align-items-center">
+                                                <div class="p-1 me-2">
+                                                    <i class="fas fa-users text-secondary"></i>
+                                                </div>
+                                                <span class="text-muted">Sin asignar</span>
+                                            </div>
+                                        </div>
+                                    `}
+                                    
+                                    ${data.usuario_info ? `
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Usuario asignado</small>
+                                            <div class="d-flex align-items-center">
+                                                <div class="p-1 me-2">
+                                                    <i class="fas fa-user text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <strong>${data.usuario_info.nombre_completo || data.usuario_info.username}</strong>
+                                                    ${data.usuario_info.email ? `<br><small class="text-muted">${data.usuario_info.email}</small>` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ` : `
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block">Usuario asignado</small>
+                                            <div class="d-flex align-items-center">
+                                                <div class="p-1 me-2">
+                                                    <i class="fas fa-user-slash text-secondary"></i>
+                                                </div>
+                                                <span class="text-muted">Sin asignar</span>
+                                            </div>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Observaciones -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0 text-white"><i class="fas fa-comment-dots me-2"></i>Observaciones</h6>
+                        </div>
+                        <div class="card-body">
+                            ${data.solicitud.observaciones ? 
+                                `<div class="bg-light p-3">${data.solicitud.observaciones}</div>` : 
+                                '<p class="text-muted fst-italic mb-0">No hay observaciones registradas.</p>'
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Historial reciente -->
+                    ${data.auditorias_recientes.length > 0 ? `
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-history me-2 text-warning"></i>Historial Reciente</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="timeline">
+                                    ${data.auditorias_recientes.map(auditoria => `
+                                        <div class="timeline-item mb-3">
+                                            <div class="d-flex">
+                                                <div class="p-2 me-3">
+                                                    <i class="fas fa-exchange-alt text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <small class="text-muted">${auditoria.fecha}</small>
+                                                    <p class="mb-1">
+                                                        <strong>${auditoria.cambiado_por}</strong>
+                                                        ${auditoria.comentario ? `: ${auditoria.comentario}` : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('detalleSolicitudContent').innerHTML = content;
+                
+                // Mostrar/ocultar botón de editar
+                const btnEditar = document.getElementById('btnEditarDetalle');
+                if (data.puede_editar) {
+                    btnEditar.style.display = 'inline-block';
+                    btnEditar.onclick = function() {
+                        modal.hide();
+                        // Buscar y hacer clic en el botón de editar correspondiente
+                        const btnEditarEnTabla = document.querySelector(`button[data-solicitudid="${solicitudId}"][data-bs-target="#editarSolicitudRelevModal"]`);
+                        if (btnEditarEnTabla) {
+                            btnEditarEnTabla.click();
+                        }
+                    };
+                } else {
+                    btnEditar.style.display = 'none';
+                }
+            } else {
+                document.getElementById('detalleSolicitudContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar los detalles de la solicitud.
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('detalleSolicitudContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error de conexión. Por favor intente nuevamente.
+                </div>
+            `;
+        });
+}
+</script>
+

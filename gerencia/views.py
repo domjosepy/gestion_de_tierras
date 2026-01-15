@@ -267,39 +267,87 @@ def cambiar_estado(request, solicitud_id):
 
 @login_required
 def obtener_datos_solicitud(request, pk):
-    """Obtener datos COMPLETOS de una solicitud para editar (AJAX)"""
+    """Obtener datos COMPLETOS de una solicitud para el modal de detalles (AJAX)"""
     solicitud = get_object_or_404(SolicitudRelevamiento, pk=pk)
-    if not solicitud.puede_gestionar(request.user):
-        return JsonResponse({'error': 'No se puede editar esta solicitud'}, status=403)
 
     # Obtener información jerárquica
     colonia = solicitud.colonia
     distrito = colonia.distritos.first() if colonia.distritos.exists() else None
     departamento = distrito.departamento if distrito else None
 
+    # Obtener información de asignación PARA EL MODAL DE DETALLES
+    grupo_info_detalle = None
+    if solicitud.grupo_asignado:
+        grupo_info_detalle = {
+            'nombre': solicitud.grupo_asignado.nombre,
+            'lider': solicitud.grupo_asignado.lider.username if solicitud.grupo_asignado.lider else None,
+            'color': solicitud.grupo_asignado.color or '#6c757d'
+        }
+
+    usuario_info_detalle = None
+    if solicitud.usuario_asignado:
+        usuario_info_detalle = {
+            'username': solicitud.usuario_asignado.username,
+            'email': solicitud.usuario_asignado.email,
+            'nombre_completo': f"{solicitud.usuario_asignado.first_name} {solicitud.usuario_asignado.last_name}".strip() or solicitud.usuario_asignado.username
+        }
+
+    # Obtener auditorías recientes (últimas 3)
+    auditorias_recientes = solicitud.auditorias.all(
+    ).select_related('cambiado_por')[:3]
+    auditorias_data = []
+    for auditoria in auditorias_recientes:
+        auditorias_data.append({
+            'fecha': auditoria.fecha.strftime("%d/%m/%Y %H:%M"),
+            'cambiado_por': auditoria.cambiado_por.username if auditoria.cambiado_por else 'Sistema',
+            'comentario': auditoria.comentario[:100] + '...' if auditoria.comentario and len(auditoria.comentario) > 100 else auditoria.comentario
+        })
+
     data = {
         'success': True,
+        'solicitud': {
+            'id': solicitud.id,
+            'tipo': solicitud.tipo,
+            'tipo_display': solicitud.get_tipo_display(),
+            'estado': solicitud.estado,
+            'estado_display': solicitud.get_estado_display(),
+            'observaciones': solicitud.observaciones,
+            'fecha_creacion': solicitud.fecha_creacion.strftime("%d/%m/%Y %H:%M"),
+            'fecha_modificacion': solicitud.fecha_modificacion.strftime("%d/%m/%Y %H:%M"),
+            'creado_por': solicitud.creado_por.username if solicitud.creado_por else 'Desconocido',
+            'motivo_rechazo': solicitud.motivo_rechazo,
+        },
         'colonia': {
             'nombre': colonia.nombre,
-            'codigo': colonia.codigo
+            'codigo': colonia.codigo,
+            'tiene_relevamiento': colonia.tiene_relevamiento,
         },
         'distrito': {
             'nombre': distrito.nombre if distrito else "Sin distrito",
-            'codigo': distrito.codigo if distrito else ""
+            'codigo': distrito.codigo if distrito else "",
         },
         'departamento': {
             'nombre': departamento.nombre if departamento else "Sin departamento",
-            'codigo': departamento.codigo if departamento else ""
+            'codigo': departamento.codigo if departamento else "",
         },
+        # Datos básicos para modal de EDICIÓN
         'estado': solicitud.estado,
         'estado_display': solicitud.get_estado_display(),
         'tipo': solicitud.tipo,
         'tipo_display': solicitud.get_tipo_display(),
         'observaciones': solicitud.observaciones,
-        'grupo_asignado': solicitud.grupo_asignado.id if solicitud.grupo_asignado else None,
-        'usuario_asignado': solicitud.usuario_asignado.id if solicitud.usuario_asignado else None,
-        'motivo_rechazo': solicitud.motivo_rechazo
+        'grupo_asignado_id': solicitud.grupo_asignado.id if solicitud.grupo_asignado else None,  # CAMBIADO
+        'usuario_asignado_id': solicitud.usuario_asignado.id if solicitud.usuario_asignado else None,  # CAMBIADO
+        'motivo_rechazo': solicitud.motivo_rechazo,
+        'tiene_usuario_asignado': solicitud.usuario_asignado is not None,
+        'puede_editar': solicitud.puede_gestionar(request.user) or request.user.is_superuser,
+
+        # Datos ampliados para modal de DETALLES (nombres diferentes)
+        'auditorias_recientes': auditorias_data,
+        'grupo_info': grupo_info_detalle,  # CAMBIADO
+        'usuario_info': usuario_info_detalle,  # CAMBIADO
     }
+
     return JsonResponse(data)
 
 
@@ -453,7 +501,7 @@ def eliminar_solicitud_relevamiento(request, pk):
 
             # Guardar mensaje para toast en sesión
             request.session['toast_message'] = {
-                'text': f'{solicitud_colonia}: La solicitud de Relevamiento fue eliminada.',
+                'text': f'La solicitud de Relevamiento: {solicitud_colonia} fue eliminada.',
                 'type': 'info'
             }
 

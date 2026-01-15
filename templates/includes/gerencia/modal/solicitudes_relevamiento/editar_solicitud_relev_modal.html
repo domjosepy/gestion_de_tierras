@@ -94,102 +94,130 @@
     </div>
   </div>
 </div>
-
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-      const modal = document.getElementById('editarSolicitudRelevModal');    
-      const form = document.getElementById("editarSolicitudRelevForm");
-      const errorDiv = document.getElementById("editarSolicitudRelevError");
+document.addEventListener("DOMContentLoaded", () => {
+    const modal = document.getElementById('editarSolicitudRelevModal');    
+    const form = document.getElementById("editarSolicitudRelevForm");
+    const errorDiv = document.getElementById("editarSolicitudRelevError");
+    const btnGuardar = form.querySelector('button[type="submit"]');
 
-      modal.addEventListener('show.bs.modal', async (event) => {
-          const button = event.relatedTarget;
-          const solicitudId = button.getAttribute('data-solicitudid');
-          
-          try {
-              // Cargar datos COMPLETOS de la solicitud
-              const response = await fetch(`/gerencia/solicitudes-relevamiento/${solicitudId}/datos/`);
-              const data = await response.json();
-              
-              if (data.success) {
-                  // Mostrar información geográfica
-                  document.getElementById('editarDepartamentoTexto').textContent = 
-                      `${data.departamento.codigo} - ${data.departamento.nombre}`;
-                  document.getElementById('editarDistritoTexto').textContent = 
-                      `${data.distrito.codigo} - ${data.distrito.nombre}`;
-                  document.getElementById('editarColoniaTexto').textContent = 
-                      `${data.colonia.codigo} - ${data.colonia.nombre}`;
-                  
-                  // Mostrar información de la solicitud
-                  document.getElementById('editarEstado').textContent = data.estado_display;
-                  document.getElementById('editarTipo').textContent = data.tipo_display;
-                  document.getElementById('editarObservaciones').value = data.observaciones || '';
-                  
-                  // Establecer URL del formulario
-                  form.action = `/gerencia/solicitudes-relevamiento/${solicitudId}/editar/`;
-              } else {
-                  errorDiv.textContent = 'Error al cargar los datos de la solicitud';
-              }
-          } catch (error) {
-              console.error('Error:', error);
-              errorDiv.textContent = 'Error al cargar los datos de la solicitud';
-          }
-      });
+    modal.addEventListener('show.bs.modal', async (event) => {
+        const button = event.relatedTarget;
+        const solicitudId = button.getAttribute('data-solicitudid');
+        
+        // Limpiar errores previos
+        errorDiv.textContent = '';
+        
+        try {
+            // Cargar datos COMPLETOS de la solicitud
+            const response = await fetch(`/gerencia/solicitudes-relevamiento/${solicitudId}/datos/`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                console.log('Datos cargados para edición:', data); // Para debugging
+                
+                // Mostrar información geográfica
+                document.getElementById('editarDepartamentoTexto').textContent = 
+                    `${data.departamento.codigo} - ${data.departamento.nombre}`;
+                document.getElementById('editarDistritoTexto').textContent = 
+                    `${data.distrito.codigo} - ${data.distrito.nombre}`;
+                document.getElementById('editarColoniaTexto').textContent = 
+                    `${data.colonia.codigo} - ${data.colonia.nombre}`;
+                
+                // Mostrar información de la solicitud
+                document.getElementById('editarEstado').textContent = data.estado_display;
+                document.getElementById('editarTipo').textContent = data.tipo_display;
+                document.getElementById('editarObservaciones').value = data.observaciones || '';
+                
+                // Establecer URL del formulario
+                form.action = `/gerencia/solicitudes-relevamiento/${solicitudId}/editar/`;
+                
+                // Deshabilitar edición si tiene usuario asignado
+                if (data.tiene_usuario_asignado && !data.puede_editar) {
+                    document.getElementById('editarObservaciones').disabled = true;
+                    btnGuardar.disabled = true;
+                    errorDiv.textContent = 'No se puede editar porque la solicitud ya tiene un usuario asignado.';
+                } else {
+                    document.getElementById('editarObservaciones').disabled = false;
+                    btnGuardar.disabled = false;
+                }
+            } else {
+                errorDiv.textContent = 'Error al cargar los datos de la solicitud';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al cargar los datos de la solicitud. Intente nuevamente.';
+        }
+    });
 
-      form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          
-          const btnSubmit = form.querySelector('button[type="submit"]');
-          const oldText = btnSubmit.innerHTML;
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const btnSubmit = form.querySelector('button[type="submit"]');
+        const oldText = btnSubmit.innerHTML;
 
-          btnSubmit.disabled = true;
-          btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
 
-          try {
-              const res = await fetch(form.action, {
-                  method: "POST",
-                  headers: { 
-                      "X-Requested-With": "XMLHttpRequest",
-                      "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
-                  },
-                  body: new FormData(form)
-              });
+        try {
+            const res = await fetch(form.action, {
+                method: "POST",
+                headers: { 
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: new FormData(form)
+            });
 
-              const data = await res.json();
-              console.log("Respuesta edición:", data); // Para debugging
+            const data = await res.json();
+            console.log("Respuesta edición:", data);
 
-              if (data.success) {
-                  // Cerrar modal primero
-                  const modalInstance = bootstrap.Modal.getInstance(modal);
-                  modalInstance.hide();
-                  
-                  // Redirigir a la lista (el toast se mostrará desde la sesión)
-                  setTimeout(() => {
-                      window.location.href = data.redirect_url || window.location.href;
-                  }, 300);
-              } else {
-                  // Mostrar errores específicos
-                  if (data.errors) {
-                      for (const [field, messages] of Object.entries(data.errors)) {
-                          const input = form.querySelector('[name="' + field + '"]');
-                          const feedback = input ? input.nextElementSibling : null;
-                          if (input && feedback) {
-                              input.classList.add('is-invalid');
-                              feedback.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
-                          }
-                      }
-                  }
-                  
-                  if (data.message) {
-                      errorDiv.textContent = data.message;
-                  }
-              }
-          } catch (error) {
-              console.error('Error:', error);
-              errorDiv.textContent = 'Error al actualizar. Intente nuevamente.';
-          } finally {
-              btnSubmit.disabled = false;
-              btnSubmit.innerHTML = oldText;
-          }
-      });
-  });
+            if (data.success) {
+                // Cerrar modal primero
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+                
+                // Redirigir a la lista
+                setTimeout(() => {
+                    window.location.href = data.redirect_url || window.location.href;
+                }, 300);
+            } else {
+                // Mostrar errores específicos
+                if (data.errors) {
+                    for (const [field, messages] of Object.entries(data.errors)) {
+                        const input = form.querySelector(`[name="${field}"]`);
+                        const feedback = input ? input.nextElementSibling : null;
+                        if (input && feedback) {
+                            input.classList.add('is-invalid');
+                            feedback.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
+                        }
+                    }
+                }
+                
+                if (data.message) {
+                    errorDiv.textContent = data.message;
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            errorDiv.textContent = 'Error al actualizar. Intente nuevamente.';
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = oldText;
+        }
+    });
+    
+    // Limpiar cuando se cierre el modal
+    modal.addEventListener('hidden.bs.modal', () => {
+        form.reset();
+        errorDiv.textContent = '';
+        document.getElementById('editarObservaciones').disabled = false;
+        btnGuardar.disabled = false;
+    });
+});
 </script>

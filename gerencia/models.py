@@ -5,6 +5,7 @@ from django.utils import timezone
 from administrador.models import Grupo, FlujoTrabajo
 from django.db.models import Q
 from core.models import Colonia
+from django.db.models import Avg, F, ExpressionWrapper, DurationField
 
 User = settings.AUTH_USER_MODEL
 
@@ -237,8 +238,6 @@ class SolicitudRelevamiento(models.Model):
     @classmethod
     def obtener_tiempos_promedio(cls):
         """Obtener tiempos promedio por etapa"""
-        from django.db.models import Avg, F, ExpressionWrapper, DurationField
-
         tiempos = {}
 
         # Tiempo promedio de digitalización (solo solicitudes con tiempo registrado)

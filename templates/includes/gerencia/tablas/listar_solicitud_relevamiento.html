@@ -6,8 +6,9 @@
 {% block content %}
 <div class="container-fluid fade-in">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h2 class="text-warning fw-bold mb-0">
-            <i class="fas fa-clipboard-list me-3"></i>Solicitudes de Relevamiento
+        <h2 class="text-info fw-bold mb-0">
+            <i class="fas fa-clipboard-list"></i>
+            <i class="fas fa-search me-3"></i>Solicitudes de Relevamiento
         </h2>
         <a href="{% url 'gerencia:listar_colonias' %}" class="btn btn-outline-warning">
             <i class="fas fa-tractor me-3"></i>Colonias
@@ -21,12 +22,12 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1 fw-bold">
                                 Total</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.total }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-primary fw-bold">{{ estadisticas.total }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            <i class="fas fa-clipboard-list fa-2x text-primary fw-bold"></i>
                         </div>
                     </div>
                 </div>
@@ -39,12 +40,12 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1 fw-bold">
                                 Activas</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.activas }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-success fw-bold">{{ estadisticas.activas }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                            <i class="fas fa-spinner fa-2x text-success fw-bold"></i>
                         </div>
                     </div>
                 </div>
@@ -57,12 +58,12 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1 fw-bold">
                                 Finalizadas</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.finalizadas }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-info fw-bold">{{ estadisticas.finalizadas }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                            <i class="fas fa-check-circle fa-2x text-info fw-bold"></i>
                         </div>
                     </div>
                 </div>
@@ -75,12 +76,12 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase fw-bold mb-1">
                                 Rechazadas</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.rechazadas }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-danger fw-bold">{{ estadisticas.rechazadas }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                            <i class="fas fa-times-circle fa-2x text-danger fw-bold"></i>
                         </div>
                     </div>
                 </div>
@@ -93,12 +94,12 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase fw-bold mb-1">
                                 Relevamientos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.relevamientos }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-warning fw-bold">{{ estadisticas.relevamientos }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-map-marked-alt fa-2x text-gray-300"></i>
+                            <i class="fas fa-map-marked-alt fa-2x text-warning fw-bold"></i>
                         </div>
                     </div>
                 </div>
@@ -111,12 +112,12 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase fw-bold mb-1">
                                 Actualizaciones</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.actualizaciones }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-secondary fw-bold">{{ estadisticas.actualizaciones }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-sync-alt fa-2x text-gray-300"></i>
+                            <i class="fas fa-sync-alt fa-2x text-secondary fw-bold"></i>
                         </div>
                     </div>
                 </div>
@@ -130,15 +131,15 @@
                 <table class="beautiful-table" id="solicitudesTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr>
-                            <th>#</th>
-                            <th>Departamento / Distrito / Colonia</th>
-                            <th>Tipo</th>
-                            <th>Estado</th>
-                            <th>Grupo Asignado</th>
-                            <th>Usuario Asignado</th>
-                            <th>Observación</th>
-                            <th>Fecha</th>
-                            <th>Acciones</th>
+                            <th class="text-center">#</th>
+                            <th class="text-center">Departamento / Distrito / Colonia</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Grupo Asignado</th>
+                            <th class="text-center">Usuario Asignado</th>
+                            <th class="text-center">Observación</th>
+                            <th class="text-center">Creacion: F/H</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -194,7 +195,7 @@
                             <td>{{ solicitud.observaciones|default:"-"|truncatechars:30 }}</td>
                             <td class="text-center">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</td>
                             <td class="text-center">
-                                <!-- Botón ver detalles (opcional) -->
+                                <!-- Modal ver detalles -->
                                 <button class="btn btn-sm btn-info me-1" 
                                         onclick="verDetalleSolicitud({{ solicitud.id }})"
                                         title="Ver detalles">
@@ -202,6 +203,7 @@
                                 </button>
                                 
                                 {% if solicitud.puede_editar %}
+                                
                                 <button class="btn btn-sm btn-warning me-1" 
                                         data-bs-toggle="modal" 
                                         data-bs-target="#editarSolicitudRelevModal"
@@ -246,21 +248,9 @@
 <!-- Incluir modales existentes -->
 {% include 'includes/gerencia/modal/solicitudes_relevamiento/editar_solicitud_relev_modal.html' %}
 {% include 'includes/gerencia/modal/solicitudes_relevamiento/eliminar_solicitud_relev_modal.html' %}
+{% include 'includes/gerencia/modal/solicitudes_relevamiento/detalle_solicitud_relev_modal.html' %}
 
-<!-- Modal simple para ver detalles (opcional) -->
-<div class="modal fade" id="detalleSolicitudModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-info text-white">
-        <h5 class="modal-title">Detalles de Solicitud</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body" id="detalleSolicitudContent">
-        <!-- Contenido cargado por JS -->
-      </div>
-    </div>
-  </div>
-</div>
+
 
 {% endblock %}
 
@@ -302,37 +292,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Función para ver detalles (opcional)
-function verDetalleSolicitud(solicitudId) {
-    fetch(`/gerencia/solicitudes-relevamiento/datos/${solicitudId}/`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const content = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Colonia:</strong> ${data.colonia.nombre}</p>
-                            <p><strong>Departamento:</strong> ${data.departamento.nombre}</p>
-                            <p><strong>Distrito:</strong> ${data.distrito.nombre}</p>
-                            <p><strong>Tipo:</strong> ${data.tipo_display}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Estado:</strong> ${data.estado_display}</p>
-                            <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
-                            <p><strong>Observaciones:</strong> ${data.observaciones || '-'}</p>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('detalleSolicitudContent').innerHTML = content;
-                new bootstrap.Modal(document.getElementById('detalleSolicitudModal')).show();
-            }
-        });
-}
+
 </script>
 
-<style>
-.bg-purple { background-color: #6f42c1 !important; }
-.bg-indigo { background-color: #6610f2 !important; }
-.bg-orange { background-color: #fd7e14 !important; }
-</style>
 {% endblock %}
