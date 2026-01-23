@@ -1,0 +1,45 @@
+<div class="modal fade" id="modalRevisarSolicitud" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-search me-2"></i>Revisar Solicitud
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formRevisarSolicitud">
+                {% csrf_token %}
+                <input type="hidden" id="solicitudIdRevisar" name="solicitud_id">
+                <input type="hidden" id="accionRevisar" name="accion">
+                
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 id="coloniaNombreRevisar" class="text-primary"></h6>
+                        <p id="textoAccion" class="text-muted mb-3"></p>
+                        
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Observaciones</label>
+                            <textarea class="form-control" id="observacionesRevisar" name="observaciones" rows="4" 
+                                      placeholder="Ingrese observaciones sobre la revisión..."></textarea>
+                            <div class="form-text" id="ayudaObservaciones"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert" id="alertaRevisar">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong id="tituloAlerta"></strong> <span id="textoAlerta"></span>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn" id="btnConfirmarRevision">
+                        <i class="fas fa-check me-1"></i>Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -8,17 +8,17 @@ class Command(BaseCommand):
     help = 'Crea grupos SIG, Digitalizador y Analista con sus permisos'
 
     def handle(self, *args, **options):
-        self.stdout.write('🚀 Creando grupos y permisos...')
+        self.stdout.write('Creando grupos y permisos...')
 
         # Crear grupos
         for nombre in ['SIG', 'Digitalizador', 'Analista']:
             grupo, creado = Group.objects.get_or_create(name=nombre)
             if creado:
                 self.stdout.write(self.style.SUCCESS(
-                    f'✅ Grupo {nombre} creado'))
+                    f'Grupo {nombre} creado'))
             else:
                 self.stdout.write(self.style.WARNING(
-                    f'⚠️ Grupo {nombre} ya existía'))
+                    f'Grupo {nombre} ya existía'))
 
         # Obtener permisos
         content_type = ContentType.objects.get_for_model(SolicitudRelevamiento)
@@ -42,4 +42,4 @@ class Command(BaseCommand):
         ]))
 
         self.stdout.write(self.style.SUCCESS(
-            '\n🎉 Grupos y permisos configurados exitosamente!'))
+            '\nGrupos y permisos configurados exitosamente!'))

@@ -179,7 +179,7 @@ def asignar_grupo(request, solicitud_id):
 
     return JsonResponse({'success': True, 'message': f'Grupo {grupo.nombre} asignado'})
 
-# ASIGNAR USUARIO A SOLICITUD
+# ASIGNAR USUARIO A SOLICITUD verificar al parecer hay que eliminar
 
 
 @login_required
@@ -309,6 +309,8 @@ def obtener_datos_solicitud(request, pk):
             'id': solicitud.id,
             'tipo': solicitud.tipo,
             'tipo_display': solicitud.get_tipo_display(),
+            'prioridad': solicitud.prioridad,  # NUEVO
+            'prioridad_display': solicitud.get_prioridad_display(),  # NUEVO
             'estado': solicitud.estado,
             'estado_display': solicitud.get_estado_display(),
             'observaciones': solicitud.observaciones,
@@ -336,16 +338,17 @@ def obtener_datos_solicitud(request, pk):
         'tipo': solicitud.tipo,
         'tipo_display': solicitud.get_tipo_display(),
         'observaciones': solicitud.observaciones,
-        'grupo_asignado_id': solicitud.grupo_asignado.id if solicitud.grupo_asignado else None,  # CAMBIADO
-        'usuario_asignado_id': solicitud.usuario_asignado.id if solicitud.usuario_asignado else None,  # CAMBIADO
+        'prioridad': solicitud.prioridad,  # NUEVO - Para el modal de edición
+        'grupo_asignado_id': solicitud.grupo_asignado.id if solicitud.grupo_asignado else None,
+        'usuario_asignado_id': solicitud.usuario_asignado.id if solicitud.usuario_asignado else None,
         'motivo_rechazo': solicitud.motivo_rechazo,
         'tiene_usuario_asignado': solicitud.usuario_asignado is not None,
         'puede_editar': solicitud.puede_gestionar(request.user) or request.user.is_superuser,
 
         # Datos ampliados para modal de DETALLES (nombres diferentes)
         'auditorias_recientes': auditorias_data,
-        'grupo_info': grupo_info_detalle,  # CAMBIADO
-        'usuario_info': usuario_info_detalle,  # CAMBIADO
+        'grupo_info': grupo_info_detalle,
+        'usuario_info': usuario_info_detalle,
     }
 
     return JsonResponse(data)
@@ -354,9 +357,6 @@ def obtener_datos_solicitud(request, pk):
 @login_required
 def crear_solicitud_relevamiento(request, colonia_id):
     colonia = get_object_or_404(Colonia, pk=colonia_id)
-
-    print(f"=== DEBUG: Creando solicitud para colonia ID: {colonia_id} ===")
-    print(f"Colonia: {colonia.nombre}")
 
     if request.method == "POST":
         print(f"Datos POST recibidos: {dict(request.POST)}")
@@ -390,14 +390,27 @@ def crear_solicitud_relevamiento(request, colonia_id):
                 # Determinar automáticamente el tipo basado en si existe relevamiento previo
                 if colonia.tiene_relevamiento:
                     solicitud.tipo = 'actualizacion'
+                    solicitud.estado = 'pendiente_asignacion_analista'
                 else:
                     solicitud.tipo = 'relevamiento'
+                    solicitud.estado = 'pendiente_asignacion_sig'
 
-                # Estado inicial
-                solicitud.estado = 'pendiente_asignacion_sig'
+                # Si no se especifica prioridad, establecer media por defecto
+                if not solicitud.prioridad:
+                    solicitud.prioridad = 'baja'
 
                 # GUARDAR ahora sí
                 solicitud.save()
+
+                # Crear auditoría de creación
+                SolicitudRelevamientoAudit.objects.create(
+                    solicitud=solicitud,
+                    campo='creacion',
+                    valor_anterior='',
+                    valor_nuevo=f"Solicitud creada con prioridad {solicitud.get_prioridad_display()}",
+                    cambiado_por=request.user,
+                    comentario=f"Solicitud de {solicitud.tipo} creada para {colonia.nombre}"
+                )
 
                 print(f"Solicitud creada exitosamente: ID {solicitud.id}")
 
@@ -440,21 +453,49 @@ def crear_solicitud_relevamiento(request, colonia_id):
 
 @login_required
 def editar_solicitud_relevamiento(request, pk):
-    """Editar solicitud (AJAX)"""
+    """Editar solicitud (AJAX) - AHORA INCLUYE PRIORIDAD"""
     solicitud = get_object_or_404(SolicitudRelevamiento, pk=pk)
 
     if not solicitud.puede_gestionar(request.user):
         return JsonResponse({
             'success': False,
             'message': 'No tiene permisos para editar esta solicitud'
-        }, status=403)  # 403 Forbidden que no tiene permisos
+        }, status=403)
 
     if request.method == "POST":
-        # Usar el formulario de EDICIÓN (solo observaciones)
+        # Guardar valores anteriores para auditoría
+        prioridad_anterior = solicitud.prioridad
+        observaciones_anterior = solicitud.observaciones
+
+        # Usar el formulario de EDICIÓN (ahora incluye prioridad)
         form = EditarSolicitudRelevamientoForm(
             request.POST, instance=solicitud)
+
         if form.is_valid():
             form.save()
+
+            # Crear auditorías para cambios
+            if prioridad_anterior != solicitud.prioridad:
+                SolicitudRelevamientoAudit.objects.create(
+                    solicitud=solicitud,
+                    campo='prioridad',
+                    valor_anterior=prioridad_anterior,
+                    valor_nuevo=solicitud.prioridad,
+                    cambiado_por=request.user,
+                    comentario=f"Prioridad cambiada de {prioridad_anterior} a {solicitud.prioridad}"
+                )
+
+            if observaciones_anterior != solicitud.observaciones:
+                SolicitudRelevamientoAudit.objects.create(
+                    solicitud=solicitud,
+                    campo='observaciones',
+                    valor_anterior=observaciones_anterior[:100] + '...' if len(
+                        observaciones_anterior) > 100 else observaciones_anterior,
+                    valor_nuevo=solicitud.observaciones[:100] + '...' if len(
+                        solicitud.observaciones) > 100 else solicitud.observaciones,
+                    cambiado_por=request.user,
+                    comentario="Observaciones actualizadas"
+                )
 
             # Guardar mensaje para toast en sesión
             request.session['toast_message'] = {
@@ -479,7 +520,7 @@ def editar_solicitud_relevamiento(request, pk):
     return JsonResponse({
         'success': False,
         'message': 'Método no permitido'
-    }, status=405)  # 405 Method Not Allowed que no está permitido el método
+    }, status=405)
 
 
 @login_required

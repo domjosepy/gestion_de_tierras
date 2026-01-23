@@ -1,0 +1,43 @@
+<div class="modal fade" id="modalFinalizarDigitalizacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Finalizar Digitalización
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formFinalizarDigitalizacion">
+                {% csrf_token %}
+                <input type="hidden" id="solicitudIdFinalizar" name="solicitud_id">
+                
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 id="coloniaNombreFinalizar" class="text-primary"></h6>
+                        <p class="text-muted mb-3">¿Está seguro de finalizar la digitalización?</p>
+                        
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Observaciones (opcional)</label>
+                            <textarea class="form-control" id="observacionesFinalizar" name="observaciones" rows="3" 
+                                      placeholder="Ingrese observaciones sobre la digitalización realizada..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atención:</strong> Una vez finalizada, la solicitud pasará a "Pendiente de Revisión"
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check me-1"></i>Finalizar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

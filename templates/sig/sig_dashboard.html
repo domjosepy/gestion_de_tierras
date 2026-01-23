@@ -7,1088 +7,366 @@
 <div class="container-fluid fade-in">
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h2 class="h3 mb-2 text-primary fw-bold">
-            <i class="fa-solid fa-compass-drafting me-2"></i>SISTEMA DE INFORMACIÓN GEOGRÁFICA (SIG)
-        </h2>
-        <!-- Depuración - Eliminar después de resolver -->
-            <div class="alert alert-info d-print-none">
-                <h5>Debug Info:</h5>
-                <p>Usuario: {{ request.user.username }}</p>
-                <p>Grupos SIG: 
+        <div>
+            <h2 class="h3 mb-2 text-primary fw-bold">
+                <i class="fa-solid fa-compass-drafting me-2"></i>SISTEMA DE INFORMACIÓN GEOGRÁFICA
+            </h2>
+        </div>
+        <div class="d-flex align-items-center">
+            {% if es_lider %}
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-crown me-1"></i> Líder de Grupo
+                </span>
+                {% endif %}
+                <span class="badge bg-info">
+                    <i class="fas fa-users me-1"></i>
                     {% for grupo in grupos_usuario %}
                         {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
-                    {% empty %}
-                        Ninguno encontrado
                     {% endfor %}
-                </p>
-                <p>Es líder: {{ es_lider }}</p>
-                <p>Total solicitudes: {{ estadisticas.total }}</p>
-                <p>Pendientes: {{ solicitudes_pendientes|length }}</p>
-                <p>Asignadas a mí: {{ solicitudes_asignadas_a_mi|length }}</p>
-                <p>Asignadas al grupo (líder): {{ solicitudes_asignadas_grupo|length|default:0 }}</p>
+                </span>
             </div>
-        <!-- Fin Depuración -->
+        </div>
+    </div>
+     <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-center mb-4">
         <div>
-            {% if es_lider %}
-            <span class="badge bg-success me-2">
-                <i class="fas fa-crown me-1"></i> Líder de Grupo
-            </span>
-            {% endif %}
-            <span class="badge bg-info">
-                <i class="fas fa-users me-1"></i>
-                {% for grupo in grupos_usuario %}
-                    {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
-                {% endfor %}
-            </span>
+            <h4 class="h3 mb-2 text-info fw-bold">
+                <i class="fas fa-clipboard-list me-0"></i>
+                <i class="fas fa-search me-3"></i>Solicitudes para estudio de Relevamiento
+            </h4>
         </div>
     </div>
-
-    <div class="text-center mb-4">
-        <h3 class="h3 mb-0 text-success fw-bold text-center">
-            <i class="fa-solid fa-file-signature me-2"></i>Solicitudes de Relevamiento
-        </h3>
-    </div>
     
-    <!-- Estadísticas -->
-    <div class="row">
-        <!-- Total Solicitudes -->
-        <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
+    <!-- Tarjetas de estadísticas -->
+    <div class="row mb-4">
+        <!-- Tarjeta Total -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
                             <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total</div>
-                            <div class="h5 mb-0 fw-bold text-primary">{{ estadisticas.total }}</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ estadisticas.total|default:0 }}</div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+                        <div class="text-primary">
+                            <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Pendientes Asignación -->
-        <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
+        <!-- Tarjeta Pendientes -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-warning border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes</div>
-                            <div class="h5 mb-0 fw-bold text-warning">{{ estadisticas.pendientes_asignacion }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-clock fa-2x text-warning"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Asignadas a Mí -->
-        <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-info text-uppercase mb-1">Asignadas a Mí</div>
-                            <div class="h5 mb-0 fw-bold text-info">{{ estadisticas.asignadas_a_usuario }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-info"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- En Proceso -->
-        <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-purple text-uppercase mb-1">En Proceso</div>
-                            <div class="h5 mb-0 fw-bold text-purple">{{ estadisticas.en_proceso }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-spinner fa-2x text-purple"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pendientes Revisión -->
-        <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-orange text-uppercase mb-1">Por Revisar</div>
-                            <div class="h5 mb-0 fw-bold text-orange">{{ estadisticas.pendientes_revision }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-double fa-2x text-orange"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total del Grupo (solo para líderes) -->
-        <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col me-2">
-                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                                {% if es_lider %}Total Grupo{% else %}Aprobadas{% endif %}
-                            </div>
-                            <div class="h5 mb-0 fw-bold text-success">
-                                {% if es_lider %}{{ solicitudes_asignadas_grupo.count|default:0 }}{% else %}{{ estadisticas.aprobadas|default:0 }}{% endif %}
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.pendiente_asignacion_sig|default:0 }}
                             </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas {% if es_lider %}fa-users{% else %}fa-check-circle{% endif %} fa-2x text-success"></i>
+                        <div class="text-warning">
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <!-- Tarjeta Asignadas -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-orange border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-orange text-uppercase mb-1">Asignadas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.asignado_a_digitalizador|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-orange">
+                            <i class="fas fa-check-double fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta En Proceso -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-info border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">En Proceso</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.en_proceso_digitalizacion|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-spinner fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Rechazadas -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-danger border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">Rechazadas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.rechazado|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-danger">
+                            <i class="fas fa-times-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Finalizadas -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-success border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Finalizadas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.finalizado|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-flag-checkered fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
     
-    <!-- Pestañas de Solicitudes -->
+    <!-- Pestañas de solicitudes -->
     <div class="card shadow mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center bg-white py-3">
+        <div class="card-header bg-white py-3 justify-content-between">
             <ul class="nav nav-tabs card-header-tabs" id="sigTabs" role="tablist">
-                <!-- Solo líderes ven Pendientes -->
-                {% if es_lider and solicitudes_pendientes.exists %}
+                <!-- Las pestañas se cargarán dinámicamente -->
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab">
-                        <i class="fas fa-clock me-1"></i> Pendientes ({{ solicitudes_pendientes.count }})
+                    <button class="nav-link active" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i>
+                        Pendientes
                     </button>
                 </li>
-                {% endif %}
-                
-                <!-- Asignadas -->
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold {% if not es_lider or not solicitudes_pendientes.exists %}active{% endif %}" 
-                            id="asignadas-tab" data-bs-toggle="tab" data-bs-target="#asignadas" type="button" role="tab">
-                        <i class="fas fa-user-check me-1"></i> 
-                        {% if es_lider %}
-                            Grupo ({{ solicitudes_asignadas_grupo.count|default:0 }})
-                        {% else %}
-                            Mías ({{ solicitudes_asignadas_a_mi.count }})
-                        {% endif %}
+                    <button class="nav-link" id="asignadas-tab" data-bs-toggle="tab" data-bs-target="#asignadas" type="button" role="tab">
+                        <i class="fas fa-user-check me-1"></i>
+                        Asignadas
                     </button>
                 </li>
-                
-                <!-- En Proceso -->
-                {% if solicitudes_en_proceso_mi.exists or solicitudes_en_proceso_grupo.exists %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold" id="proceso-tab" data-bs-toggle="tab" data-bs-target="#proceso" type="button" role="tab">
-                        <i class="fas fa-spinner me-1"></i> 
-                        {% if es_lider %}
-                            En Proceso ({{ solicitudes_en_proceso_grupo.count|default:0 }})
-                        {% else %}
-                            En Proceso ({{ solicitudes_en_proceso_mi.count }})
-                        {% endif %}
+                    <button class="nav-link" id="proceso-tab" data-bs-toggle="tab" data-bs-target="#proceso" type="button" role="tab">
+                        <i class="fas fa-spinner me-1"></i>
+                        En Proceso
                     </button>
                 </li>
-                {% endif %}
-                
-                <!-- Pendientes Revisión -->
-                {% if solicitudes_pendientes_revision.exists %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button" role="tab">
-                        <i class="fas fa-check-double me-1"></i> Por Revisar ({{ solicitudes_pendientes_revision.count }})
+                    <button class="nav-link" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button" role="tab">
+                        <i class="fas fa-check-double me-1"></i>
+                        Por Revisar
                     </button>
                 </li>
-                {% endif %}
-                
-                <!-- Aprobadas -->
-                {% if solicitudes_aprobadas.exists %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold" id="aprobadas-tab" data-bs-toggle="tab" data-bs-target="#aprobadas" type="button" role="tab">
-                        <i class="fas fa-check-circle me-1"></i> Aprobadas ({{ solicitudes_aprobadas.count }})
+                    <button class="nav-link" id="analisis-tab" data-bs-toggle="tab" data-bs-target="#analisis" type="button" role="tab">
+                        <i class="fas fa-check-circle me-1"></i>
+                        En Análisis
                     </button>
                 </li>
-                {% endif %}
-                
-                <!-- Rechazadas -->
-                {% if solicitudes_rechazadas.exists %}
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold" id="rechazadas-tab" data-bs-toggle="tab" data-bs-target="#rechazadas" type="button" role="tab">
-                        <i class="fas fa-times-circle me-1"></i> Rechazadas ({{ solicitudes_rechazadas.count }})
+                    <button class="nav-link" id="rechazadas-tab" data-bs-toggle="tab" data-bs-target="#rechazadas" type="button" role="tab">
+                        <i class="fas fa-times-circle me-1"></i>
+                        Rechazadas
                     </button>
                 </li>
-                {% endif %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="finalizadas-tab" data-bs-toggle="tab" data-bs-target="#finalizadas" type="button" role="tab">
+                        <i class="fas fa-flag-checkered me-1"></i>
+                        Finalizadas
+                    </button>
+                </li>
             </ul>
-            
             <div class="btn-group" role="group">
-                <button class="btn btn-outline-secondary btn-sm" id="exportCsvBtn-asignacion" title="Descargar CSV">
-                    <i class="fas fa-file-csv"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" id="exportExcelBtn-asignacion" title="Descargar Excel">
-                    <i class="fas fa-file-excel"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" id="exportPrintBtn-asignacion" title="Imprimir">
-                    <i class="fas fa-print"></i>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('asignadas')">
+                        <i class="fas fa-file-csv me-1"></i>CSV
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('asignadas', 'excel')">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>Imprimir
                 </button>
             </div>
         </div>
-
+        
         <div class="card-body">
             <div class="tab-content" id="sigTabsContent">
-                <!-- Pestaña Pendientes (solo líderes) -->
-                {% if es_lider and solicitudes_pendientes.exists %}
+                <!-- Pestaña Pendientes -->
                 <div class="tab-pane fade show active" id="pendientes" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="beautiful-table" id="tablaSolicitudesPendientes" width="100%" cellspacing="0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Colonia</th>
-                                    <th>Departamento / Distrito</th>
-                                    <th>Tipo</th>
-                                    <th>Fecha Creación</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solicitud in solicitudes_pendientes %}
-                                <tr>
-                                    <td class="text-center">{{ solicitud.id }}</td>
-                                    <td>
-                                        <strong>{{ solicitud.colonia.nombre }}</strong>
-                                        {% with distrito=solicitud.colonia.distritos.first %}
-                                            {% if distrito %}
-                                            <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                    <td>
-                                        {% if solicitud.departamento and solicitud.distrito %}
-                                            {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                        {% else %}
-                                            <span class="text-muted">Sin información</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                            {{ solicitud.get_tipo_display }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</td>
-                                    <td class="text-center">
-                                        <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <button class="btn btn-sm btn-primary asignar-btn" 
-                                                data-solicitud-id="{{ solicitud.id }}"
-                                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#modalAsignar">
-                                            <i class="fas fa-user-plus"></i> Asignar
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    {% include 'includes/sig/tablas/tabla_pendientes.html' %}
                 </div>
-                {% endif %}
                 
                 <!-- Pestaña Asignadas -->
-                <div class="tab-pane fade {% if not es_lider or not solicitudes_pendientes.exists %}show active{% endif %}" 
-                     id="asignadas" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="beautiful-table" id="tablaSolicitudesAsignadas" width="100%" cellspacing="0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Colonia</th>
-                                    <th>Departamento / Distrito</th>
-                                    <th>Tipo</th>
-                                    <th>Usuario Asignado</th>
-                                    <th>Fecha Asignación</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if es_lider %}
-                                    {% for solicitud in solicitudes_asignadas_grupo %}
-                                    <tr>
-                                        <td class="text-center">{{ solicitud.id }}</td>
-                                        <td>
-                                            <strong>{{ solicitud.colonia.nombre }}</strong>
-                                            {% with distrito=solicitud.colonia.distritos.first %}
-                                                {% if distrito %}
-                                                <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td>
-                                            {% if solicitud.departamento and solicitud.distrito %}
-                                                {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                            {% else %}
-                                                <span class="text-muted">Sin información</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                                {{ solicitud.get_tipo_display }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            {% if solicitud.usuario_asignado %}
-                                                <span class="badge bg-primary">
-                                                    {{ solicitud.usuario_asignado.username }}
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-warning">Sin asignar</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">{{ solicitud.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                                        <td class="text-center">
-                                            <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                               class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            {% if not solicitud.usuario_asignado %}
-                                            <button class="btn btn-sm btn-primary asignar-btn" 
-                                                    data-solicitud-id="{{ solicitud.id }}"
-                                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#modalAsignar">
-                                                <i class="fas fa-user-plus"></i> Asignar
-                                            </button>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="7" class="text-center">No hay solicitudes asignadas en el grupo</td>
-                                    </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    {% for solicitud in solicitudes_asignadas_a_mi %}
-                                    <tr>
-                                        <td class="text-center">{{ solicitud.id }}</td>
-                                        <td>
-                                            <strong>{{ solicitud.colonia.nombre }}</strong>
-                                            {% with distrito=solicitud.colonia.distritos.first %}
-                                                {% if distrito %}
-                                                <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td>
-                                            {% if solicitud.departamento and solicitud.distrito %}
-                                                {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                            {% else %}
-                                                <span class="text-muted">Sin información</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                                {{ solicitud.get_tipo_display }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-user me-1"></i> Tú
-                                            </span>
-                                        </td>
-                                        <td class="text-center">{{ solicitud.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                                        <td class="text-center">
-                                            <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                               class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{% url 'sig:iniciar_digitalizacion' solicitud.id %}" 
-                                               class="btn btn-sm btn-success"
-                                               onclick="return confirm('¿Iniciar digitalización de esta solicitud?')">
-                                                <i class="fas fa-play"></i> Iniciar
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="7" class="text-center">No tienes solicitudes asignadas</td>
-                                    </tr>
-                                    {% endfor %}
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="tab-pane fade" id="asignadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/tabla_asignadas.html' %}
                 </div>
                 
                 <!-- Pestaña En Proceso -->
-                {% if solicitudes_en_proceso_mi.exists or solicitudes_en_proceso_grupo.exists %}
                 <div class="tab-pane fade" id="proceso" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="beautiful-table" id="tablaSolicitudesProceso" width="100%" cellspacing="0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Colonia</th>
-                                    <th>Departamento / Distrito</th>
-                                    <th>Tipo</th>
-                                    <th>Usuario</th>
-                                    <th>Iniciado el</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% if es_lider %}
-                                    {% for solicitud in solicitudes_en_proceso_grupo %}
-                                    <tr>
-                                        <td class="text-center">{{ solicitud.id }}</td>
-                                        <td>
-                                            <strong>{{ solicitud.colonia.nombre }}</strong>
-                                            {% with distrito=solicitud.colonia.distritos.first %}
-                                                {% if distrito %}
-                                                <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td>
-                                            {% if solicitud.departamento and solicitud.distrito %}
-                                                {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                            {% else %}
-                                                <span class="text-muted">Sin información</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                                {{ solicitud.get_tipo_display }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-primary">
-                                                {{ solicitud.usuario_asignado.username }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">{{ solicitud.fecha_inicio_etapa|date:"d/m/Y H:i" }}</td>
-                                        <td class="text-center">
-                                            <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                               class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="7" class="text-center">No hay solicitudes en proceso en el grupo</td>
-                                    </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    {% for solicitud in solicitudes_en_proceso_mi %}
-                                    <tr>
-                                        <td class="text-center">{{ solicitud.id }}</td>
-                                        <td>
-                                            <strong>{{ solicitud.colonia.nombre }}</strong>
-                                            {% with distrito=solicitud.colonia.distritos.first %}
-                                                {% if distrito %}
-                                                <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                                {% endif %}
-                                            {% endwith %}
-                                        </td>
-                                        <td>
-                                            {% if solicitud.departamento and solicitud.distrito %}
-                                                {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                            {% else %}
-                                                <span class="text-muted">Sin información</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                                {{ solicitud.get_tipo_display }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-user me-1"></i> Tú
-                                            </span>
-                                        </td>
-                                        <td class="text-center">{{ solicitud.fecha_inicio_etapa|date:"d/m/Y H:i" }}</td>
-                                        <td class="text-center">
-                                            <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                               class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button class="btn btn-sm btn-warning finalizar-btn" 
-                                                    data-solicitud-id="{{ solicitud.id }}"
-                                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#finalizarModal">
-                                                <i class="fas fa-check"></i> Finalizar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="7" class="text-center">No tienes solicitudes en proceso</td>
-                                    </tr>
-                                    {% endfor %}
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
+                    {% include 'includes/sig/tablas/tabla_proceso.html' %}
                 </div>
-                {% endif %}
                 
-                <!-- Pestaña Pendientes Revisión -->
-                {% if solicitudes_pendientes_revision.exists %}
+                <!-- Pestaña Por Revisar -->
                 <div class="tab-pane fade" id="revision" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="beautiful-table" id="tablaSolicitudesRevision" width="100%" cellspacing="0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Colonia</th>
-                                    <th>Departamento / Distrito</th>
-                                    <th>Tipo</th>
-                                    <th>Digitalizador</th>
-                                    <th>Finalizado el</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solicitud in solicitudes_pendientes_revision %}
-                                <tr>
-                                    <td class="text-center">{{ solicitud.id }}</td>
-                                    <td>
-                                        <strong>{{ solicitud.colonia.nombre }}</strong>
-                                        {% with distrito=solicitud.colonia.distritos.first %}
-                                            {% if distrito %}
-                                            <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                    <td>
-                                        {% if solicitud.departamento and solicitud.distrito %}
-                                            {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                        {% else %}
-                                            <span class="text-muted">Sin información</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                            {{ solicitud.get_tipo_display }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary">
-                                            {{ solicitud.usuario_asignado.username }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">{{ solicitud.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                                    <td class="text-center">
-                                        <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        {% if es_lider %}
-                                        <div class="btn-group" role="group">
-                                            <button class="btn btn-sm btn-success revisar-btn" 
-                                                    data-solicitud-id="{{ solicitud.id }}"
-                                                    data-accion="aprobar"
-                                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}">
-                                                <i class="fas fa-check"></i> Aprobar
-                                            </button>
-                                            <button class="btn btn-sm btn-danger revisar-btn" 
-                                                    data-solicitud-id="{{ solicitud.id }}"
-                                                    data-accion="rechazar"
-                                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}">
-                                                <i class="fas fa-times"></i> Rechazar
-                                            </button>
-                                        </div>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    {% include 'includes/sig/tablas/tabla_revision.html' %}
                 </div>
-                {% endif %}
                 
-                <!-- Pestaña Aprobadas -->
-                {% if solicitudes_aprobadas.exists %}
-                <div class="tab-pane fade" id="aprobadas" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="beautiful-table" id="tablaSolicitudesAprobadas" width="100%" cellspacing="0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Colonia</th>
-                                    <th>Departamento / Distrito</th>
-                                    <th>Tipo</th>
-                                    <th>Digitalizador</th>
-                                    <th>Aprobado el</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solicitud in solicitudes_aprobadas %}
-                                <tr>
-                                    <td class="text-center">{{ solicitud.id }}</td>
-                                    <td>
-                                        <strong>{{ solicitud.colonia.nombre }}</strong>
-                                        {% with distrito=solicitud.colonia.distritos.first %}
-                                            {% if distrito %}
-                                            <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                    <td>
-                                        {% if solicitud.departamento and solicitud.distrito %}
-                                            {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                        {% else %}
-                                            <span class="text-muted">Sin información</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                            {{ solicitud.get_tipo_display }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary">
-                                            {{ solicitud.usuario_asignado.username }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">{{ solicitud.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                                    <td class="text-center">
-                                        <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                <!-- Pestaña En Análisis -->
+                <div class="tab-pane fade" id="analisis" role="tabpanel">
+                    {% include 'includes/sig/tablas/tabla_analisis.html' %}
                 </div>
-                {% endif %}
                 
                 <!-- Pestaña Rechazadas -->
-                {% if solicitudes_rechazadas.exists %}
                 <div class="tab-pane fade" id="rechazadas" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="beautiful-table" id="tablaSolicitudesRechazadas" width="100%" cellspacing="0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Colonia</th>
-                                    <th>Departamento / Distrito</th>
-                                    <th>Tipo</th>
-                                    <th>Digitalizador</th>
-                                    <th>Rechazado el</th>
-                                    <th>Motivo</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for solicitud in solicitudes_rechazadas %}
-                                <tr>
-                                    <td class="text-center">{{ solicitud.id }}</td>
-                                    <td>
-                                        <strong>{{ solicitud.colonia.nombre }}</strong>
-                                        {% with distrito=solicitud.colonia.distritos.first %}
-                                            {% if distrito %}
-                                            <br><small class="text-muted">{{ distrito.nombre }}</small>
-                                            {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                    <td>
-                                        {% if solicitud.departamento and solicitud.distrito %}
-                                            {{ solicitud.departamento.nombre }} / {{ solicitud.distrito.nombre }}
-                                        {% else %}
-                                            <span class="text-muted">Sin información</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                            {{ solicitud.get_tipo_display }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-primary">
-                                            {{ solicitud.usuario_asignado.username }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">{{ solicitud.fecha_actualizacion|date:"d/m/Y H:i" }}</td>
-                                    <td>{{ solicitud.motivo_rechazo|default:"-"|truncatechars:30 }}</td>
-                                    <td class="text-center">
-                                        <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                                           class="btn btn-sm btn-info me-1" title="Ver detalles">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    {% include 'includes/sig/tablas/tabla_rechazadas.html' %}
                 </div>
-                {% endif %}
+                
+                <!-- Pestaña Finalizadas -->
+                <div class="tab-pane fade" id="finalizadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/tabla_finalizadas.html' %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para asignar usuario (solo para líderes) -->
-{% if es_lider %}
-<div class="modal fade" id="modalAsignar" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2"></i>
-                    Asignar Usuario
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formAsignarUsuario" method="post">
-                {% csrf_token %}
-                <input type="hidden" id="solicitudIdAsignar" name="solicitud_id">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Solicitud:</label>
-                        <p id="coloniaNombreAsignar" class="mb-3"></p>
-                        
-                        <label class="form-label fw-bold">Seleccionar Usuario</label>
-                        <select class="form-select" id="usuarioSelect" name="usuario_id" required>
-                            <option value="">Seleccione un usuario...</option>
-                            {% for usuario in usuarios_grupo %}
-                            <option value="{{ usuario.id }}">
-                                {{ usuario.get_full_name|default:usuario.username }} 
-                                {% if usuario.email %}
-                                <small class="text-muted">({{ usuario.email }})</small>
-                                {% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" id="btnConfirmarAsignacion">
-                        <i class="fas fa-check me-1"></i> Asignar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- Incluir modales -->
+{% if es_lider and usuarios_grupo %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/asignar_digitalizador_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/cambiar_digitalizador_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/eliminar_asignacion_modal.html' %}
 {% endif %}
-
-<!-- Modal para finalizar digitalización -->
-<div class="modal fade" id="finalizarModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-check-circle me-2"></i>
-                    Finalizar Digitalización
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formFinalizar" method="post">
-                {% csrf_token %}
-                <input type="hidden" id="solicitudIdFinalizar" name="solicitud_id">
-                <div class="modal-body">
-                    <p id="coloniaNombreFinalizar" class="mb-3"></p>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Observaciones (opcional)</label>
-                        <textarea class="form-control" id="observacionesFinalizar" name="observaciones" rows="3" 
-                                  placeholder="Ingrese observaciones sobre la digitalización..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="fas fa-check me-1"></i> Finalizar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal para revisión (solo líderes) -->
-{% if es_lider %}
-<div class="modal fade" id="revisionModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-search me-2"></i>
-                    Revisar Solicitud
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="formRevision" method="post">
-                {% csrf_token %}
-                <input type="hidden" id="solicitudIdRevision" name="solicitud_id">
-                <input type="hidden" id="accionRevision" name="accion">
-                <div class="modal-body">
-                    <p id="coloniaNombreRevision" class="mb-3"></p>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Comentarios (opcional)</label>
-                        <textarea class="form-control" id="observacionesRevision" name="observaciones" rows="3" 
-                                  placeholder="Ingrese comentarios para la revisión..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-info">
-                        <i class="fas fa-check me-1"></i> Confirmar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endif %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/finalizar_digitalizacion_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar DataTables en cada tabla
-    const tablas = [
-        '#tablaSolicitudesPendientes',
-        '#tablaSolicitudesAsignadas', 
-        '#tablaSolicitudesProceso',
-        '#tablaSolicitudesRevision',
-        '#tablaSolicitudesAprobadas',
-        '#tablaSolicitudesRechazadas'
-    ];
-    
-    tablas.forEach(selector => {
-        const tableElement = document.querySelector(selector);
-        if (tableElement && tableElement.rows.length > 1) {
-            new simpleDatatables.DataTable(tableElement, {
-                perPage: 10,
-                labels: {
-                    placeholder: "Buscar...",
-                    perPage: "Registros por página",
-                    noRows: "No se encontraron solicitudes",
-                    info: "Mostrando {start} a {end} de {rows} solicitudes"
-                }
-            });
-        }
-    });
-    
-    // Configurar modal de asignación
-    const asignarBtns = document.querySelectorAll('.asignar-btn');
-    asignarBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const solicitudId = this.getAttribute('data-solicitud-id');
-            const coloniaNombre = this.getAttribute('data-colonia-nombre');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar DataTables para cada tabla
+            inicializarDataTables();
             
-            document.getElementById('solicitudIdAsignar').value = solicitudId;
-            document.getElementById('coloniaNombreAsignar').textContent = 
-                `Solicitud #${solicitudId} - ${coloniaNombre}`;
-        });
-    });
-    
-    // Formulario de asignación
-    const formAsignar = document.getElementById('formAsignarUsuario');
-    if (formAsignar) {
-        formAsignar.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const solicitudId = formData.get('solicitud_id');
-            const btnSubmit = this.querySelector('button[type="submit"]');
-            const originalText = btnSubmit.innerHTML;
-            
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Asignando...';
-            
-            fetch(`/sig/solicitud/${solicitudId}/asignar-usuario/`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast(data.message, 'success');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    mostrarToast(data.error, 'error');
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = originalText;
-                }
-            })
-            .catch(error => {
-                mostrarToast('Error al asignar usuario', 'error');
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = originalText;
-            });
-        });
-    }
-    
-    // Configurar modal de finalización
-    const finalizarBtns = document.querySelectorAll('.finalizar-btn');
-    finalizarBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const solicitudId = this.getAttribute('data-solicitud-id');
-            const coloniaNombre = this.getAttribute('data-colonia-nombre');
-            
-            document.getElementById('solicitudIdFinalizar').value = solicitudId;
-            document.getElementById('coloniaNombreFinalizar').textContent = 
-                `¿Finalizar digitalización de la solicitud #${solicitudId} - ${coloniaNombre}?`;
-        });
-    });
-    
-    // Formulario de finalización
-    const formFinalizar = document.getElementById('formFinalizar');
-    if (formFinalizar) {
-        formFinalizar.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const solicitudId = formData.get('solicitud_id');
-            
-            fetch(`/sig/solicitud/${solicitudId}/finalizar-digitalizacion/`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast(data.message, 'success');
-                    setTimeout(() => {
-                        window.location.href = data.redirect_url || window.location.href;
-                    }, 1500);
-                } else {
-                    mostrarToast(data.error, 'error');
-                }
-            })
-            .catch(error => {
-                mostrarToast('Error al finalizar digitalización', 'error');
-            });
-        });
-    }
-    
-    // Configurar botones de revisión (solo líderes)
-    const revisarBtns = document.querySelectorAll('.revisar-btn');
-    revisarBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const solicitudId = this.getAttribute('data-solicitud-id');
-            const accion = this.getAttribute('data-accion');
-            const coloniaNombre = this.getAttribute('data-colonia-nombre');
-            
-            const accionTexto = accion === 'aprobar' ? 'aprobar' : 'rechazar';
-            const confirmar = confirm(`¿Está seguro de ${accionTexto} la solicitud #${solicitudId} - ${coloniaNombre}?`);
-            
-            if (confirmar) {
-                const formData = new FormData();
-                formData.append('solicitud_id', solicitudId);
-                formData.append('accion', accion);
-                formData.append('observaciones', '');
-                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-                
-                fetch(`/sig/solicitud/${solicitudId}/revisar/`, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        mostrarToast(data.message, 'success');
-                        setTimeout(() => {
-                            window.location.href = data.redirect_url || window.location.href;
-                        }, 1500);
-                    } else {
-                        mostrarToast(data.error, 'error');
+            function inicializarDataTables() {
+                const tablas = document.querySelectorAll('.beautiful-table');
+                tablas.forEach(tabla => {
+                    if (tabla.rows.length > 1) {
+                        new simpleDatatables.DataTable(tabla, {
+                            perPage: 10,
+                            perPageSelect: [5, 10, 20, 50],
+                            labels: {
+                                placeholder: "Buscar...",
+                                perPage: "registros por página",
+                                noRows: "No se encontraron solicitudes",
+                                info: "Mostrando {start} a {end} de {rows} solicitudes"
+                            }
+                        });
                     }
-                })
-                .catch(error => {
-                    mostrarToast('Error al procesar la revisión', 'error');
                 });
             }
+            
+            // Event delegation para botones de modales
+            document.addEventListener('click', function(event) {
+                // Botón para asignar digitalizador
+                if (event.target.closest('.btn-asignar')) {
+                    const btn = event.target.closest('.btn-asignar');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    
+                    document.getElementById('solicitudIdAsignar').value = solicitudId;
+                    document.getElementById('coloniaNombreAsignar').textContent = coloniaNombre;
+                    
+                    // Limpiar selección anterior
+                    const usuarioAsignado = document.getElementById('usuarioAsignado');
+                    if (usuarioAsignado) usuarioAsignado.value = '';
+                    const comentarioAsignacion = document.getElementById('comentarioAsignacion');
+                    if (comentarioAsignacion) comentarioAsignacion.value = '';
+                    const asignarError = document.getElementById('asignarError');
+                    if (asignarError) asignarError.textContent = '';
+                    
+                    // ¡CORREGIDO! ID correcto con a minúscula
+                    const modalElement = document.getElementById('asignarDigitalizadorModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+                
+                // Botón para cambiar asignación
+                if (event.target.closest('.btn-cambiar-asignacion')) {
+                    const btn = event.target.closest('.btn-cambiar-asignacion');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const digitalizadorActual = btn.dataset.digitalizadorActual;
+                    const observacionActual = btn.dataset.observacionActual || '';
+                    
+                    document.getElementById('solicitudIdCambiar').value = solicitudId;
+                    document.getElementById('coloniaNombreCambiar').textContent = coloniaNombre;
+                    document.getElementById('digitalizadorActualCambiar').textContent = digitalizadorActual;
+                    document.getElementById('observacionActualCambiar').value = observacionActual;
+                    
+                    // Limpiar selección anterior
+                    const usuarioAsignadoCambiar = document.getElementById('usuarioAsignadoCambiar');
+                    if (usuarioAsignadoCambiar) usuarioAsignadoCambiar.value = '';
+                    const comentarioCambio = document.getElementById('comentarioCambio');
+                    if (comentarioCambio) comentarioCambio.value = '';
+                    const cambiarError = document.getElementById('cambiarError');
+                    if (cambiarError) cambiarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('cambiarDigitalizadorModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+                
+                // Botón para eliminar asignación
+                if (event.target.closest('.btn-eliminar-asignacion')) {
+                    const btn = event.target.closest('.btn-eliminar-asignacion');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const digitalizador = btn.dataset.digitalizador;
+                    
+                    document.getElementById('solicitudIdEliminar').value = solicitudId;
+                    document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
+                    document.getElementById('digitalizadorActualEliminar').textContent = digitalizador;
+                    
+                    // Limpiar formulario
+                    const comentarioEliminacion = document.getElementById('comentarioEliminacion');
+                    if (comentarioEliminacion) comentarioEliminacion.value = '';
+                    const eliminarError = document.getElementById('eliminarError');
+                    if (eliminarError) eliminarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('eliminarAsignacionModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+            });
         });
-    });
-    
-    // Función para exportar a CSV (mantener tu función existente)
-    function exportToCSV(table, filename) {
-        // Tu función existente de exportación CSV
-        if (typeof exportCSV === 'function') {
-            exportCSV(table, filename);
-        } else {
-            // Implementación básica si no existe
-            console.log('Función exportCSV no disponible');
-        }
-    }
-    
-    // Función para exportar a Excel (mantener tu función existente)
-    function exportToExcel(table, filename) {
-        // Tu función existente de exportación Excel
-        if (typeof exportExcel === 'function') {
-            exportExcel(table, filename);
-        } else {
-            console.log('Función exportExcel no disponible');
-        }
-    }
-    
-    // Función para imprimir (mantener tu función existente)
-    function printTable(table) {
-        // Tu función existente de impresión
-        if (typeof printTableFunc === 'function') {
-            printTableFunc(table);
-        } else {
-            console.log('Función printTable no disponible');
-        }
-    }
-    
-    // Asignar eventos a los botones de exportación (mantener tu lógica)
-    document.getElementById("exportCsvBtn-asignacion")?.addEventListener("click", function() {
-        const activeTabPane = document.querySelector("#sigTabsContent .tab-pane.active");
-        const activeTable = activeTabPane?.querySelector("table");
-        const date = new Date().toISOString().split('T')[0];
-        exportToCSV(activeTable, `solicitudes_sig_${date}.csv`);
-    });
-    
-    document.getElementById("exportExcelBtn-asignacion")?.addEventListener("click", function() {
-        const activeTabPane = document.querySelector("#sigTabsContent .tab-pane.active");
-        const activeTable = activeTabPane?.querySelector("table");
-        const date = new Date().toISOString().split('T')[0];
-        exportToExcel(activeTable, `solicitudes_sig_${date}.xlsx`);
-    });
-    
-    document.getElementById("exportPrintBtn-asignacion")?.addEventListener("click", function() {
-        const activeTabPane = document.querySelector("#sigTabsContent .tab-pane.active");
-        const activeTable = activeTabPane?.querySelector("table");
-        printTable(activeTable);
-    });
-    
-    // Inicializar tooltips
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-        new bootstrap.Tooltip(el);
-    });
-});
-</script>
-
-<style>
-.bg-purple { background-color: #6f42c1 !important; }
-.bg-indigo { background-color: #6610f2 !important; }
-.bg-orange { background-color: #fd7e14 !important; }
-</style>
+    </script>
 {% endblock %}

@@ -134,8 +134,9 @@
                             <th class="text-center">#</th>
                             <th class="text-center">Departamento / Distrito / Colonia</th>
                             <th class="text-center">Tipo</th>
-                            <th class="text-center">Estado</th>
+                            <th class="text-center">Prioridad</th>
                             <th class="text-center">Grupo Asignado</th>
+                            <th class="text-center">Estado</th>
                             <th class="text-center">Usuario Asignado</th>
                             <th class="text-center">Observación</th>
                             <th class="text-center">Creacion: F/H</th>
@@ -162,14 +163,18 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="badge estado-badge" data-estado="{{ solicitud.estado }}">
-                                    {{ solicitud.get_estado_display }}
+                                <!-- NUEVO: Badge de prioridad -->
+                                <span class="badge 
+                                    {% if solicitud.prioridad == 'alta' %}bg-danger
+                                    {% elif solicitud.prioridad == 'media' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ solicitud.get_prioridad_display }}
                                 </span>
                             </td>
                             <td class="text-center">
                                 {% if solicitud.grupo_asignado %}
                                     <span class="badge" style="background-color: {{ solicitud.grupo_asignado.color|default:'#6c757d' }}">
-                                        <i class="fas fa-users me-1"></i>
+                                        <i class="fa-solid fa-users-viewfinder"></i>
                                         {{ solicitud.grupo_asignado.nombre }}
                                     </span>
                                 {% else %}
@@ -178,6 +183,11 @@
                                         Sin asignar
                                     </span>
                                 {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge estado-badge" data-estado="{{ solicitud.estado }}">
+                                    {{ solicitud.get_estado_display }}
+                                </span>
                             </td>
                             <td class="text-center">
                                 {% if solicitud.usuario_asignado %}
@@ -203,33 +213,32 @@
                                 </button>
                                 
                                 {% if solicitud.puede_editar %}
-                                
-                                <button class="btn btn-sm btn-warning me-1" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#editarSolicitudRelevModal"
-                                        data-solicitudid="{{ solicitud.pk }}"
-                                        data-colonianombre="{{ solicitud.colonia.nombre }}"
-                                        data-coloniacodigo="{{ solicitud.colonia.codigo }}"
-                                        data-tipo="{{ solicitud.get_tipo_display }}"
-                                        data-estado="{{ solicitud.get_estado_display }}"
-                                        data-observaciones="{{ solicitud.observaciones|default:'' }}"
-                                        title="Editar Solicitud">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+                                    <button class="btn btn-sm btn-warning me-1" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editarSolicitudRelevModal"
+                                            data-solicitudid="{{ solicitud.pk }}"
+                                            data-colonianombre="{{ solicitud.colonia.nombre }}"
+                                            data-coloniacodigo="{{ solicitud.colonia.codigo }}"
+                                            data-tipo="{{ solicitud.get_tipo_display }}"
+                                            data-estado="{{ solicitud.get_estado_display }}"
+                                            data-observaciones="{{ solicitud.observaciones|default:'' }}"
+                                            title="Editar Solicitud">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                 {% endif %}
                                 
                                 {% if solicitud.puede_borrar %}
-                                <button class="btn btn-sm btn-danger me-1" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#eliminarSolicitudRelevModal"
-                                        data-solicitudid="{{ solicitud.pk }}"
-                                        data-colonianombre="{{ solicitud.colonia.nombre }}"
-                                        data-coloniacodigo="{{ solicitud.colonia.codigo }}"
-                                        data-tipo="{{ solicitud.get_tipo_display }}"
-                                        data-estado="{{ solicitud.get_estado_display }}"
-                                        title="Eliminar Solicitud">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                    <button class="btn btn-sm btn-danger me-1" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#eliminarSolicitudRelevModal"
+                                            data-solicitudid="{{ solicitud.pk }}"
+                                            data-colonianombre="{{ solicitud.colonia.nombre }}"
+                                            data-coloniacodigo="{{ solicitud.colonia.codigo }}"
+                                            data-tipo="{{ solicitud.get_tipo_display }}"
+                                            data-estado="{{ solicitud.get_estado_display }}"
+                                            title="Eliminar Solicitud">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 {% endif %}
                             </td>
                         </tr>

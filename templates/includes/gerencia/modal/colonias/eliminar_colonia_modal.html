@@ -35,11 +35,6 @@
             <i class="fas fa-exclamation-circle me-2"></i>
             <span id="mensaje_solicitudes_info"></span>
           </div>
-
-          <div class="alert alert-warning d-none mt-2" id="alert_relevamientos_info">
-            <i class="fas fa-clipboard-list me-2"></i>
-            <span id="mensaje_relevamientos_info"></span>
-          </div>
         </div>
 
         <div class="modal-footer justify-content-between">
@@ -71,9 +66,9 @@
       
       // Obtener información de solicitudes y relevamientos si están disponibles
       const tieneSolicitudes = button.getAttribute('data-tienesolicitudes') === 'true';
-      const tieneRelevamientos = button.getAttribute('data-tienerelevamientos') === 'true';
+     
       const cantSolicitudes = button.getAttribute('data-cantsolicitudes') || '0';
-      const cantRelevamientos = button.getAttribute('data-cantrelevamientos') || '0';
+
 
       // Establecer datos en el formulario
       document.getElementById('eliminar_colonia_id').value = coloniaId;
@@ -97,7 +92,7 @@
         departamentosSpan.textContent = 'No especificados';
       }
 
-      // Manejar alertas de solicitudes
+      // Manejar alertas de solicitudes, hacer lo mismo para relevamiento
       const alertSolicitudes = document.getElementById('alert_solicitudes_info');
       const mensajeSolicitudes = document.getElementById('mensaje_solicitudes_info');
       
@@ -110,21 +105,10 @@
         alertSolicitudes.classList.add('d-none');
       }
 
-      // Manejar alertas de relevamientos
-      const alertRelevamientos = document.getElementById('alert_relevamientos_info');
-      const mensajeRelevamientos = document.getElementById('mensaje_relevamientos_info');
-      
-      if (tieneRelevamientos) {
-        mensajeRelevamientos.textContent = 
-          `Esta colonia tiene ${cantRelevamientos} relevamiento(s) asociado(s). No podrá eliminarse hasta que se procesen o eliminen.`;
-        alertRelevamientos.classList.remove('d-none');
-        btnEliminar.disabled = true;
-      } else {
-        alertRelevamientos.classList.add('d-none');
-      }
 
-      // Habilitar botón solo si no hay asociaciones
-      if (!tieneSolicitudes && !tieneRelevamientos) {
+      // Habilitar botón solo si no hay asociaciones; mas adelante cuando se cree el 
+      // modelo relevamiento reemplazar al parentesis (!tieneSolicitudes && !tieneRelevamientos)
+      if (!tieneSolicitudes) {
         btnEliminar.disabled = false;
       }
 

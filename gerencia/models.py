@@ -18,6 +18,12 @@ class SolicitudRelevamiento(models.Model):
         (TIPO_ACTUALIZACION, "Estudio de Actualización")
     ]
 
+    PRIORIDADES = [
+        ("alta", "Alta"),
+        ("media", "Media"),
+        ("baja", "Baja"),
+    ]
+
     ESTADOS = [
         ("pendiente_asignacion_sig", "Pendiente de Asignación SIG"),
         ("asignado_a_digitalizador", "Asignado a Digitalizador"),
@@ -46,6 +52,7 @@ class SolicitudRelevamiento(models.Model):
 
         # Estados Análisis
         "pendiente_asignacion_analista": ["ANALISIS"],
+        "asignado_a_analista": ["ANALISIS"],
         "en_proceso_analisis": ["ANALISIS"],
 
         # Estado de aprobación campo (dinámico por tipo)
@@ -79,6 +86,13 @@ class SolicitudRelevamiento(models.Model):
         choices=TIPOS,
         editable=False,
         verbose_name="Tipo de estudio"
+    )
+
+    prioridad = models.CharField(
+        max_length=10,
+        choices=PRIORIDADES,
+        default="baja",
+        verbose_name="Prioridad"
     )
     estado = models.CharField(
         max_length=30,
@@ -332,8 +346,7 @@ class SolicitudRelevamiento(models.Model):
                     )
                 except Colonia.DoesNotExist:
                     raise ValidationError(
-                        "Ya existe una solicitud activa para esta colonia"
-                    )
+                        "Ya existe una solicitud activa para esta colonia")
 
     def save(self, *args, **kwargs):
         """Guardar con lógica de estados y tiempos"""
@@ -352,6 +365,10 @@ class SolicitudRelevamiento(models.Model):
             else:
                 self.tipo = self.TIPO_RELEVAMIENTO
                 self.estado = "pendiente_asignacion_sig"
+
+            # Si no se especifica prioridad, establecer baja por defecto
+            if not self.prioridad:
+                self.prioridad = "baja"
 
             # Asignar grupo inicial
             self._asignar_grupo_automaticamente()
@@ -375,14 +392,20 @@ class SolicitudRelevamiento(models.Model):
                 self._asignar_grupo_automaticamente()
 
                 # Limpiar asignación de usuario cuando cambia el grupo
-                try:
-                    grupo_anterior = original.grupo_asignado
-                    if grupo_anterior != self.grupo_asignado:
-                        self.usuario_asignado = None
-                        self.asignado_por = None
-                        self.fecha_asignacion = None
-                except:
-                    pass
+                # EXCEPCIÓN: No limpiar cuando asignamos por primera vez
+                if estado_cambio:
+                    # Verificar si es la asignación inicial a digitalizador
+                    if not (estado_anterior == 'pendiente_asignacion_sig'
+                            and self.estado == 'asignado_a_digitalizador'):
+                        # Solo si NO es la asignación inicial, verificar cambios de grupo
+                        try:
+                            grupo_anterior = original.grupo_asignado
+                            if grupo_anterior != self.grupo_asignado:
+                                self.usuario_asignado = None
+                                self.asignado_por = None
+                                self.fecha_asignacion = None
+                        except:
+                            pass
 
         # Guardar primero
         super().save(*args, **kwargs)
@@ -494,11 +517,14 @@ class SolicitudRelevamiento(models.Model):
 
     def _asignar_grupo_automaticamente(self):
         """Asignar grupo automáticamente basado en el estado actual"""
-
-        # Limpiar asignación anterior
-        self.usuario_asignado = None
-        self.asignado_por = None
-        self.fecha_asignacion = None
+        if self.estado in ['asignado_a_digitalizador', 'en_proceso_digitalizacion'] and self.usuario_asignado:
+            # Mantener la asignación existente
+            pass
+        else:
+            # Solo limpiar si no hay usuario asignado o no estamos en estados de asignación activa
+            self.usuario_asignado = None
+            self.asignado_por = None
+            self.fecha_asignacion = None
 
         # Obtener nombres de grupos para este estado
         nombres_grupos = self.GRUPOS_POR_ESTADO.get(self.estado, [])

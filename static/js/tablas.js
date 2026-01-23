@@ -1,4 +1,4 @@
-// static/js/table.js
+
 
 // Prevenir auto-inicialización de Simple-DataTables
 if (window.simpleDatatables) {

@@ -1,0 +1,114 @@
+{% if solicitudes_finalizadas %}
+<div class="table-responsive">
+    <table class="beautiful-table table-hover" width="100%" cellspacing="0">
+        <thead class="table-light">
+            <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Ubicación</th>
+                <th class="text-center">Colonia</th>
+                <th class="text-center">Tipo</th>
+                <th class="text-center">Fecha</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for solicitud in solicitudes_finalizadas %}
+                <tr>
+                    <td class="text-center">{{ solicitud.id }}</td>
+                    <td>
+                        {% with distrito=solicitud.colonia.distritos.first %}
+                            {% if distrito %}
+                                <small class="text-muted">{{ distrito.departamento.nombre }}</small>
+                                <br>{{ distrito.nombre }}
+                            {% else %}
+                                <span class="text-muted">Sin ubicación</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        <strong>{{ solicitud.colonia.nombre }}</strong>
+                        <br><small class="text-muted">Cód: {{ solicitud.colonia.codigo }}</small>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                            {{ solicitud.get_tipo_display }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
+                        <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                    </td>
+                    <td class="text-center">
+                        <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
+                        class="btn btn-sm btn-info me-1" 
+                        title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        
+                        {% if es_lider %}
+                            <button class="btn btn-sm btn-primary btn-asignar" 
+                                    data-solicitud-id="{{ solicitud.id }}"
+                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                    title="Asignar digitalizador">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-3 d-flex justify-content-between align-items-center">
+    <div class="text-muted small">
+        <i class="fas fa-info-circle me-1"></i>
+        Mostrando {{ solicitudes_finalizadas|length }} solicitud{{ solicitudes_finalizadas|length|pluralize:"es" }}
+    </div>
+    <div class="btn-group" role="group">
+        <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('finalizadas')">
+            <i class="fas fa-file-csv me-1"></i>
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('finalizadas', 'excel')">
+            <i class="fas fa-file-excel me-1"></i>
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="fas fa-print me-1"></i>
+        </button>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+    <h5 class="text-muted">No hay solicitudes finalizadas</h5>
+    <p class="text-muted">No hay solicitudes finalizadas de asignación en tu grupo</p>
+</div>
+{% endif %}
+
+<script>
+    // Botones de finalizar
+            document.querySelectorAll('.btn-finalizar').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const solicitudId = this.dataset.solicitudId;
+                    const coloniaNombre = this.dataset.coloniaNombre;
+                    
+                    if (document.getElementById('solicitudIdFinalizar')) {
+                        document.getElementById('solicitudIdFinalizar').value = solicitudId;
+                        document.getElementById('coloniaNombreFinalizar').innerHTML = `
+                            <strong>Solicitud #${solicitudId}</strong><br>
+                            <small class="text-muted">${coloniaNombre}</small>
+                        `;
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('modalFinalizarDigitalizacion'));
+                        modal.show();
+                    }
+                });
+            });
+
+             // Formulario de finalizar digitalización
+        document.getElementById('formFinalizarDigitalizacion')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            await procesarFormulario(this, 'finalizar');
+        });
+        
+</script>

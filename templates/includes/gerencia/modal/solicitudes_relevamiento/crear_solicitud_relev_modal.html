@@ -1,4 +1,3 @@
-
 <div class="modal fade modal-primary" id="crearSolicitudRelevModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
@@ -13,7 +12,7 @@
           <!-- Información jerárquica compacta -->
           <div class="card mb-4">
             <div class="card-header bg-light py-2">
-              <h6 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos</h6>
+              <h6 class="mb-0 text-white"><i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos</h6>
             </div>
             <div class="card-body p-3">
               <!-- Jerarquía en una línea -->
@@ -54,7 +53,7 @@
           <!-- Información de la solicitud -->
           <div class="card mb-4">
             <div class="card-header bg-light py-2">
-              <h6 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Detalles de la Solicitud</h6>
+              <h6 class="mb-0 text-white"><i class="fas fa-clipboard-check me-2"></i>Detalles de la Solicitud</h6>
             </div>
             <div class="card-body">
               <!-- Tipo de solicitud -->
@@ -66,6 +65,22 @@
                     <span class="fs-6" id="tipoTexto">Estudio de Relevamiento (primer relevamiento de la colonia)</span>
                   </div>
                 </div>
+              </div>
+              
+              <!-- Campo de prioridad -->
+              <div class="mb-3">
+                <label for="prioridad" class="form-label fw-bold">
+                  <i class="fas fa-exclamation-triangle me-1"></i>Prioridad
+                </label>
+                <select class="form-select" id="prioridad" name="prioridad" required>
+                  <option value="alta"> Alta</option>
+                  <option value="media">Media</option>
+                  <option value="baja" selected>Baja</option>
+                </select>
+                <div class="form-text">
+                  <small>Seleccione la urgencia del relevamiento</small>
+                </div>
+                <div class="invalid-feedback" id="prioridadError"></div>
               </div>
                     
               <!-- Observaciones -->
@@ -104,6 +119,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const distritoTexto = document.getElementById('distritoTexto');
     const coloniaTexto = document.getElementById('coloniaTexto');
     const tipoSolicitud = document.getElementById('tipoSolicitud');
+    const prioridadInput = document.getElementById('prioridad');
+    const prioridadError = document.getElementById('prioridadError');
     const observacionesInput = document.getElementById('observaciones');
     const observacionesError = document.getElementById('observacionesError');
 
@@ -195,20 +212,48 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function limpiarErrores() {
-        if (observacionesInput) {
-            observacionesInput.classList.remove('is-invalid');
-        }
-        if (observacionesError) {
-            observacionesError.textContent = '';
-        }
+        // Limpiar errores de todos los campos
+        const invalidInputs = form.querySelectorAll('.is-invalid');
+        invalidInputs.forEach(input => {
+            input.classList.remove('is-invalid');
+        });
+        
+        const errorMessages = form.querySelectorAll('.invalid-feedback');
+        errorMessages.forEach(message => {
+            message.textContent = '';
+        });
+        
         if (errorDiv) {
             errorDiv.textContent = '';
         }
     }
 
+    function validarFormulario() {
+        let valido = true;
+        
+        // Validar prioridad
+        if (!prioridadInput.value) {
+            prioridadInput.classList.add('is-invalid');
+            prioridadError.textContent = 'Por favor seleccione una prioridad';
+            valido = false;
+        } else {
+            prioridadInput.classList.remove('is-invalid');
+            prioridadError.textContent = '';
+        }
+        
+        return valido;
+    }
+
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
+        
+        // Limpiar errores previos
         limpiarErrores();
+        
+        // Validar formulario
+        if (!validarFormulario()) {
+            return;
+        }
 
         const btnSubmit = form.querySelector('button[type="submit"]');
         const oldText = btnSubmit.innerHTML;
@@ -249,20 +294,26 @@ document.addEventListener("DOMContentLoaded", () => {
                     modalInstance.hide();
                 }
                 
+                // Mostrar mensaje de éxito
                 setTimeout(() => {
-                    window.location.href = data.redirect_url || "{% url 'gerencia:lista_solicitudes_relevamiento' %}";
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.reload();
+                    }
                 }, 500);
             } else {
+                // Mostrar errores específicos
                 if (data.errors) {
                     for (const [field, messages] of Object.entries(data.errors)) {
-                        if (field === 'observaciones') {
-                            if (observacionesInput) {
-                                observacionesInput.classList.add('is-invalid');
-                            }
-                            if (observacionesError) {
-                                observacionesError.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
-                            }
+                        const input = form.querySelector(`[name="${field}"]`);
+                        const feedback = input ? input.nextElementSibling : null;
+                        
+                        if (input && feedback) {
+                            input.classList.add('is-invalid');
+                            feedback.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
                         } else if (field === '__all__') {
+                            // Error general
                             if (errorDiv) {
                                 errorDiv.textContent = Array.isArray(messages) ? messages.join(' ') : messages;
                             }
@@ -285,9 +336,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Limpiar el modal cuando se cierre
     modal.addEventListener('hidden.bs.modal', () => {
         if (form) {
             form.reset();
+            // Establecer prioridad por defecto a baja
+            if (prioridadInput) {
+                prioridadInput.value = 'baja';
+            }
         }
         limpiarErrores();
         
@@ -311,5 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
         }
     });
+    
+  
 });
 </script>

@@ -1,0 +1,83 @@
+{% load sig_tags %}
+{% if solicitudes_pendientes %}
+    <div class="table-responsive">
+        <table class="beautiful-table table-hover" width="100%" cellspacing="0">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-center">#</th>
+                    <th class="text-center">Datos Geográficos</th>
+                    <th class="text-center">Observación</th>
+                    <th class="text-center">Creacion</th>
+                    <th class="text-center">Prioridad</th>
+                    <th class="text-center">Acciones</th> 
+                </tr>
+            </thead>
+            <tbody>
+                {% for solicitud in solicitudes_pendientes %}
+                    <tr>
+                        <td class="text-center">{{ solicitud.id }}</td>
+                        <td>
+                            {% with distrito=solicitud.colonia.distritos.first %}
+                                {% if distrito %}
+                                    <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                                    <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                {% else %}
+                                    <span class="text-muted">Sin ubicación</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            <span>
+                                {{ solicitud.observaciones }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
+                            <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                        </td>
+                        <td class="text-center">
+                                <span class="badge 
+                                    {% if solicitud.prioridad == 'alta' %}bg-danger
+                                    {% elif solicitud.prioridad == 'media' %}bg-warning
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ solicitud.get_prioridad_display }}
+                                </span>
+                            </td>
+                        <td class="text-center">
+                            <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
+                            class="btn btn-sm btn-info me-1" 
+                            title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            
+                            {% if es_lider %}
+                                <button class="btn btn-sm btn-primary btn-asignar" 
+                                        data-solicitud-id="{{ solicitud.id }}"
+                                        data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                        title="Asignar digitalizador">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+            <h4 class="text-success">¡Excelente!</h4>
+        </div>
+        <h5 class="text-muted mb-3">No hay solicitudes pendientes de asignación</h5>
+        <p class="text-muted mb-4">Todas las solicitudes han sido asignadas a digitalizadores.</p>
+        
+        {% if es_lider %}
+            <div class="alert alert-info d-inline-block">
+                <i class="fas fa-lightbulb me-2"></i>
+                <strong>Consejo:</strong> Revisa las otras pestañas para ver el progreso de las asignaciones.
+            </div>
+        {% endif %}
+    </div>
+{% endif %}

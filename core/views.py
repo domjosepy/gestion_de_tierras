@@ -409,9 +409,10 @@ def eliminar_colonia(request, colonia_id):
     colonia = get_object_or_404(Colonia, id=colonia_id)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-    # Verificar si tiene solicitudes o relevamientos asociados
-    if colonia.solicitudes.exists() or colonia.relevamientos.exists():
-        msg = f'No se puede eliminar la colonia "{colonia.nombre}" porque tiene solicitudes o relevamientos asociados.'
+    # Verificar si tiene solicitudes de relevamiento asociadas
+    if colonia.solicitudes_relevamiento.exists():
+        num_solicitudes = colonia.solicitudes_relevamiento.count()
+        msg = f'No se puede eliminar la colonia "{colonia.nombre}" porque tiene {num_solicitudes} solicitud(es) de relevamiento asociada(s).'
 
         if is_ajax:
             return JsonResponse({
@@ -421,6 +422,9 @@ def eliminar_colonia(request, colonia_id):
 
         messages.error(request, msg)
         return redirect('gerencia:listar_colonias')
+
+    # Verificar si tiene relevamientos (relacionar el proximo relevamiento.)
+    # para doble validacion
 
     nombre_colonia = colonia.nombre
     colonia.delete()
