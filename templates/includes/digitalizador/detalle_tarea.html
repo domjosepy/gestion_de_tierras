@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Digitalización - {{ tarea.colonia.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 mb-2 text-success fw-bold">
+                <i class="fas fa-map-marked-alt me-2"></i>{{ tarea.colonia.nombre }}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'digitalizador:digitalizador_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Tarea #{{ tarea.id }}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="d-flex align-items-center">
+            <span class="badge {% if tarea.estado == 'asignado_a_digitalizador' %}bg-warning
+                        {% elif tarea.estado == 'en_proceso_digitalizacion' %}bg-info
+                        {% elif tarea.estado == 'pendiente_revision_sig' %}bg-primary
+                        {% else %}bg-secondary{% endif %} fs-6 me-3">
+                {{ tarea.get_estado_display }}
+            </span>
+            {% if puede_iniciar %}
+                <button class="btn btn-info btn-iniciar me-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalIniciar"
+                        data-tarea-id="{{ tarea.id }}"
+                        data-colonia-nombre="{{ tarea.colonia.nombre }}">
+                    <i class="fas fa-play me-2"></i>Iniciar Digitalización
+                </button>
+            {% elif puede_subir %}
+                <a href="{% url 'digitalizador:subir_precat' tarea.id %}" class="btn btn-success">
+                    <i class="fas fa-upload me-2"></i>Subir Precat
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-info-circle me-2"></i>Información de la Tarea
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Datos Generales</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted" width="40%">Colonia:</td>
+                                    <td class="fw-bold">{{ tarea.colonia.nombre }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Código:</td>
+                                    <td>{{ tarea.colonia.codigo }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Tipo:</td>
+                                    <td>
+                                        <span class="badge {% if tarea.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ tarea.get_tipo_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Prioridad:</td>
+                                    <td>
+                                        <span class="badge {% if tarea.prioridad == 'alta' %}bg-danger
+                                                    {% elif tarea.prioridad == 'media' %}bg-warning
+                                                    {% else %}bg-secondary{% endif %}">
+                                            {{ tarea.get_prioridad_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Asignación</h6>
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td class="text-muted" width="40%">Asignado por:</td>
+                                    <td>{{ tarea.asignado_por.get_full_name|default:tarea.asignado_por.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Fecha asignación:</td>
+                                    <td>{{ tarea.fecha_asignacion|date:"d/m/Y H:i"|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Creado por:</td>
+                                    <td>{{ tarea.creado_por.get_full_name|default:tarea.creado_por.username }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Fecha creación:</td>
+                                    <td>{{ tarea.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones Generales -->
+                    {% if tarea.observaciones %}
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-sticky-note me-2"></i>Observaciones Generales
+                        </h6>
+                        <div class="alert alert-light border">
+                            {{ tarea.observaciones|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado y Tiempos -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-line me-2"></i>Progreso
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-2">Tiempos</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td class="text-muted">Tiempo asignado:</td>
+                                <td>{{ tarea.obtener_tiempo_transcurrido|default:"-" }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Tiempo etapa actual:</td>
+                                <td>{{ tarea.obtener_tiempo_etapa_actual|default:"-" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    {% if tarea.es_urgente %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>¡Atención!</strong> Esta tarea es considerada urgente.
+                    </div>
+                    {% endif %}
+
+                    <!-- Archivos Subidos -->
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-2">
+                            <i class="fas fa-file-archive me-2"></i>Archivos Subidos
+                        </h6>
+                        {% if archivos_precat %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                <strong>Precat subido:</strong><br>
+                                <small>{{ archivos_precat.get_nombre_archivo }} ({{ archivos_precat.get_tamanio_mb }} MB)</small>
+                            </div>
+                        {% endif %}
+                        {% if archivos_planos %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-file-pdf me-2"></i>
+                                <strong>Planos subidos:</strong><br>
+                                <small>{{ archivos_planos.get_nombre_archivo }} ({{ archivos_planos.get_tamanio_mb }} MB)</small>
+                            </div>
+                        {% endif %}
+                        {% if not archivos_precat and not archivos_planos %}
+                            <div class="alert alert-light">
+                                <i class="fas fa-file-import me-2"></i>
+                                No hay archivos subidos aún.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auditorías -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-history me-2"></i>Historial de Cambios
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if auditorias %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Campo</th>
+                                <th>Valor Anterior</th>
+                                <th>Valor Nuevo</th>
+                                <th>Usuario</th>
+                                <th>Comentario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for auditoria in auditorias %}
+                            <tr>
+                                <td>{{ auditoria.fecha_cambio|date:"d/m/Y H:i" }}</td>
+                                <td><span class="badge bg-secondary">{{ auditoria.campo }}</span></td>
+                                <td><small>{{ auditoria.valor_anterior|default:"-" }}</small></td>
+                                <td><small>{{ auditoria.valor_nuevo|default:"-" }}</small></td>
+                                <td>{{ auditoria.cambiado_por.get_full_name|default:auditoria.cambiado_por.username }}</td>
+                                <td><small>{{ auditoria.comentario|default:"-" }}</small></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center py-3">No hay historial de cambios registrado.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para iniciar digitalización -->
+<div class="modal fade" id="modalIniciar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Confirmar Inicio de Digitalización</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea iniciar la digitalización de la colonia <span id="coloniaNombreIniciar" class="fw-bold"></span>?</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Al iniciar, la tarea cambiará a estado "En Proceso de Digitalización"
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-info" id="btnConfirmarIniciar">
+                    <i class="fas fa-play me-2"></i>Iniciar Digitalización
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal para iniciar digitalización
+    const modalIniciar = document.getElementById('modalIniciar');
+    if (modalIniciar) {
+        modalIniciar.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const tareaId = button.getAttribute('data-tarea-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            
+            modalIniciar.querySelector('#coloniaNombreIniciar').textContent = coloniaNombre;
+            modalIniciar.querySelector('#btnConfirmarIniciar').setAttribute('data-tarea-id', tareaId);
+        });
+
+        document.getElementById('btnConfirmarIniciar').addEventListener('click', function() {
+            const tareaId = this.getAttribute('data-tarea-id');
+            
+            fetch(`/digitalizador/tarea/${tareaId}/iniciar/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert(data.message || 'Error al iniciar digitalización');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error de conexión');
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

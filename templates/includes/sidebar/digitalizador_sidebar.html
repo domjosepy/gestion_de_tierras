@@ -1,0 +1,144 @@
+<!-- === digitalizador_sidebar.html (menú de digitalizador) === -->
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'digitalizador:digitalizador_dashboard' %}">
+    <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+    <span class="justify-content-center">Panel de Control</span>
+  </a>
+</li>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small px-3">
+  <i class="fas fa-edit me-1"></i>
+  Digitalización
+</div>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small px-3">
+  Módulos
+</div>
+
+<!-- sidebar.html -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-mouse-pointer"></i>
+    </div>
+    <div class="sidebar-brand-text">GRT</div>
+  </div>
+
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link active" title="Panel Digitalizador" data-bs-toggle="tooltip" href="{% url 'digitalizador:digitalizador_dashboard' %}">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Panel Digitalizador</span>
+      </a>
+    </li>
+
+    <div class="sidebar-heading">
+      <i class="fas fa-edit me-1"></i>
+      Digitalización
+    </div>
+    
+    <li class="nav-item">
+      <a class="nav-link" href="#" title="Nuevo Trabajo">
+        <i class="fas fa-plus-circle"></i>
+        <span>Nuevo Trabajo</span>
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseTrabajos" aria-expanded="false" aria-controls="collapseTrabajos" title="Mis Trabajos">
+        <i class="fas fa-tasks"></i>
+        <span>Mis Trabajos</span>
+      </a>
+      <div id="collapseTrabajos" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fas fa-hourglass-start me-2"></i>Pendientes
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-spinner me-2"></i>En Proceso
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-check-circle me-2"></i>Completados
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <div class="sidebar-heading">Módulos</div>
+    
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseHerramientas" aria-expanded="false" aria-controls="collapseHerramientas" title="Herramientas">
+        <i class="fas fa-tools"></i>
+        <span>Herramientas</span>
+      </a>
+      <div id="collapseHerramientas" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fas fa-draw-polygon me-2"></i>Polígonos
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-ruler me-2"></i>Líneas
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-map-pin me-2"></i>Puntos
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCalidad" aria-expanded="false" aria-controls="collapseCalidad" title="Control de Calidad">
+        <i class="fas fa-search-check"></i>
+        <span>Control de Calidad</span>
+      </a>
+      <div id="collapseCalidad" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fas fa-check-double me-2"></i>Validaciones
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-exclamation-triangle me-2"></i>Correcciones
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseProductividad" aria-expanded="false" aria-controls="collapseProductividad" title="Productividad">
+        <i class="fas fa-chart-line"></i>
+        <span>Productividad</span>
+      </a>
+      <div id="collapseProductividad" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fas fa-chart-bar me-2"></i>Estadísticas
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-bullseye me-2"></i>Objetivos
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link" href="#" title="Configuración">
+        <i class="fas fa-cogs"></i>
+        <span>Configuración</span>
+      </a>
+    </li>
+  </ul>
+
+  <button id="sidebarToggle">
+    <i class="fas fa-angle-double-right"></i>
+  </button>
+</div>
+
+<!-- content wrapper -->
+<div id="content-wrapper">
+  {% block content %}
+  {% endblock %}
+</div>

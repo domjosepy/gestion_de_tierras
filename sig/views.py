@@ -19,7 +19,7 @@ from django.db import transaction
 @requiere_ser_sig
 def sig_dashboard(request):
     """
-    Dashboard optimizado para usuarios del grupo SIG
+    Dashboard para usuarios del grupo SIG
     """
     grupos_usuario = request.user.grupos_pertenece.filter(
         nombre__icontains='SIG',
@@ -36,7 +36,71 @@ def sig_dashboard(request):
     # Verificar si es líder
     es_lider = grupos_usuario.filter(lider=request.user).exists()
 
-    # Base de consulta
+    # Base de consulta para estadísticas
+    query = SolicitudRelevamiento.objects.filter(
+        grupo_asignado__in=grupos_usuario
+    )
+
+    # Estadísticas básicas (sin querysets pesados)
+    estadisticas = {
+        'total': query.count(),
+        'pendiente_asignacion_sig': query.filter(estado='pendiente_asignacion_sig').count(),
+        'asignado_a_digitalizador': query.filter(estado='asignado_a_digitalizador').count(),
+        'en_proceso_digitalizacion': query.filter(estado='en_proceso_digitalizacion').count(),
+        'pendiente_revision_sig': query.filter(estado='pendiente_revision_sig').count(),
+        'pendiente_asignacion_analista': query.filter(estado='pendiente_asignacion_analista').count(),
+        'rechazado': query.filter(estado='rechazado').count(),
+        'finalizado': query.filter(estado='finalizado').count(),
+    }
+
+    # Si es líder, mostrar usuarios del grupo
+    usuarios_grupo = []
+    if es_lider and grupos_usuario.exists():
+        grupo_principal = grupos_usuario.first()
+        usuarios_grupo = grupo_principal.usuarios.filter(
+            estado='ACTIVO',
+            is_active=True
+        ).order_by('username').values('id', 'username', 'first_name', 'last_name')
+
+    # Últimas 5 solicitudes para vista rápida
+    ultimas_solicitudes = query.select_related(
+        'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
+    ).order_by('-fecha_creacion')[:5]
+
+    context = {
+        'es_lider': es_lider,
+        'grupos_usuario': grupos_usuario,
+        'estadisticas': estadisticas,
+        'usuarios_grupo': usuarios_grupo,
+        'ultimas_solicitudes': ultimas_solicitudes,
+    }
+
+    return render(request, 'sig/sig_dashboard.html', context)
+
+
+@login_required
+@requiere_ser_sig
+def sig_solicitudes(request):
+    """
+    Vista COMPLETA de solicitudes para usuarios SIG
+    """
+    grupos_usuario = request.user.grupos_pertenece.filter(
+        nombre__icontains='SIG',
+        activo=True
+    )
+
+    if not grupos_usuario.exists():
+        messages.warning(request, "No pertenece a ningún grupo SIG activo.")
+        # CORREGIDO: Cambia : por /
+        return render(request, 'includes/sig/tablas/solicitudes_relevamiento_sig.html', {
+            'estadisticas': {},
+            'es_lider': False
+        })
+
+    # Verificar si es líder
+    es_lider = grupos_usuario.filter(lider=request.user).exists()
+
+    # Base de consulta optimizada
     query = SolicitudRelevamiento.objects.filter(
         grupo_asignado__in=grupos_usuario
     ).select_related(
@@ -46,32 +110,26 @@ def sig_dashboard(request):
     )
 
     # Obtener solicitudes por estado
-    solicitudes_pendientes = query.filter(estado='pendiente_asignacion_sig')
-    solicitudes_asignadas = query.filter(estado='asignado_a_digitalizador')
-    solicitudes_proceso = query.filter(estado='en_proceso_digitalizacion')
-    solicitudes_revision = query.filter(estado='pendiente_revision_sig')
-    solicitudes_analisis = query.filter(estado='pendiente_asignacion_analista')
-    solicitudes_rechazadas = query.filter(estado='rechazado')
-    solicitudes_finalizadas = query.filter(estado='finalizado')
+    estados = {
+        'pendientes': query.filter(estado='pendiente_asignacion_sig'),
+        'asignadas': query.filter(estado='asignado_a_digitalizador'),
+        'en_proceso': query.filter(estado='en_proceso_digitalizacion'),
+        'pendiente_revision': query.filter(estado='pendiente_revision_sig'),
+        'pendiente_analisis': query.filter(estado='pendiente_asignacion_analista'),
+        'rechazadas': query.filter(estado='rechazado'),
+        'finalizadas': query.filter(estado='finalizado'),
+    }
 
     # Si no es líder, filtrar según corresponda
     if not es_lider:
-        solicitudes_asignadas = solicitudes_asignadas.filter(
+        estados['asignadas'] = estados['asignadas'].filter(
             usuario_asignado=request.user)
-        solicitudes_proceso = solicitudes_proceso.filter(
+        estados['en_proceso'] = estados['en_proceso'].filter(
             usuario_asignado=request.user)
 
     # Estadísticas
-    estadisticas = {
-        'total': query.count(),
-        'pendiente_asignacion_sig': solicitudes_pendientes.count(),
-        'asignado_a_digitalizador': solicitudes_asignadas.count(),
-        'en_proceso_digitalizacion': solicitudes_proceso.count(),
-        'pendiente_revision_sig': solicitudes_revision.count(),
-        'pendiente_asignacion_analista': solicitudes_analisis.count(),
-        'rechazado': solicitudes_rechazadas.count(),
-        'finalizado': solicitudes_finalizadas.count(),
-    }
+    estadisticas = {key: qs.count() for key, qs in estados.items()}
+    estadisticas['total'] = query.count()
 
     # Usuarios del grupo para asignación (solo líderes)
     usuarios_grupo = []
@@ -82,49 +140,26 @@ def sig_dashboard(request):
             is_active=True
         ).order_by('username')
 
-    context = {
-        'es_lider': es_lider,
-        'grupos_usuario': grupos_usuario,
-        'estadisticas': estadisticas,
-        'usuarios_grupo': usuarios_grupo,
-        'solicitudes_pendientes': solicitudes_pendientes,
-        'solicitudes_asignadas': solicitudes_asignadas,
-        'solicitudes_proceso': solicitudes_proceso,
-        'solicitudes_revision': solicitudes_revision,
-        'solicitudes_analisis': solicitudes_analisis,
-        'solicitudes_rechazadas': solicitudes_rechazadas,
-        'solicitudes_finalizadas': solicitudes_finalizadas,
-    }
-
-    # Calcular urgencias para cada estado
-    def contar_urgentes(queryset):
-        return sum(1 for s in queryset if s.es_urgente())
-
-    urgentes_pendientes = contar_urgentes(solicitudes_pendientes)
-    urgentes_asignadas = contar_urgentes(solicitudes_asignadas)
-    urgentes_proceso = contar_urgentes(solicitudes_proceso)
-    # ... y así para cada estado ...
+    # Calcular urgencias
+    urgentes = {key: sum(1 for s in qs if s.es_urgente())
+                for key, qs in estados.items()}
 
     context = {
         'es_lider': es_lider,
         'grupos_usuario': grupos_usuario,
         'estadisticas': estadisticas,
         'usuarios_grupo': usuarios_grupo,
-        'solicitudes_pendientes': solicitudes_pendientes,
-        'solicitudes_asignadas': solicitudes_asignadas,
-        'solicitudes_proceso': solicitudes_proceso,
-        'solicitudes_revision': solicitudes_revision,
-        'solicitudes_analisis': solicitudes_analisis,
-        'solicitudes_rechazadas': solicitudes_rechazadas,
-        'solicitudes_finalizadas': solicitudes_finalizadas,
-        'urgentes_pendientes': urgentes_pendientes,
-        'urgentes_asignadas': urgentes_asignadas,
-        'urgentes_proceso': urgentes_proceso,
-        'urgentes_revision': contar_urgentes(solicitudes_revision),
-        'urgentes_analisis': contar_urgentes(solicitudes_analisis),
+        'solicitudes_pendientes': estados['pendientes'],
+        'solicitudes_asignadas': estados['asignadas'],
+        'solicitudes_proceso': estados['en_proceso'],
+        'solicitudes_revision': estados['pendiente_revision'],
+        'solicitudes_analisis': estados['pendiente_analisis'],
+        'solicitudes_rechazadas': estados['rechazadas'],
+        'solicitudes_finalizadas': estados['finalizadas'],
+        'urgentes': urgentes,
     }
 
-    return render(request, 'sig/sig_dashboard.html', context)
+    return render(request, 'includes/sig/tablas/solicitudes_relevamiento_sig.html', context)
 
 
 @login_required
@@ -523,6 +558,7 @@ def revisar_solicitud(request, solicitud_id):
     solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
     accion = request.POST.get('accion')  # 'aprobar' o 'rechazar'
     observaciones = request.POST.get('observaciones', '')
+    feedback = request.POST.get('feedback', '')
 
     # Verificar que el usuario sea líder del grupo
     if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
@@ -541,15 +577,25 @@ def revisar_solicitud(request, solicitud_id):
         solicitud.estado = 'pendiente_asignacion_analista'
         mensaje = "Solicitud aprobada. Pendiente de análisis."
     elif accion == 'rechazar':
-        solicitud.estado = 'rechazado'
-        solicitud.motivo_rechazo = observaciones
-        mensaje = "Solicitud rechazada."
+        solicitud.estado = 'en_proceso_digitalizacion'
+        # Guardar feedback para el digitalizador
+        if feedback:
+            solicitud.observaciones += f"\n\n--- FEEDBACK LÍDER SIG ---\n{feedback}"
+        mensaje = "Digitalización rechazada. Se ha enviado feedback al digitalizador."
     else:
         return JsonResponse({'error': 'Acción no válida'}, status=400)
 
     solicitud.save()
 
-    messages.success(request, mensaje)
+    # Crear auditoría
+    SolicitudRelevamientoAudit.objects.create(
+        solicitud=solicitud,
+        campo='estado',
+        valor_anterior='pendiente_revision_sig',
+        valor_nuevo=solicitud.estado,
+        cambiado_por=request.user,
+        comentario=f'Revisión SIG: {accion}. {feedback}'
+    )
 
     return JsonResponse({
         'success': True,

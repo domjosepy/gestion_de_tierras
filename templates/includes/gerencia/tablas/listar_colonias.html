@@ -17,7 +17,7 @@
         </div>
         
             <a href="{% url 'gerencia:lista_solicitudes_relevamiento' %}" class="btn btn-outline-info ms-4">
-                <i class="fas fa-clipboard-list me-0"></i>
+                <i class="fas fa-file-upload me-0"></i>
                 <i class="fas fa-search me-3"></i>Solicitudes de Relevamiento
             </a>
         
@@ -135,13 +135,13 @@
                                                 {% endif %}
                                             {% endwith %}
                                             data-tienerelevamiento="{{ colonia.tiene_relevamiento|yesno:'true,false' }}">
-                                        <i class="fas fa-clipboard-list me-1"></i>
+                                        <i class="fas fa-file-upload me-1"></i>
                                         <i class="fas fa-search"></i>
                                     </button>
                                 {% else %}
                                     <button class="btn btn-sm btn-info" disabled
                                             title="Ya existe {{ colonia.num_solicitudes_activas }} solicitud{{ colonia.num_solicitudes_activas|pluralize:'es' }} activa{{ colonia.num_solicitudes_activas|pluralize:'s' }} para esta colonia">
-                                        <i class="fas fa-clipboard-list me-1"></i>
+                                        <i class="fas fa-file-upload me-1"></i>
                                         <i class="fas fa-search"></i>
                                     </button>
                                 {% endif %}

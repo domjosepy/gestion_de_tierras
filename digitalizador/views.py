@@ -1,10 +1,16 @@
-# digitalizador/views.py
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from gerencia.models import SolicitudRelevamiento
-from administrador.models import User
+from django.http import JsonResponse, HttpResponseForbidden
+from django.contrib import messages
+from django.urls import reverse
+from django.utils import timezone
+from django.db import transaction
+from django.template.loader import render_to_string
+from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from .decorators import requiere_ser_digitalizador
+from .froms import PrecatSubirForm
+from .models import PrecatArchivo
+from administrador.models import User
 
 
 @login_required
@@ -15,25 +21,33 @@ def digitalizador_dashboard(request):
     """
     # Obtener tareas asignadas al usuario actual
     tareas = SolicitudRelevamiento.objects.filter(
-        digitalizador_asignado=request.user
-    ).select_related('colonia')
+        usuario_asignado=request.user,
+        estado__in=['asignado_a_digitalizador',
+                    'en_proceso_digitalizacion', 'pendiente_revision_sig']
+    ).select_related(
+        'colonia', 'grupo_asignado', 'creado_por'
+    ).prefetch_related(
+        'precat_archivos'
+    ).order_by('-fecha_modificacion')
 
-    # Estadísticas
+    # Estadísticas por estado
     estadisticas = {
         'pendientes': tareas.filter(estado='asignado_a_digitalizador').count(),
         'en_proceso': tareas.filter(estado='en_proceso_digitalizacion').count(),
-        'completadas': tareas.filter(estado='pendiente_revision_sig').count(),
+        'pendientes_revision': tareas.filter(estado='pendiente_revision_sig').count(),
         'total': tareas.count(),
     }
 
-    # Tareas por estado
+    # Tareas por estado para mostrar en secciones
     tareas_pendientes = tareas.filter(estado='asignado_a_digitalizador')
     tareas_en_proceso = tareas.filter(estado='en_proceso_digitalizacion')
+    tareas_pendientes_revision = tareas.filter(estado='pendiente_revision_sig')
 
     context = {
         'estadisticas': estadisticas,
         'tareas_pendientes': tareas_pendientes,
         'tareas_en_proceso': tareas_en_proceso,
+        'tareas_pendientes_revision': tareas_pendientes_revision,
         'usuario': request.user,
     }
 
@@ -47,22 +61,38 @@ def detalle_tarea(request, tarea_id):
     Detalle de una tarea específica para digitalización
     """
     tarea = get_object_or_404(
-        SolicitudRelevamiento.objects.select_related('colonia', 'creado_por'),
+        SolicitudRelevamiento.objects.select_related(
+            'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
+        ).prefetch_related('precat_archivos'),
         pk=tarea_id,
-        digitalizador_asignado=request.user  # Solo sus tareas
+        usuario_asignado=request.user  # Solo puede ver sus propias tareas
     )
 
-    # Información de la colonia
-    distritos = tarea.colonia.distritos.all()
+    # Verificar que tiene permisos para esta tarea
+    if tarea.usuario_asignado != request.user:
+        messages.error(request, "No tiene permisos para acceder a esta tarea.")
+        return redirect('digitalizador:digitalizador_dashboard')
+
+    # Obtener archivos ya subidos
+    archivos_precat = tarea.precat_archivos.filter(
+        tipo_archivo=PrecatArchivo.TIPO_PRECAT).last()
+    archivos_planos = tarea.precat_archivos.filter(
+        tipo_archivo=PrecatArchivo.TIPO_PLANOS).last()
+
+    # Obtener auditorías de la solicitud
+    auditorias = tarea.auditorias.all().select_related('cambiado_por')[:10]
 
     context = {
         'tarea': tarea,
-        'distritos': distritos,
+        'archivos_precat': archivos_precat,
+        'archivos_planos': archivos_planos,
+        'auditorias': auditorias,
         'puede_iniciar': tarea.estado == 'asignado_a_digitalizador',
-        'puede_finalizar': tarea.estado == 'en_proceso_digitalizacion',
+        'puede_subir': tarea.estado == 'en_proceso_digitalizacion',
+        'puede_ver': tarea.estado == 'pendiente_revision_sig',
     }
 
-    return render(request, 'digitalizador/detalle_tarea.html', context)
+    return render(request, 'includes/digitalizador/detalle_tarea.html', context)
 
 
 @login_required
@@ -77,51 +107,125 @@ def iniciar_digitalizacion(request, tarea_id):
     tarea = get_object_or_404(
         SolicitudRelevamiento,
         pk=tarea_id,
-        digitalizador_asignado=request.user
+        usuario_asignado=request.user
     )
 
-    if not tarea.puede_iniciar_digitalizacion():
+    if tarea.estado != 'asignado_a_digitalizador':
         return JsonResponse({
             'success': False,
-            'message': 'No se puede iniciar esta tarea'
-        })
+            'message': 'La tarea no está en estado "Asignado a Digitalizador"'
+        }, status=400)
 
-    tarea.estado = 'en_proceso_digitalizacion'
-    tarea.save()
+    try:
+        with transaction.atomic():
+            # Cambiar estado
+            estado_anterior = tarea.estado
+            tarea.estado = 'en_proceso_digitalizacion'
+            tarea.fecha_inicio_etapa = timezone.now()
+            tarea.save()
 
-    return JsonResponse({
-        'success': True,
-        'message': 'Digitalización iniciada',
-        'estado': tarea.get_estado_display()
-    })
+            # Registrar auditoría
+            SolicitudRelevamientoAudit.objects.create(
+                solicitud=tarea,
+                campo='estado',
+                valor_anterior=estado_anterior,
+                valor_nuevo=tarea.estado,
+                cambiado_por=request.user,
+                comentario=f'Digitalización iniciada por {request.user.get_full_name()}'
+            )
+
+            messages.success(request, 'Digitalización iniciada correctamente.')
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Digitalización iniciada',
+                'estado': tarea.get_estado_display(),
+                'redirect_url': reverse('includes/digitalizador/detalle_tarea', args=[tarea_id])
+            })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al iniciar digitalización: {str(e)}'
+        }, status=500)
 
 
 @login_required
 @requiere_ser_digitalizador
-def finalizar_digitalizacion(request, tarea_id):
+def subir_precat(request, tarea_id):
     """
-    Marcar una tarea como finalizada (pendiente de revisión)
+    Subir archivos de Precat y Planos, y cambiar estado a Pendiente de Revisión
     """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
     tarea = get_object_or_404(
         SolicitudRelevamiento,
         pk=tarea_id,
-        digitalizador_asignado=request.user
+        usuario_asignado=request.user
     )
 
-    if not tarea.puede_finalizar_digitalizacion():
-        return JsonResponse({
-            'success': False,
-            'message': 'No se puede finalizar esta tarea'
-        })
+    if tarea.estado != 'en_proceso_digitalizacion':
+        messages.error(
+            request,
+            f'No puede subir archivos en el estado actual: {tarea.get_estado_display()}'
+        )
+        return redirect('includes/digitalizador/detalle_tarea', tarea_id=tarea_id)
 
-    tarea.estado = 'pendiente_revision_sig'
-    tarea.save()
+    if request.method == 'POST':
+        form = PrecatSubirForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # Guardar archivo Precat
+                    archivo_precat = PrecatArchivo(
+                        solicitud=tarea,
+                        tipo_archivo=PrecatArchivo.TIPO_PRECAT,
+                        archivo=form.cleaned_data['archivo_precat'],
+                        observaciones=form.cleaned_data['observaciones'],
+                        subido_por=request.user
+                    )
+                    archivo_precat.save()
 
-    return JsonResponse({
-        'success': True,
-        'message': 'Digitalización finalizada, pendiente de revisión',
-        'estado': tarea.get_estado_display()
-    })
+                    # Guardar archivo Planos
+                    archivo_planos = PrecatArchivo(
+                        solicitud=tarea,
+                        tipo_archivo=PrecatArchivo.TIPO_PLANOS,
+                        archivo=form.cleaned_data['archivo_planos'],
+                        observaciones=form.cleaned_data['observaciones'],
+                        subido_por=request.user
+                    )
+                    archivo_planos.save()
+
+                    # Cambiar estado de la solicitud
+                    estado_anterior = tarea.estado
+                    tarea.estado = 'pendiente_revision_sig'
+                    tarea.observaciones = form.cleaned_data['observaciones']
+                    tarea.save()
+
+                    # Registrar auditoría
+                    SolicitudRelevamientoAudit.objects.create(
+                        solicitud=tarea,
+                        campo='estado',
+                        valor_anterior=estado_anterior,
+                        valor_nuevo=tarea.estado,
+                        cambiado_por=request.user,
+                        comentario=f'Precat subido por {request.user.get_full_name()}. Archivos: {archivo_precat.get_nombre_archivo()}, {archivo_planos.get_nombre_archivo()}'
+                    )
+
+                    messages.success(
+                        request,
+                        'Archivos subidos correctamente. La solicitud está ahora pendiente de revisión por el Líder SIG.'
+                    )
+                    return redirect('digitalizador:detalle_tarea', tarea_id=tarea_id)
+
+            except Exception as e:
+                messages.error(
+                    request,
+                    f'Error al subir archivos: {str(e)}'
+                )
+    else:
+        form = PrecatSubirForm()
+
+    context = {
+        'tarea': tarea,
+        'form': form,
+    }
+
+    return render(request, 'includes/digitalizador/tablas/subir_precat.html', context)

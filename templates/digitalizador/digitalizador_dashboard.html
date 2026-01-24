@@ -1,4 +1,3 @@
-<!-- digitalizador/digitalizador_dashboard.html -->
 {% extends 'base.html' %}
 {% load static %}
 
@@ -8,64 +7,83 @@
 <div class="container-fluid fade-in">
     <!-- Header -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h2 class="text-success fw-bold mb-0">
-            <i class="fas fa-digital-tachograph me-3"></i>Dashboard Digitalizador
+        <h2 class="h3 mb-2 text-success fw-bold">
+            <i class="fas fa-digital-tachograph me-2"></i>DIGITALIZADOR
         </h2>
-        <div>
-            <span class="badge bg-success fs-6">{{ usuario.get_full_name }}</span>
-        </div>
     </div>
 
-    <!-- Estadísticas Personales -->
+    <!-- Estadísticas -->
     <div class="row mb-4">
+        <!-- Pendientes -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Pendientes
+            <div class="card border-start-warning border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">
+                                Pendientes de Inicio
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ tareas_pendientes }}</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ estadisticas.pendientes }}</div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        <div class="text-warning">
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- En Proceso -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+            <div class="card border-start-info border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
                                 En Proceso
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ tareas_en_proceso }}</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ estadisticas.en_proceso }}</div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                        <div class="text-info">
+                            <i class="fas fa-spinner fa-2x opacity-50"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Pendientes Revisión -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Completadas
+            <div class="card border-start-primary border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Pendientes Revisión
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ tareas_completadas }}</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ estadisticas.pendientes_revision }}</div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        <div class="text-primary">
+                            <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start-success border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Total Tareas
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ estadisticas.total }}</div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-tasks fa-2x opacity-50"></i>
                         </div>
                     </div>
                 </div>
@@ -73,117 +91,74 @@
         </div>
     </div>
 
-    <!-- Listado de Tareas -->
-    <div class="card shadow">
-        <div class="card-header bg-success text-white">
-            <h6 class="m-0 font-weight-bold">
-                <i class="fas fa-tasks me-2"></i>Tareas Asignadas
-            </h6>
+    <!-- Pestañas de Tareas -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3">
+            <ul class="nav nav-tabs card-header-tabs" id="digitalizadorTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button">
+                        <i class="fas fa-clock me-1"></i>
+                        Pendientes
+                        <span class="badge bg-warning ms-1">{{ tareas_pendientes.count }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="proceso-tab" data-bs-toggle="tab" data-bs-target="#proceso" type="button">
+                        <i class="fas fa-spinner me-1"></i>
+                        En Proceso
+                        <span class="badge bg-info ms-1">{{ tareas_en_proceso.count }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Por Revisar
+                        <span class="badge bg-primary ms-1">{{ tareas_pendientes_revision.count }}</span>
+                    </button>
+                </li>
+            </ul>
         </div>
+
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="tablaTareas">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Colonia</th>
-                            <th>Tipo</th>
-                            <th>Estado</th>
-                            <th>Asignado el</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for tarea in tareas_asignadas %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
-                                <strong>{{ tarea.colonia.nombre }}</strong><br>
-                                <small class="text-muted">{{ tarea.colonia.codigo }}</small>
-                            </td>
-                            <td>
-                                <span class="badge {% if tarea.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                                    {{ tarea.get_tipo_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge 
-                                    {% if tarea.estado == 'asignado_a_digitalizador' %}bg-warning
-                                    {% elif tarea.estado == 'en_proceso_digitalizacion' %}bg-info
-                                    {% elif tarea.estado == 'pendiente_revision_sig' %}bg-success
-                                    {% else %}bg-secondary{% endif %}">
-                                    {{ tarea.get_estado_display }}
-                                </span>
-                            </td>
-                            <td>{{ tarea.fecha_asignacion_digitalizador|date:"d/m/Y H:i"|default:"-" }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'sig:detalle_tarea' tarea.pk %}" 
-                                       class="btn btn-info">
-                                        <i class="fas fa-eye"></i> Detalles
-                                    </a>
-                                    
-                                    {% if tarea.estado == 'asignado_a_digitalizador' %}
-                                    <button class="btn btn-warning btn-iniciar"
-                                            data-tarea-id="{{ tarea.pk }}">
-                                        <i class="fas fa-play"></i> Iniciar
-                                    </button>
-                                    {% endif %}
-                                    
-                                    {% if tarea.estado == 'en_proceso_digitalizacion' %}
-                                    <button class="btn btn-success btn-finalizar"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalFinalizar"
-                                            data-tarea-id="{{ tarea.pk }}"
-                                            data-colonia-nombre="{{ tarea.colonia.nombre }}">
-                                        <i class="fas fa-check"></i> Finalizar
-                                    </button>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
-                                No tienes tareas asignadas
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="tab-content" id="digitalizadorTabsContent">
+                <!-- Pestaña Pendientes -->
+                <div class="tab-pane fade show active" id="pendientes" role="tabpanel">
+                    {% include 'includes/digitalizador/tablas/tabla_pendientes.html' %}
+                </div>
+
+                <!-- Pestaña En Proceso -->
+                <div class="tab-pane fade" id="proceso" role="tabpanel">
+                    {% include 'includes/digitalizador/tablas/tabla_proceso.html' %}
+                </div>
+
+                <!-- Pestaña Pendientes Revisión -->
+                <div class="tab-pane fade" id="revision" role="tabpanel">
+                    {% include 'includes/digitalizador/tablas/tabla_revision.html' %}
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Finalizar -->
-<div class="modal fade" id="modalFinalizar" tabindex="-1">
+<!-- Modal para iniciar digitalización -->
+<div class="modal fade" id="modalIniciar" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Finalizar Digitalización</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Confirmar Inicio de Digitalización</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="formFinalizar">
-                    {% csrf_token %}
-                    <input type="hidden" id="tareaId" name="tarea_id">
-                    <div class="mb-3">
-                        <label for="observaciones" class="form-label">Observaciones</label>
-                        <textarea class="form-control" id="observaciones" name="observaciones" 
-                                  rows="3" placeholder="Observaciones sobre la digitalización realizada..."></textarea>
-                    </div>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Al finalizar, la tarea pasará a "Pendiente de Revisión SIG"
-                    </div>
-                </form>
+                <p>¿Está seguro que desea iniciar la digitalización de la colonia <span id="coloniaNombreIniciar" class="fw-bold"></span>?</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Al iniciar, la tarea cambiará a estado "En Proceso de Digitalización"
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success" id="btnConfirmarFinalizar">
-                    <i class="fas fa-check me-2"></i>Finalizar Digitalización
+                <button type="button" class="btn btn-info" id="btnConfirmarIniciar">
+                    <i class="fas fa-play me-2"></i>Iniciar Digitalización
                 </button>
             </div>
         </div>
@@ -195,83 +170,52 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar DataTable
-    if ($.fn.DataTable) {
-        $('#tablaTareas').DataTable({
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
-            },
-            pageLength: 10,
-            order: [[4, 'desc']] // Ordenar por fecha de asignación
-        });
-    }
-
-    // Botones de iniciar
-    document.querySelectorAll('.btn-iniciar').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tareaId = this.getAttribute('data-tarea-id');
-            
-            if (confirm('¿Iniciar digitalización de esta tarea?')) {
-                fetch(`/sig/digitalizador/tarea/${tareaId}/iniciar/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert(data.message || 'Error al iniciar digitalización');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error de conexión');
-                });
-            }
-        });
+    // Inicializar DataTables para todas las tablas beautiful-table
+    const tablas = document.querySelectorAll('.beautiful-table');
+    tablas.forEach(tabla => {
+        if (tabla.rows.length > 1) {
+            new simpleDatatables.DataTable(tabla, {
+                perPage: 10,
+                perPageSelect: [5, 10, 20, 50],
+                labels: {
+                    placeholder: "Buscar...",
+                    perPage: "registros por página",
+                    noRows: "No se encontraron tareas",
+                    info: "Mostrando {start} a {end} de {rows} tareas"
+                }
+            });
+        }
     });
 
-    // Modal finalizar
-    const modalFinalizar = document.getElementById('modalFinalizar');
-    if (modalFinalizar) {
-        modalFinalizar.addEventListener('show.bs.modal', function(event) {
+    // Modal para iniciar digitalización
+    const modalIniciar = document.getElementById('modalIniciar');
+    if (modalIniciar) {
+        modalIniciar.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const tareaId = button.getAttribute('data-tarea-id');
             const coloniaNombre = button.getAttribute('data-colonia-nombre');
             
-            const modalTitle = modalFinalizar.querySelector('.modal-title');
-            const inputTareaId = modalFinalizar.querySelector('#tareaId');
-            
-            modalTitle.textContent = `Finalizar Digitalización - ${coloniaNombre}`;
-            inputTareaId.value = tareaId;
+            modalIniciar.querySelector('#coloniaNombreIniciar').textContent = coloniaNombre;
+            modalIniciar.querySelector('#btnConfirmarIniciar').setAttribute('data-tarea-id', tareaId);
         });
 
-        // Confirmar finalización
-        document.getElementById('btnConfirmarFinalizar').addEventListener('click', function() {
-            const tareaId = document.getElementById('tareaId').value;
-            const observaciones = document.getElementById('observaciones').value;
+        // Confirmar inicio
+        document.getElementById('btnConfirmarIniciar').addEventListener('click', function() {
+            const tareaId = this.getAttribute('data-tarea-id');
             
-            fetch(`/sig/digitalizador/tarea/${tareaId}/finalizar/`, {
+            fetch(`{% url 'digitalizador:iniciar_digitalizacion' 0 %}`.replace('0', tareaId), {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': '{{ csrf_token }}',
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    observaciones_digitalizacion: observaciones
-                })
+                }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    location.reload();
+                    window.location.href = data.redirect_url;
                 } else {
-                    alert(data.message || 'Error al finalizar digitalización');
+                    alert(data.message || 'Error al iniciar digitalización');
                 }
             })
             .catch(error => {

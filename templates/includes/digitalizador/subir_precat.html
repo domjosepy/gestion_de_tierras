@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Subir Precat - {{ tarea.colonia.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 mb-2 text-success fw-bold">
+                <i class="fas fa-upload me-2"></i>Subir Archivos de Precat
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'digitalizador:digitalizador_dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'digitalizador:detalle_tarea' tarea.id %}">{{ tarea.colonia.nombre }}</a></li>
+                    <li class="breadcrumb-item active">Subir Precat</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <span class="badge bg-info fs-6">
+                <i class="fas fa-map-marked-alt me-1"></i>{{ tarea.colonia.nombre }}
+            </span>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="m-0 font-weight-bold">
+                        <i class="fas fa-file-archive me-2"></i>Carga de Archivos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Importante:</strong> Al subir los archivos, la solicitud cambiará a estado 
+                        <span class="badge bg-primary">Pendiente de Revisión SIG</span> para su aprobación por el Líder SIG.
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" id="precatForm">
+                        {% csrf_token %}
+                        
+                        <!-- Archivo Precat -->
+                        <div class="mb-4">
+                            <label for="{{ form.archivo_precat.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-file-archive me-2"></i>{{ form.archivo_precat.label }}
+                            </label>
+                            {{ form.archivo_precat }}
+                            {% if form.archivo_precat.help_text %}
+                                <div class="form-text">{{ form.archivo_precat.help_text }}</div>
+                            {% endif %}
+                            {% if form.archivo_precat.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {{ form.archivo_precat.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Archivo Planos -->
+                        <div class="mb-4">
+                            <label for="{{ form.archivo_planos.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-file-pdf me-2"></i>{{ form.archivo_planos.label }}
+                            </label>
+                            {{ form.archivo_planos }}
+                            {% if form.archivo_planos.help_text %}
+                                <div class="form-text">{{ form.archivo_planos.help_text }}</div>
+                            {% endif %}
+                            {% if form.archivo_planos.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {{ form.archivo_planos.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="mb-4">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-bold">
+                                <i class="fas fa-sticky-note me-2"></i>{{ form.observaciones.label }}
+                            </label>
+                            {{ form.observaciones }}
+                            {% if form.observaciones.help_text %}
+                                <div class="form-text">{{ form.observaciones.help_text }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Resumen -->
+                        <div class="card border-info mb-4">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-list-check me-2"></i>Resumen de la Acción
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Subir archivo Precat final (formato .zip o .rar)
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Subir planos de referencia en formato .pdf
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Agregar observaciones del trabajo realizado
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-exchange-alt text-primary me-2"></i>
+                                        Estado actual: <span class="badge bg-info">{{ tarea.get_estado_display }}</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-arrow-right text-primary me-2"></i>
+                                        Nuevo estado: <span class="badge bg-primary">Pendiente de Revisión SIG</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'digitalizador:detalle_tarea' tarea.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success" id="btnSubir">
+                                <i class="fas fa-upload me-2"></i>Subir Archivos y Finalizar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Mejorar estilos de los campos de archivo
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+        input.classList.add('form-control');
+    });
+    
+    // Validación antes de enviar
+    document.getElementById('precatForm').addEventListener('submit', function(e) {
+        const btnSubir = document.getElementById('btnSubir');
+        btnSubir.disabled = true;
+        btnSubir.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Subiendo...';
+    });
+});
+</script>
+{% endblock %}

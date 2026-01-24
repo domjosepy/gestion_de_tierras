@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}SIG - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 mb-2 text-primary fw-bold">
+                <i class="fas fa-file-upload me-2"></i>SOLICITUDES DE RELEVAMIENTO
+            </h2>
+        </div>
+        <div class="d-flex align-items-center">
+            {% if es_lider %}
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-crown me-1"></i> Líder de Grupo
+                </span>
+                {% endif %}
+                <span class="badge bg-info">
+                    <i class="fas fa-users me-1"></i>
+                    {% for grupo in grupos_usuario %}
+                        {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    
+    <!-- Tarjetas de estadísticas -->
+    <div class="row mb-4">
+        <!-- Tarjeta Total -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ estadisticas.total|default:0 }}</div>
+                        </div>
+                        <div class="text-primary">
+                            <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Pendientes -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-warning border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.pendiente_asignacion_sig|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-warning">
+                            <i class="fas fa-clock fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Tarjeta Asignadas -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-orange border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-orange text-uppercase mb-1">Asignadas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.asignado_a_digitalizador|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-orange">
+                            <i class="fas fa-check-double fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta En Proceso -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-info border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">En Proceso</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.en_proceso_digitalizacion|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-spinner fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Rechazadas -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-danger border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">Rechazadas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.rechazado|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-danger">
+                            <i class="fas fa-times-circle fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Finalizadas -->
+        <div class="col-xl-2 col-md-4 col-6 mb-3">
+            <div class="card border-start-success border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Finalizadas</div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">
+                                {{ estadisticas.finalizado|default:0 }}
+                            </div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-flag-checkered fa-2x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Pestañas de solicitudes -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3 justify-content-between">
+            <ul class="nav nav-tabs card-header-tabs" id="sigTabs" role="tablist">
+                <!-- Las pestañas se cargarán dinámicamente -->
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i>
+                        Pendientes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="asignadas-tab" data-bs-toggle="tab" data-bs-target="#asignadas" type="button" role="tab">
+                        <i class="fas fa-user-check me-1"></i>
+                        Asignadas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="proceso-tab" data-bs-toggle="tab" data-bs-target="#proceso" type="button" role="tab">
+                        <i class="fas fa-spinner me-1"></i>
+                        En Proceso
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button" role="tab">
+                        <i class="fas fa-check-double me-1"></i>
+                        Por Revisar
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="analisis-tab" data-bs-toggle="tab" data-bs-target="#analisis" type="button" role="tab">
+                        <i class="fas fa-check-circle me-1"></i>
+                        En Análisis
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rechazadas-tab" data-bs-toggle="tab" data-bs-target="#rechazadas" type="button" role="tab">
+                        <i class="fas fa-times-circle me-1"></i>
+                        Rechazadas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="finalizadas-tab" data-bs-toggle="tab" data-bs-target="#finalizadas" type="button" role="tab">
+                        <i class="fas fa-flag-checkered me-1"></i>
+                        Finalizadas
+                    </button>
+                </li>
+            </ul>
+            <div class="btn-group" role="group">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('asignadas')">
+                        <i class="fas fa-file-csv me-1"></i>CSV
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('asignadas', 'excel')">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>Imprimir
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="tab-content" id="sigTabsContent">
+                <!-- Pestaña Pendientes -->
+                <div class="tab-pane fade show active" id="pendientes" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_pendientes.html' %}
+                </div>
+                
+                <!-- Pestaña Asignadas -->
+                <div class="tab-pane fade" id="asignadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_asignadas.html' %}
+                </div>
+                
+                <!-- Pestaña En Proceso -->
+                <div class="tab-pane fade" id="proceso" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_proceso.html' %}
+                </div>
+                
+                <!-- Pestaña Por Revisar -->
+                <div class="tab-pane fade" id="revision" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_revision.html' %}
+                </div>
+                
+                <!-- Pestaña En Análisis -->
+                <div class="tab-pane fade" id="analisis" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_analisis.html' %}
+                </div>
+                
+                <!-- Pestaña Rechazadas -->
+                <div class="tab-pane fade" id="rechazadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_rechazadas.html' %}
+                </div>
+                
+                <!-- Pestaña Finalizadas -->
+                <div class="tab-pane fade" id="finalizadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_finalizadas.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Incluir modales -->
+{% if es_lider and usuarios_grupo %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/asignar_digitalizador_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/cambiar_digitalizador_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/eliminar_asignacion_modal.html' %}
+{% endif %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/finalizar_digitalizacion_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar DataTables para cada tabla
+            inicializarDataTables();
+            
+            function inicializarDataTables() {
+                const tablas = document.querySelectorAll('.beautiful-table');
+                tablas.forEach(tabla => {
+                    if (tabla.rows.length > 1) {
+                        new simpleDatatables.DataTable(tabla, {
+                            perPage: 10,
+                            perPageSelect: [5, 10, 20, 50],
+                            labels: {
+                                placeholder: "Buscar...",
+                                perPage: "registros por página",
+                                noRows: "No se encontraron solicitudes",
+                                info: "Mostrando {start} a {end} de {rows} solicitudes"
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Event delegation para botones de modales
+            document.addEventListener('click', function(event) {
+                // Botón para asignar digitalizador
+                if (event.target.closest('.btn-asignar')) {
+                    const btn = event.target.closest('.btn-asignar');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    
+                    document.getElementById('solicitudIdAsignar').value = solicitudId;
+                    document.getElementById('coloniaNombreAsignar').textContent = coloniaNombre;
+                    
+                    // Limpiar selección anterior
+                    const usuarioAsignado = document.getElementById('usuarioAsignado');
+                    if (usuarioAsignado) usuarioAsignado.value = '';
+                    const comentarioAsignacion = document.getElementById('comentarioAsignacion');
+                    if (comentarioAsignacion) comentarioAsignacion.value = '';
+                    const asignarError = document.getElementById('asignarError');
+                    if (asignarError) asignarError.textContent = '';
+                    
+                    // ¡CORREGIDO! ID correcto con a minúscula
+                    const modalElement = document.getElementById('asignarDigitalizadorModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+                
+                // Botón para cambiar asignación
+                if (event.target.closest('.btn-cambiar-asignacion')) {
+                    const btn = event.target.closest('.btn-cambiar-asignacion');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const digitalizadorActual = btn.dataset.digitalizadorActual;
+                    const observacionActual = btn.dataset.observacionActual || '';
+                    
+                    document.getElementById('solicitudIdCambiar').value = solicitudId;
+                    document.getElementById('coloniaNombreCambiar').textContent = coloniaNombre;
+                    document.getElementById('digitalizadorActualCambiar').textContent = digitalizadorActual;
+                    document.getElementById('observacionActualCambiar').value = observacionActual;
+                    
+                    // Limpiar selección anterior
+                    const usuarioAsignadoCambiar = document.getElementById('usuarioAsignadoCambiar');
+                    if (usuarioAsignadoCambiar) usuarioAsignadoCambiar.value = '';
+                    const comentarioCambio = document.getElementById('comentarioCambio');
+                    if (comentarioCambio) comentarioCambio.value = '';
+                    const cambiarError = document.getElementById('cambiarError');
+                    if (cambiarError) cambiarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('cambiarDigitalizadorModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+                
+                // Botón para eliminar asignación
+                if (event.target.closest('.btn-eliminar-asignacion')) {
+                    const btn = event.target.closest('.btn-eliminar-asignacion');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const digitalizador = btn.dataset.digitalizador;
+                    
+                    document.getElementById('solicitudIdEliminar').value = solicitudId;
+                    document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
+                    document.getElementById('digitalizadorActualEliminar').textContent = digitalizador;
+                    
+                    // Limpiar formulario
+                    const comentarioEliminacion = document.getElementById('comentarioEliminacion');
+                    if (comentarioEliminacion) comentarioEliminacion.value = '';
+                    const eliminarError = document.getElementById('eliminarError');
+                    if (eliminarError) eliminarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('eliminarAsignacionModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -2,13 +2,14 @@ from django.urls import path
 from sig.views import (
     sig_dashboard, detalle_solicitud, asignar_usuario_solicitud,
     iniciar_digitalizacion, finalizar_digitalizacion, revisar_solicitud,
-    obtener_estados_dashboard, cargar_tabla_estado, cambiar_usuario_solicitud, eliminar_asignacion
+    obtener_estados_dashboard, cargar_tabla_estado, cambiar_usuario_solicitud, eliminar_asignacion, sig_solicitudes
 )
 
 app_name = 'sig'
 
 urlpatterns = [
     path('sig-dashboard/', sig_dashboard, name='sig_dashboard'),
+    path('solicitudes/', sig_solicitudes, name='solicitudes_relevamiento_sig'),
     path('solicitud/<int:solicitud_id>/',
          detalle_solicitud, name='detalle_solicitud'),
     path('solicitud/<int:solicitud_id>/asignar-usuario/',
