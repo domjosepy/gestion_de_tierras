@@ -1,4 +1,4 @@
-<!-- digitalizador/includes/tabla_pendientes.html -->
+{% load gerencia_tags %}
 {% if tareas_pendientes %}
 <div class="table-responsive">
     <table class="beautiful-table table-hover" width="100%" cellspacing="0">
@@ -44,7 +44,7 @@
                 <td class="text-center">
                     {% if tarea.fecha_asignacion %}
                         <small>{{ tarea.fecha_asignacion|date:"d/m/Y" }}</small>
-                        <br><small class="text-muted">{{ tarea.fecha_asignacion|date:"H:i" }}</small>
+                        <br><small class="text-muted">{{ tarea.fecha_asignacion|time_since_detail }}</small>
                     {% else %}
                         <span class="text-muted">No asignada</span>
                     {% endif %}
@@ -58,8 +58,11 @@
                     </span>
                 </td>
                 <td class="text-center">
-                    <small class="text-muted">
-                        {{ tarea.obtener_tiempo_transcurrido|default:"-" }}
+                    <small class="{% if tarea.es_urgente %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                        {{ tarea.obtener_tiempo_transcurrido|format_timedelta }}
+                        {% if tarea.es_urgente %}
+                            <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
+                        {% endif %}
                     </small>
                 </td>
                 <td class="text-center">

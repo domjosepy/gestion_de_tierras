@@ -5,25 +5,16 @@
 
 {% block content %}
 <div class="container-fluid fade-in">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'sig:sig_dashboard' %}">
-                    <i class="fas fa-home me-1"></i>Dashboard SIG
-                </a>
-            </li>
-            <li class="breadcrumb-item active">Solicitud #{{ solicitud.id }}</li>
-        </ol>
-    </nav>
     
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
-            <h2 class="h4 mb-0 text-primary">
-                <i class="fas fa-clipboard-list me-2"></i>Solicitud #{{ solicitud.id }}
+            <h6 class="h3 mb-2 text-info fw-bold">
+                Informacion General de la Solicitud
+            </h6>
+            <h2 class="h4 mb-0 text-warning fw-bold">
+                <i class="fas fa-tractor me-2"></i> {{ solicitud.colonia.nombre }}
             </h2>
-            <p class="text-muted mb-0">{{ solicitud.colonia.nombre }}</p>
         </div>
         
         <div class="btn-group" role="group">
@@ -56,7 +47,7 @@
                     
                     {% if puede_asignar and solicitud.estado in 'pendiente_asignacion_sig,asignado_a_digitalizador' %}
                     <li>
-                        <button class="dropdown-item btn-asignar-detalle" 
+                        <button class="dropdown-item btn-asignar" 
                                 data-solicitud-id="{{ solicitud.id }}"
                                 data-colonia-nombre="{{ solicitud.colonia.nombre }}">
                             <i class="fas fa-user-plus text-primary me-2"></i>Asignar Digitalizador
@@ -99,7 +90,7 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <small class="text-muted d-block">Estado</small>
-                        <span class="badge estado-badge" data-estado="{{ solicitud.estado }}">
+                        <span class="badge bg-warning" data-estado="{{ solicitud.estado }}">
                             {{ solicitud.get_estado_display }}
                         </span>
                     </div>
@@ -178,15 +169,15 @@
                     </div>
                     
                     {% if solicitud.asignado_por %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Asignado por</small>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-user-check text-success"></i>
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Asignado por</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-user-check text-success"></i>
+                                </div>
+                                <span>{{ solicitud.asignado_por.username }}</span>
                             </div>
-                            <span>{{ solicitud.asignado_por.username }}</span>
                         </div>
-                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -214,22 +205,40 @@
                         </div>
                     </div>
                     
-                    {% if distritos %}
+                    
                     <div class="mb-3">
-                        <small class="text-muted d-block">Distrito(s)</small>
-                        {% for distrito in distritos %}
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-map text-warning"></i>
-                            </div>
-                            <div>
-                                <strong>{{ distrito.nombre }}</strong>
-                                <br><small class="text-muted">{{ distrito.departamento.nombre }}</small>
-                            </div>
-                        </div>
-                        {% endfor %}
+                        {% if distritos %}
+                            <small class="text-muted d-block">Distrito</small>
+                            {% for distrito in distritos %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="fas fa-map text-success"></i>
+                                    </div>
+                                    <div>
+                                        <strong>{{ distrito.nombre }}</strong>
+                                        <br><small class="text-muted">Código:{{ distrito.codigo }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
                     </div>
-                    {% endif %}
+                    <div class="mb-3">
+                        {% if departamentos %}
+                            <small class="text-muted d-block">Departamento</small>
+                            {% for departamento in departamentos %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="fas fa-map-marked-alt text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <strong>{{ departamento.nombre }}</strong>
+                                        <br><small class="text-muted">Código: {{ departamento.codigo }}</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    
                     
                     <div class="mb-3">
                         <small class="text-muted d-block">Estado de relevamiento</small>
@@ -319,12 +328,92 @@
 {% if puede_asignar %}
     {% include 'includes/sig/modal/solicitud_relevamiento/asignar_digitalizador_modal.html' %}
 {% endif %}
-{% include 'includes/sig/modal/solicitud_relevamiento/finalizar_digitalizacion_modal.html' %}
-{% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/finalizar_digitalizacion_modal.html' %}
+    {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
 {% endblock %}
 
 
 {% block scripts %}
-<script src="{% static 'js/sig/detalle.js' %}"></script>
+<script>
+    // Event delegation para botones de modales
+            document.addEventListener('click', function(event) {
+                // Botón para asignar digitalizador
+                if (event.target.closest('.btn-asignar')) {
+                    const btn = event.target.closest('.btn-asignar');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    
+                    document.getElementById('solicitudIdAsignar').value = solicitudId;
+                    document.getElementById('coloniaNombreAsignar').textContent = coloniaNombre;
+                    
+                    // Limpiar selección anterior
+                    const usuarioAsignado = document.getElementById('usuarioAsignado');
+                    if (usuarioAsignado) usuarioAsignado.value = '';
+                    const comentarioAsignacion = document.getElementById('comentarioAsignacion');
+                    if (comentarioAsignacion) comentarioAsignacion.value = '';
+                    const asignarError = document.getElementById('asignarError');
+                    if (asignarError) asignarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('asignarDigitalizadorModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+                
+                // Botón para cambiar asignación
+                if (event.target.closest('.btn-cambiar-asignacion')) {
+                    const btn = event.target.closest('.btn-cambiar-asignacion');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const digitalizadorActual = btn.dataset.digitalizadorActual;
+                    const observacionActual = btn.dataset.observacionActual || '';
+                    
+                    document.getElementById('solicitudIdCambiar').value = solicitudId;
+                    document.getElementById('coloniaNombreCambiar').textContent = coloniaNombre;
+                    document.getElementById('digitalizadorActualCambiar').textContent = digitalizadorActual;
+                    document.getElementById('observacionActualCambiar').value = observacionActual;
+                    
+                    // Limpiar selección anterior
+                    const usuarioAsignadoCambiar = document.getElementById('usuarioAsignadoCambiar');
+                    if (usuarioAsignadoCambiar) usuarioAsignadoCambiar.value = '';
+                    const comentarioCambio = document.getElementById('comentarioCambio');
+                    if (comentarioCambio) comentarioCambio.value = '';
+                    const cambiarError = document.getElementById('cambiarError');
+                    if (cambiarError) cambiarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('cambiarDigitalizadorModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+                
+                // Botón para eliminar asignación
+                if (event.target.closest('.btn-eliminar-asignacion')) {
+                    const btn = event.target.closest('.btn-eliminar-asignacion');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const digitalizador = btn.dataset.digitalizador;
+                    
+                    document.getElementById('solicitudIdEliminar').value = solicitudId;
+                    document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
+                    document.getElementById('digitalizadorActualEliminar').textContent = digitalizador;
+                    
+                    // Limpiar formulario
+                    const comentarioEliminacion = document.getElementById('comentarioEliminacion');
+                    if (comentarioEliminacion) comentarioEliminacion.value = '';
+                    const eliminarError = document.getElementById('eliminarError');
+                    if (eliminarError) eliminarError.textContent = '';
+                    
+                    const modalElement = document.getElementById('eliminarAsignacionModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    }
+                }
+            });
+        
+</script>
 
 {% endblock %}

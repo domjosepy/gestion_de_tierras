@@ -98,6 +98,21 @@ class Colonia(models.Model):
             self.codigo = nuevo_codigo
         super().save(*args, **kwargs)
 
+    def departamentos_unicos(self):
+        """
+        Retorna los departamentos únicos asociados a los distritos de la colonia
+        """
+        departamentos = []
+        departamentos_vistos = set()
+
+        for distrito in self.distritos.all():
+            depto = distrito.departamento
+            if depto.id not in departamentos_vistos:
+                departamentos_vistos.add(depto.id)
+                departamentos.append(depto)
+
+        return departamentos
+
     def clean(self):
         if self.pk:
             if self.distritos.count() == 0:

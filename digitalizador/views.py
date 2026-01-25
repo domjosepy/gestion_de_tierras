@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse
 from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
@@ -11,6 +11,7 @@ from .decorators import requiere_ser_digitalizador
 from .froms import PrecatSubirForm
 from .models import PrecatArchivo
 from administrador.models import User
+import os
 
 
 @login_required
@@ -63,7 +64,7 @@ def detalle_tarea(request, tarea_id):
     tarea = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
             'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
-        ).prefetch_related('precat_archivos'),
+        ).prefetch_related('precat_archivos', 'auditorias__cambiado_por'),
         pk=tarea_id,
         usuario_asignado=request.user  # Solo puede ver sus propias tareas
     )
@@ -229,3 +230,30 @@ def subir_precat(request, tarea_id):
     }
 
     return render(request, 'includes/digitalizador/tablas/subir_precat.html', context)
+
+
+@login_required
+@requiere_ser_digitalizador
+def descargar_precat(request, archivo_id):
+    """Descargar archivo Precat con autenticación"""
+    archivo = get_object_or_404(PrecatArchivo, pk=archivo_id)
+
+    # Verificar permisos: solo el usuario que subió o líder SIG puede descargar
+    puede_descargar = (
+        archivo.subido_por == request.user or
+        request.user.groups.filter(name__icontains='SIG_LIDER').exists()
+    )
+
+    if not puede_descargar:
+        return HttpResponseForbidden("No tiene permisos para descargar este archivo")
+
+    if not archivo.archivo_existe:
+        messages.error(request, "El archivo no existe en el servidor")
+        return redirect('digitalizador:detalle_tarea', tarea_id=archivo.solicitud.id)
+
+    response = FileResponse(
+        archivo.archivo.open('rb'),
+        content_type='application/octet-stream'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{archivo.get_nombre_archivo()}"'
+    return response

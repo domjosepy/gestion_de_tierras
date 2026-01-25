@@ -1,27 +1,18 @@
-
 from django import template
-from gerencia.models import SolicitudRelevamiento
 from django.utils import timezone
+from django.utils.timesince import timesince
 import datetime
 
 register = template.Library()
 
 
 @register.filter
-def estado_no_finalizado(queryset):
-    """Filtra las solicitudes que NO están en estado finalizado o rechazado"""
-    return queryset.exclude(estado__in=["rechazado", "finalizado"])
-
-
-@register.filter
 def format_timedelta(td):
     """Formatea un timedelta a texto legible"""
-    if not td:
-        return "-"
-
     if not isinstance(td, datetime.timedelta):
-        return str(td)
+        return td
 
+    # Si es menos de 1 día
     if td.days == 0:
         horas = td.seconds // 3600
         minutos = (td.seconds % 3600) // 60
@@ -33,6 +24,7 @@ def format_timedelta(td):
         else:
             return "Recién"
 
+    # Si es 1 día o más
     if td.days == 1:
         return "1 día"
     else:
@@ -42,6 +34,7 @@ def format_timedelta(td):
 @register.filter
 def time_since_detail(datetime_obj):
     """Muestra tiempo desde una fecha específica con detalles"""
+
     if not datetime_obj:
         return "Nunca"
 

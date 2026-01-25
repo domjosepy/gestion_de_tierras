@@ -186,6 +186,7 @@ def detalle_solicitud(request, solicitud_id):
 
     # Obtener información de la colonia
     distritos = solicitud.colonia.distritos.all()
+    departamentos = [d.departamento for d in distritos]
 
     # Obtener auditorías
     auditorias = solicitud.auditorias.all().select_related('cambiado_por')
@@ -203,6 +204,7 @@ def detalle_solicitud(request, solicitud_id):
     context = {
         'solicitud': solicitud,
         'distritos': distritos,
+        'departamentos': departamentos,
         'auditorias': auditorias,
         'puede_asignar': puede_asignar,
         'usuarios_disponibles': usuarios_disponibles,

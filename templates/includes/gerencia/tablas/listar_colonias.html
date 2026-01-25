@@ -15,13 +15,10 @@
                 <i class="fas fa-tractor me-3"></i>Colonias
             </h2>
         </div>
-        
-            <a href="{% url 'gerencia:lista_solicitudes_relevamiento' %}" class="btn btn-outline-info ms-4">
-                <i class="fas fa-file-upload me-0"></i>
-                <i class="fas fa-search me-3"></i>Solicitudes de Relevamiento
-            </a>
-        
-       
+        <a href="{% url 'gerencia:lista_solicitudes_relevamiento' %}" class="btn btn-outline-info ms-4">
+            <i class="fas fa-file-upload me-0"></i>
+            <i class="fas fa-search me-3"></i>Solicitudes de Relevamiento
+        </a>
     </div>
 
     <div class="card shadow mb-4">
@@ -45,22 +42,37 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Inicio de filtros -->
                         {% for colonia in colonias %}
                         {% with total_solicitudes=colonia.solicitudes_relevamiento.count %}
-                        <tr class="text-center">
+                        <tr>
                             <td class="text-uppercase">
-                                <strong>{{ colonia.distritos.first.departamento.codigo }}.</strong> {{ colonia.distritos.first.departamento.nombre }}
+                                <!-- DEPARTAMENTOS ÚNICOS -->
+                                {% with departamentos_unicos=colonia.departamentos_unicos %}
+                                    {% for depto in departamentos_unicos %}
+                                        <div>
+                                            <strong>{{ depto.codigo }}.</strong> {{ depto.nombre }}
+                                            {% if not forloop.last %}<br>{% endif %}
+                                        </div>
+                                    {% empty %}
+                                        <span class="text-muted">Sin departamento</span>
+                                    {% endfor %}
+                                {% endwith %}
                             </td>
-                            <td>
-                                {% for distrito in colonia.distritos.all %}
-                                <span><strong>{{distrito.codigo}}.</strong> {{ distrito.nombre }}</span>
-                                {% endfor %}
-                            </td>
-                            <td>{{ colonia.codigo }}</td>
-                            <td class="text-uppercase">{{ colonia.nombre }}</td>
                             
                             <td>
+                                <!-- DISTRITOS -->
+                                {% for distrito in colonia.distritos.all %}
+                                    <div class="mb-1">
+                                        <strong>{{ distrito.codigo }}.</strong> {{ distrito.nombre }}
+                                        
+                                    </div>
+                                {% endfor %}
+                            </td>
+                            
+                            <td class="text-center">{{ colonia.codigo }}</td>
+                            <td class="text-uppercase">{{ colonia.nombre }}</td>
+                            
+                            <td class="text-center">
                                 <span class="badge 
                                     {% if total_solicitudes > 0 %} 
                                         {% if colonia.num_solicitudes_activas > 0 %}bg-warning{% else %}bg-info{% endif %}
@@ -94,7 +106,7 @@
                                             data-colonianombre="{{ colonia.nombre }}"
                                             data-coloniacodigo="{{ colonia.codigo }}"
                                             data-coloniadistritos="{% for distrito in colonia.distritos.all %}{{ distrito.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
-                                            data-departamentos="{% for distrito in colonia.distritos.all %}{{ distrito.departamento.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                                            data-departamentos="{% for depto in colonia.departamentos_unicos %}{{ depto.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}"
                                             data-tienesolicitudes="{% if total_solicitudes > 0 %}true{% else %}false{% endif %}"
                                             data-cantsolicitudes="{{ total_solicitudes }}"
                                             data-tienerelevamiento="{{ colonia.tiene_relevamiento|yesno:'true,false' }}"
@@ -135,7 +147,7 @@
                                                 {% endif %}
                                             {% endwith %}
                                             data-tienerelevamiento="{{ colonia.tiene_relevamiento|yesno:'true,false' }}">
-                                        <i class="fas fa-file-upload me-1"></i>
+                                        <i class="fas fa-clipboard-list me-1"></i>
                                         <i class="fas fa-search"></i>
                                     </button>
                                 {% else %}

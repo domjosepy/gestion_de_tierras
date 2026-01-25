@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Digitalizador - Dashboard{% endblock %}
+{% block title %}Digitalizador{% endblock %}
 
 {% block content %}
 <div class="container-fluid fade-in">
@@ -99,21 +99,18 @@
                     <button class="nav-link active" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button">
                         <i class="fas fa-clock me-1"></i>
                         Pendientes
-                        <span class="badge bg-warning ms-1">{{ tareas_pendientes.count }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="proceso-tab" data-bs-toggle="tab" data-bs-target="#proceso" type="button">
                         <i class="fas fa-spinner me-1"></i>
                         En Proceso
-                        <span class="badge bg-info ms-1">{{ tareas_en_proceso.count }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button">
                         <i class="fas fa-check-circle me-1"></i>
                         Por Revisar
-                        <span class="badge bg-primary ms-1">{{ tareas_pendientes_revision.count }}</span>
                     </button>
                 </li>
             </ul>
@@ -155,9 +152,9 @@
                     Al iniciar, la tarea cambiará a estado "En Proceso de Digitalización"
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-info" id="btnConfirmarIniciar">
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-info" id="btnConfirmarIniciar">
                     <i class="fas fa-play me-2"></i>Iniciar Digitalización
                 </button>
             </div>

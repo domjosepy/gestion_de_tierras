@@ -11,4 +11,7 @@ urlpatterns = [
          views.iniciar_digitalizacion, name='iniciar_digitalizacion'),
     path('tarea/<int:tarea_id>/subir-precat/',
          views.subir_precat, name='subir_precat'),
+    path('descargar/precat/<int:archivo_id>/',
+         views.descargar_precat,
+         name='descargar_precat'),
 ]

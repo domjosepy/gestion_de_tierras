@@ -292,7 +292,10 @@ class ColoniaListView(LoginRequiredMixin, ListView):
                     ]
                 )
             )
-        ).prefetch_related('distritos', 'distritos__departamento')
+        ).prefetch_related(
+            'distritos',
+            'distritos__departamento'  # Asegúrate de incluir esto
+        )
 
         # Aplicar filtros
         q = self.request.GET.get('q')

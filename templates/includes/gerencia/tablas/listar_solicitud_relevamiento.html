@@ -132,14 +132,14 @@
                     <thead class="table-light">
                         <tr>
                             <th class="text-center">#</th>
-                            <th class="text-center">Departamento / Distrito / Colonia</th>
+                            <th class="text-center">Datos Geográficos</th>
                             <th class="text-center">Tipo</th>
                             <th class="text-center">Prioridad</th>
-                            <th class="text-center">Grupo Asignado</th>
+                            <th class="text-center">Grupo</th>
                             <th class="text-center">Estado</th>
-                            <th class="text-center">Usuario Asignado</th>
+                            <th class="text-center">Usuario</th>
                             <th class="text-center">Observación</th>
-                            <th class="text-center">Creacion: F/H</th>
+                            <th class="text-center">Creación</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -148,13 +148,14 @@
                         <tr>
                             <td class="text-center">{{ forloop.counter }}</td>
                             <td>
-                                {% if solicitud.departamento and solicitud.distrito %}
-                                    {{ solicitud.departamento.nombre }} / 
-                                    {{ solicitud.distrito.nombre }} / 
-                                    <strong>{{ solicitud.colonia.nombre }}</strong>
-                                {% else %}
-                                    <strong>{{ solicitud.colonia.nombre }}</strong>
-                                {% endif %}
+                                {% with distrito=solicitud.colonia.distritos.first %}
+                                    {% if distrito %}
+                                        <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                                        <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Sin ubicación</span>
+                                    {% endif %}
+                                {% endwith %}
                             </td>
                             <td class="text-center">
                                 <span class="badge 
