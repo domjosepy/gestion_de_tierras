@@ -11,7 +11,8 @@
                 <th class="text-center">Observaciones</th>
                 <th class="text-center">Tiempo Total</th>
                 <th class="text-center">Archivos</th>
-                <th class="text-center">Estado Revisión</th>
+                <th class="text-center">Líder SIG</th>
+                <th class="text-center">Estado</th>
                 <th class="text-center">Acciones</th>
             </tr>
         </thead>
@@ -22,7 +23,6 @@
                 <td class="text-center">
                     <small>{{ tarea.fecha_modificacion|date:"d/m/Y" }}</small>
                     <br><small class="text-muted">{{ tarea.fecha_modificacion|date:"H:i" }}</small>
-                    <br><small class="text-muted">enviado</small>
                 </td>
                 <td>
                     {% with distrito=tarea.colonia.distritos.first %}
@@ -40,13 +40,11 @@
                     </span>
                 </td>
                 <td class="text-center">
-                    {% with ultima_observacion=tarea.observaciones|truncatechars:50 %}
-                        {% if ultima_observacion %}
-                            <small>{{ ultima_observacion }}</small>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    {% endwith %}
+                    {% if tarea.observaciones %}
+                        <small>{{ tarea.observaciones|truncatechars:50 }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
                 </td>
                 <td class="text-center">
                     {% if tarea.tiempo_digitalizacion %}
@@ -91,19 +89,41 @@
                     {% endwith %}
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-primary">
-                        <i class="fas fa-user-check me-1"></i>
-                        {{ tarea.grupo_asignado.lider.get_full_name|default:tarea.grupo_asignado.lider.username }}
-                    </span>
-                    <br>
-                    <small class="text-muted">Líder SIG</small>
+                    {% if tarea.grupo_asignado and tarea.grupo_asignado.lider %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-user-check me-1"></i>
+                            {{ tarea.grupo_asignado.lider.get_full_name|default:tarea.grupo_asignado.lider.username }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-user-times me-1"></i>
+                            Sin líder
+                        </span>
+                    {% endif %}
                 </td>
                 <td class="text-center">
-                    <a href="{% url 'digitalizador:detalle_tarea' tarea.id %}" 
-                       class="btn btn-sm btn-info" 
-                       title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </a>
+                    <span class="badge bg-warning">
+                        <i class="fas fa-clock me-1"></i>
+                        Pendiente
+                    </span>
+                    <br>
+                    <small class="text-muted">Revisión SIG</small>
+                </td>
+                <td class="text-center">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'digitalizador:detalle_tarea' tarea.id %}" 
+                           class="btn btn-sm btn-info" 
+                           title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        {% if tarea.precat_archivos.exists %}
+                            <a href="{% url 'digitalizador:descargar_archivo_digitalizador' tarea.precat_archivos.first.id %}" 
+                               class="btn btn-sm btn-success" 
+                               title="Descargar archivos">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        {% endif %}
+                    </div>
                 </td>
             </tr>
             {% endfor %}

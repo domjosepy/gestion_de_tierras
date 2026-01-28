@@ -1,0 +1,104 @@
+<div class="container-fluid">
+    <div class="alert alert-info mb-3">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Solicitud #{{ solicitud.id }}</strong> - {{ solicitud.colonia.nombre }}
+    </div>
+
+    <!-- Archivos Precat (ZIP/RAR) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h6 class="text-info border-bottom pb-2">
+                <i class="fas fa-file-zipper me-2"></i>Archivos Precat
+                <span class="badge bg-info">{{ archivos_precat|length }}</span>
+            </h6>
+            
+            {% if archivos_precat %}
+            <div class="list-group">
+                {% for archivo in archivos_precat %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-file-zipper text-info me-2"></i>
+                            <strong>{{ archivo.get_nombre_archivo }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>{{ archivo.subido_por.get_full_name|default:archivo.subido_por.username }}
+                                | <i class="fas fa-clock me-1"></i>{{ archivo.fecha_subida|date:"d/m/Y H:i" }}
+                                | <i class="fas fa-weight-hanging me-1"></i>{{ archivo.get_tamanio_mb }} MB
+                            </small>
+                            {% if archivo.observaciones %}
+                            <br>
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-sticky-note me-1"></i>{{ archivo.observaciones }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <a href="{% url 'sig:descargar_archivo_precat' archivo.id %}" 
+                               class="btn btn-sm btn-outline-primary" 
+                               title="Descargar">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                No hay archivos Precat subidos para esta solicitud.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Archivos Planos (PDF) -->
+    <div class="row">
+        <div class="col-12">
+            <h6 class="text-danger border-bottom pb-2">
+                <i class="fas fa-file-pdf me-2"></i>Planos de Referencia
+                <span class="badge bg-danger">{{ archivos_planos|length }}</span>
+            </h6>
+            
+            {% if archivos_planos %}
+            <div class="list-group">
+                {% for archivo in archivos_planos %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-file-pdf text-danger me-2"></i>
+                            <strong>{{ archivo.get_nombre_archivo }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                <i class="fas fa-user me-1"></i>{{ archivo.subido_por.get_full_name|default:archivo.subido_por.username }}
+                                | <i class="fas fa-clock me-1"></i>{{ archivo.fecha_subida|date:"d/m/Y H:i" }}
+                                | <i class="fas fa-weight-hanging me-1"></i>{{ archivo.get_tamanio_mb }} MB
+                            </small>
+                            {% if archivo.observaciones %}
+                            <br>
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-sticky-note me-1"></i>{{ archivo.observaciones }}
+                            </small>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <a href="{% url 'sig:descargar_archivo_precat' archivo.id %}" 
+                               class="btn btn-sm btn-outline-primary" 
+                               title="Descargar">
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-light">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                No hay planos subidos para esta solicitud.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

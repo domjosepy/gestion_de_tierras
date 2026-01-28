@@ -397,15 +397,16 @@ class SolicitudRelevamiento(models.Model):
                     # Verificar si es la asignación inicial a digitalizador
                     if not (estado_anterior == 'pendiente_asignacion_sig'
                             and self.estado == 'asignado_a_digitalizador'):
-                        # Solo si NO es la asignación inicial, verificar cambios de grupo
-                        try:
-                            grupo_anterior = original.grupo_asignado
-                            if grupo_anterior != self.grupo_asignado:
-                                self.usuario_asignado = None
-                                self.asignado_por = None
-                                self.fecha_asignacion = None
-                        except:
-                            pass
+                        if self.estado != 'pendiente_revision_sig':
+                            # Solo si NO es la asignación inicial, verificar cambios de grupo
+                            try:
+                                grupo_anterior = original.grupo_asignado
+                                if grupo_anterior != self.grupo_asignado:
+                                    self.usuario_asignado = None
+                                    self.asignado_por = None
+                                    self.fecha_asignacion = None
+                            except:
+                                pass
 
         # Guardar primero
         super().save(*args, **kwargs)
@@ -517,7 +518,7 @@ class SolicitudRelevamiento(models.Model):
 
     def _asignar_grupo_automaticamente(self):
         """Asignar grupo automáticamente basado en el estado actual"""
-        if self.estado in ['asignado_a_digitalizador', 'en_proceso_digitalizacion'] and self.usuario_asignado:
+        if self.estado in ['asignado_a_digitalizador', 'en_proceso_digitalizacion', 'pendiente_revision_sig'] and self.usuario_asignado:
             # Mantener la asignación existente
             pass
         else:
@@ -670,8 +671,8 @@ class SolicitudRelevamiento(models.Model):
 
         # Definir umbrales de urgencia (puedes ajustar estos valores)
         if self.estado in ["en_proceso_digitalizacion", "en_proceso_analisis", "en_ejecucion_campo"]:
-            # Si está en proceso más de 5 días
-            return tiempo_transcurrido.days > 5
+            # Si está en proceso más de 30 días
+            return tiempo_transcurrido.days > 30
 
         if self.estado in ["pendiente_asignacion_sig", "pendiente_asignacion_analista", "pendiente_revision_sig", "pendiente_revision_analista"]:
             # Si está pendiente más de 2 días

@@ -2,14 +2,16 @@ from django.shortcuts import render
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, HttpResponseForbidden
 from django.template.loader import render_to_string
 from django.db.models import Q, Count, Avg
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
-from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from administrador.models import User
+from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
+from digitalizador.models import PrecatArchivo
+
 from sig.decorators import requiere_ser_sig, requiere_ser_lider_sig
 from django.template.loader import render_to_string
 from django.db import transaction
@@ -160,6 +162,8 @@ def sig_solicitudes(request):
     }
 
     return render(request, 'includes/sig/tablas/solicitudes_relevamiento_sig.html', context)
+
+# ------------------ Detalle y Gestión de Solicitudes ------------------ #
 
 
 @login_required
@@ -604,3 +608,121 @@ def revisar_solicitud(request, solicitud_id):
         'message': mensaje,
         'redirect_url': reverse('sig:sig_dashboard')
     })
+
+# ------------------ Gestión de Archivos Precat ------------------ #
+
+
+@login_required
+@requiere_ser_sig
+def listar_archivos_precat(request):
+    """
+    Listar todos los archivos Precat disponibles para el grupo SIG
+    """
+    grupos_usuario = request.user.grupos_pertenece.filter(
+        nombre__icontains='SIG',
+        activo=True
+    )
+
+    if not grupos_usuario.exists():
+        messages.warning(request, "No pertenece a ningún grupo SIG activo.")
+        return render(request, 'sig/archivos_precat.html', {'archivos': []})
+
+    # Obtener solicitudes del grupo
+    solicitudes_grupo = SolicitudRelevamiento.objects.filter(
+        grupo_asignado__in=grupos_usuario
+    )
+
+    # Obtener archivos Precat de esas solicitudes
+    archivos_precat = PrecatArchivo.objects.filter(
+        solicitud__in=solicitudes_grupo
+    ).select_related(
+        'solicitud',
+        'solicitud__colonia',
+        'subido_por'
+    ).order_by('-fecha_subida')
+
+    # Estadísticas
+    estadisticas = {
+        'total': archivos_precat.count(),
+        'precat': archivos_precat.filter(tipo_archivo=PrecatArchivo.TIPO_PRECAT).count(),
+        'planos': archivos_precat.filter(tipo_archivo=PrecatArchivo.TIPO_PLANOS).count(),
+    }
+
+    context = {
+        'archivos': archivos_precat,
+        'estadisticas': estadisticas,
+        'grupos_usuario': grupos_usuario,
+    }
+
+    return render(request, 'sig/archivos_precat.html', context)
+
+
+@login_required
+@requiere_ser_sig
+def descargar_archivo_precat(request, archivo_id):
+    """
+    Descargar archivo Precat (para usuarios SIG)
+    """
+    archivo = get_object_or_404(PrecatArchivo, pk=archivo_id)
+
+    # Verificar permisos: usuario debe pertenecer al mismo grupo SIG
+    grupos_usuario = request.user.grupos_pertenece.filter(
+        nombre__icontains='SIG',
+        activo=True
+    )
+
+    if archivo.solicitud.grupo_asignado not in grupos_usuario:
+        messages.error(
+            request, "No tiene permisos para descargar este archivo.")
+        return redirect('sig:sig_dashboard')
+
+    # Verificar que el archivo existe
+    if not archivo.archivo_existe:
+        messages.error(request, "El archivo no existe en el servidor.")
+        return redirect('sig:listar_archivos_precat')
+
+    try:
+        response = FileResponse(
+            archivo.archivo.open('rb'),
+            content_type='application/octet-stream'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{archivo.get_nombre_archivo()}"'
+        return response
+    except Exception as e:
+        messages.error(request, f"Error al descargar el archivo: {str(e)}")
+        return redirect('sig:listar_archivos_precat')
+
+
+@login_required
+@requiere_ser_sig
+def obtener_archivos_solicitud(request, solicitud_id):
+    """
+    Obtener archivos de una solicitud específica (para modal)
+    """
+    solicitud = get_object_or_404(SolicitudRelevamiento, pk=solicitud_id)
+
+    # Verificar permisos
+    grupos_usuario = request.user.grupos_pertenece.filter(
+        nombre__icontains='SIG',
+        activo=True
+    )
+
+    if solicitud.grupo_asignado not in grupos_usuario:
+        return JsonResponse({'error': 'No tiene permisos'}, status=403)
+
+    # Obtener archivos
+    archivos_precat = solicitud.precat_archivos.filter(
+        tipo_archivo=PrecatArchivo.TIPO_PRECAT
+    )
+    archivos_planos = solicitud.precat_archivos.filter(
+        tipo_archivo=PrecatArchivo.TIPO_PLANOS
+    )
+
+    # Renderizar template
+    html = render_to_string('includes/sig/modal/archivos_precat_lista.html', {
+        'archivos_precat': archivos_precat,
+        'archivos_planos': archivos_planos,
+        'solicitud': solicitud,
+    })
+
+    return JsonResponse({'html': html})

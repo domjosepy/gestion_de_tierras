@@ -1,4 +1,4 @@
-<!-- digitalizador/includes/tabla_proceso.html -->
+{% load gerencia_tags %}
 {% if tareas_en_proceso %}
 <div class="table-responsive">
     <table class="beautiful-table table-hover" width="100%" cellspacing="0">
@@ -47,7 +47,7 @@
                 </td>
                 <td class="text-center">
                     <small class="{% if tarea.es_urgente %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                        {{ tarea.obtener_tiempo_etapa_actual|default:"-" }}
+                        {{ tarea.obtener_tiempo_etapa_actual|format_timedelta }}
                     </small>
                     {% if tarea.es_urgente %}
                         <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Urgente</small>

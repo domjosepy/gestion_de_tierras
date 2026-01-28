@@ -179,50 +179,6 @@ def asignar_grupo(request, solicitud_id):
 
     return JsonResponse({'success': True, 'message': f'Grupo {grupo.nombre} asignado'})
 
-# ASIGNAR USUARIO A SOLICITUD verificar al parecer hay que eliminar
-
-
-@login_required
-@require_POST
-def asignar_usuario(request, solicitud_id):
-    """Asigna un usuario a la solicitud (AJAX)"""
-    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
-    usuario_id = request.POST.get('usuario_id')
-
-    # Validar que haya grupo asignado
-    if not solicitud.grupo_asignado:
-        return JsonResponse({'error': 'No hay grupo asignado'}, status=400)
-
-    # Verificar permisos (líder del grupo asignado o superusuario)
-    if not (request.user == solicitud.grupo_asignado.lider or request.user.is_superuser):
-        return JsonResponse({'error': 'No tiene permisos para asignar usuarios'}, status=403)
-
-    # Obtener usuario
-    usuario = get_object_or_404(
-        User, id=usuario_id, estado='ACTIVO', is_active=True)
-
-    # Verificar que el usuario pertenece al grupo
-    if usuario not in solicitud.grupo_asignado.usuarios.all():
-        return JsonResponse({'error': 'El usuario no pertenece al grupo asignado'}, status=400)
-
-    # Asignar usuario
-    solicitud.usuario_asignado = usuario
-    solicitud.asignado_por = request.user
-    solicitud.save()
-
-    # Crear auditoría
-    SolicitudRelevamientoAudit.objects.create(
-        solicitud=solicitud,
-        previo="Sin usuario asignado",
-        nuevo=f"Usuario: {usuario.username}",
-        cambiado_por=request.user,
-        comentario=f"Asignado a {usuario.username}"
-    )
-
-    return JsonResponse({
-        'success': True,
-        'message': f'Usuario {usuario.username} asignado correctamente'
-    })
 
 # CAMBIAR ESTADO DE SOLICITUD
 

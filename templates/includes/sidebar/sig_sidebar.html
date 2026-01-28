@@ -51,78 +51,13 @@
           <a class="collapse-item" href="{% url 'sig:solicitudes_relevamiento_sig' %}">
             <i class="fas fa-file-upload me-2"></i>Solicitudes de Relevamiento
           </a>
-          <a class="collapse-item" href="#">
-            <i class="fas fa-vector-square me-2"></i>Parcelarios
-          </a>
-          <a class="collapse-item" href="#">
-            <i class="fas fa-city me-2"></i>Colonias-Catastro
-          </a>
-          <a class="collapse-item" href="#">
-            <i class="fas fa-draw-polygon me-2"></i>Delineación
+          <a class="collapse-item" href="{% url 'sig:listar_archivos_precat' %}">
+            <i class="fas fa-vector-square me-2"></i>Precat
           </a>
         </div>
       </div>
     </li>
 
-    <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseMapas" aria-expanded="false" aria-controls="collapseMapas" title="Mapas y Visores">
-        <i class="fas fa-map"></i>
-        <span>Mapas y Visores</span>
-      </a>
-      <div id="collapseMapas" class="collapse">
-        <div class="collapse-inner">
-          <a class="collapse-item" href="#">
-            <i class="fas fa-map-marked-alt me-2"></i>Visor de Mapas
-          </a>
-          <a class="collapse-item" href="#">
-            <i class="fas fa-satellite me-2"></i>Imágenes Satelitales
-          </a>
-        </div>
-      </div>
-    </li>
-
-    <div class="sidebar-heading">Módulos</div>
-    
-    <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAnalisis" aria-expanded="false" aria-controls="collapseAnalisis" title="Análisis">
-        <i class="fas fa-chart-bar"></i>
-        <span>Análisis</span>
-      </a>
-      <div id="collapseAnalisis" class="collapse">
-        <div class="collapse-inner">
-          <a class="collapse-item" href="#">
-            <i class="fas fa-chart-area me-2"></i>Análisis Espacial
-          </a>
-          <a class="collapse-item" href="#">
-            <i class="fas fa-ruler-combined me-2"></i>Mediciones
-          </a>
-        </div>
-      </div>
-    </li>
-
-    <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseReportes" aria-expanded="false" aria-controls="collapseReportes" title="Reportes SIG">
-        <i class="fas fa-file-alt"></i>
-        <span>Reportes SIG</span>
-      </a>
-      <div id="collapseReportes" class="collapse">
-        <div class="collapse-inner">
-          <a class="collapse-item" href="#">
-            <i class="fas fa-map-marked-alt me-2"></i>Reportes Territoriales
-          </a>
-          <a class="collapse-item" href="#">
-            <i class="fas fa-file-export me-2"></i>Exportar Datos
-          </a>
-        </div>
-      </div>
-    </li>
-
-    <li class="nav-item">
-      <a class="nav-link" href="#" title="Configuración">
-        <i class="fas fa-cogs"></i>
-        <span>Configuración</span>
-      </a>
-    </li>
   </ul>
 
   <button id="sidebarToggle">

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% load gerencia_tags %}
 {% block title %}Digitalización - {{ tarea.colonia.nombre }}{% endblock %}
 
 {% block content %}
@@ -131,11 +131,11 @@
                         <table class="table table-sm table-borderless">
                             <tr>
                                 <td class="text-muted">Tiempo asignado:</td>
-                                <td>{{ tarea.obtener_tiempo_transcurrido|default:"-" }}</td>
+                                <td>{{ tarea.obtener_tiempo_transcurrido|format_timedelta }}</td>
                             </tr>
                             <tr>
                                 <td class="text-muted">Tiempo etapa actual:</td>
-                                <td>{{ tarea.obtener_tiempo_etapa_actual|default:"-" }}</td>
+                                <td>{{ tarea.obtener_tiempo_etapa_actual|format_timedelta }}</td>
                             </tr>
                         </table>
                     </div>
@@ -264,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('btnConfirmarIniciar').addEventListener('click', function() {
             const tareaId = this.getAttribute('data-tarea-id');
             
+            // Usar URL relativa basada en la estructura de URLs
             fetch(`/digitalizador/tarea/${tareaId}/iniciar/`, {
                 method: 'POST',
                 headers: {
@@ -274,6 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Redirigir usando la URL del JSON response
                     window.location.href = data.redirect_url;
                 } else {
                     alert(data.message || 'Error al iniciar digitalización');

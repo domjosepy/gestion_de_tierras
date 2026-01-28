@@ -8,7 +8,7 @@ from core.views import (
 from gerencia.views import (
     lista_solicitudes_relevamiento, obtener_datos_solicitud, crear_solicitud_relevamiento, editar_solicitud_relevamiento,
     eliminar_solicitud_relevamiento, detalle_solicitud,
-    asignar_grupo, asignar_usuario, cambiar_estado, api_info_colonia
+    asignar_grupo, cambiar_estado, api_info_colonia
 )
 
 app_name = "gerencia"
@@ -77,9 +77,6 @@ urlpatterns = [
 
     path('solicitudes/<int:solicitud_id>/asignar-grupo/',
          asignar_grupo, name='asignar_grupo'),
-
-    path('solicitudes/<int:solicitud_id>/asignar-usuario/',
-         asignar_usuario, name='asignar_usuario'),
 
     path('solicitudes/<int:solicitud_id>/cambiar-estado/',
          cambiar_estado, name='cambiar_estado'),

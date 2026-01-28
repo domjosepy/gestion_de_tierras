@@ -68,7 +68,7 @@ class EditarSolicitudRelevamientoForm(forms.ModelForm):
     """Formulario solo para editar observaciones y prioridad"""
     class Meta:
         model = SolicitudRelevamiento
-        fields = ["prioridad", "observaciones"]  # AGREGAR prioridad
+        fields = ["prioridad", "observaciones"]
         widgets = {
             "observaciones": forms.Textarea(attrs={
                 "class": "form-control",
@@ -81,6 +81,6 @@ class EditarSolicitudRelevamientoForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Personalizar etiquetas si lo deseas
+        # Personalizar etiquetas
         self.fields['prioridad'].label = "Prioridad"
         self.fields['prioridad'].help_text = "Seleccione la urgencia de la solicitud"

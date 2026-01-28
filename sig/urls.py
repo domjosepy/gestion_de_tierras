@@ -1,8 +1,9 @@
 from django.urls import path
 from sig.views import (
-    sig_dashboard, detalle_solicitud, asignar_usuario_solicitud,
+    listar_archivos_precat, sig_dashboard, detalle_solicitud, asignar_usuario_solicitud,
     iniciar_digitalizacion, finalizar_digitalizacion, revisar_solicitud,
-    obtener_estados_dashboard, cargar_tabla_estado, cambiar_usuario_solicitud, eliminar_asignacion, sig_solicitudes
+    obtener_estados_dashboard, cargar_tabla_estado, cambiar_usuario_solicitud, eliminar_asignacion, sig_solicitudes,
+    descargar_archivo_precat, obtener_archivos_solicitud
 )
 
 app_name = 'sig'
@@ -24,10 +25,15 @@ urlpatterns = [
          finalizar_digitalizacion, name='finalizar_digitalizacion'),
     path('solicitud/<int:solicitud_id>/revisar/',
          revisar_solicitud, name='revisar_solicitud'),
-
-    # Nuevas URLs para dashboard dinámico
     path('dashboard/estados/', obtener_estados_dashboard,
          name='obtener_estados_dashboard'),
     path('dashboard/tabla/<str:estado>/',
          cargar_tabla_estado, name='cargar_tabla_estado'),
+
+    path('archivos-precat/', listar_archivos_precat,
+         name='listar_archivos_precat'),
+    path('descargar-precat/<int:archivo_id>/',
+         descargar_archivo_precat, name='descargar_archivo_precat'),
+    path('solicitud/<int:solicitud_id>/archivos/',
+         obtener_archivos_solicitud, name='obtener_archivos_solicitud'),
 ]

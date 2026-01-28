@@ -25,7 +25,7 @@ def requiere_ser_digitalizador(view_func):
                         'en_proceso_digitalizacion', 'pendiente_revision_sig']
         ).exists()
 
-        # Verificar si pertenece a grupo SIG (alternativo)
+        # Verificar si pertenece a grupo SIG
         en_grupo_sig = request.user.grupos_pertenece.filter(
             nombre__icontains='SIG',
             activo=True

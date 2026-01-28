@@ -26,7 +26,7 @@ def digitalizador_dashboard(request):
         estado__in=['asignado_a_digitalizador',
                     'en_proceso_digitalizacion', 'pendiente_revision_sig']
     ).select_related(
-        'colonia', 'grupo_asignado', 'creado_por'
+        'colonia', 'grupo_asignado', 'creado_por', 'grupo_asignado__lider'
     ).prefetch_related(
         'precat_archivos'
     ).order_by('-fecha_modificacion')
@@ -61,12 +61,13 @@ def detalle_tarea(request, tarea_id):
     """
     Detalle de una tarea específica para digitalización
     """
+
     tarea = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
             'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
-        ).prefetch_related('precat_archivos', 'auditorias__cambiado_por'),
+        ).prefetch_related('precat_archivos'),
         pk=tarea_id,
-        usuario_asignado=request.user  # Solo puede ver sus propias tareas
+        usuario_asignado=request.user
     )
 
     # Verificar que tiene permisos para esta tarea
@@ -120,7 +121,6 @@ def iniciar_digitalizacion(request, tarea_id):
     try:
         with transaction.atomic():
             # Cambiar estado
-            estado_anterior = tarea.estado
             tarea.estado = 'en_proceso_digitalizacion'
             tarea.fecha_inicio_etapa = timezone.now()
             tarea.save()
@@ -129,24 +129,29 @@ def iniciar_digitalizacion(request, tarea_id):
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=tarea,
                 campo='estado',
-                valor_anterior=estado_anterior,
-                valor_nuevo=tarea.estado,
+                valor_anterior='asignado_a_digitalizador',
+                valor_nuevo='en_proceso_digitalizacion',
                 cambiado_por=request.user,
                 comentario=f'Digitalización iniciada por {request.user.get_full_name()}'
             )
 
-            messages.success(request, 'Digitalización iniciada correctamente.')
+            redirect_url = reverse(
+                'digitalizador:detalle_tarea', args=[tarea_id])
 
             return JsonResponse({
                 'success': True,
                 'message': 'Digitalización iniciada',
                 'estado': tarea.get_estado_display(),
-                'redirect_url': reverse('includes/digitalizador/detalle_tarea', args=[tarea_id])
+                'redirect_url': redirect_url
             })
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
+
         return JsonResponse({
             'success': False,
-            'message': f'Error al iniciar digitalización: {str(e)}'
+            'message': f'Error al iniciar digitalización: {str(e)}',
+            'traceback': error_traceback
         }, status=500)
 
 
@@ -167,7 +172,7 @@ def subir_precat(request, tarea_id):
             request,
             f'No puede subir archivos en el estado actual: {tarea.get_estado_display()}'
         )
-        return redirect('includes/digitalizador/detalle_tarea', tarea_id=tarea_id)
+        return redirect('digitalizador:detalle_tarea', tarea_id=tarea_id)
 
     if request.method == 'POST':
         form = PrecatSubirForm(request.POST, request.FILES)
@@ -214,7 +219,7 @@ def subir_precat(request, tarea_id):
                         request,
                         'Archivos subidos correctamente. La solicitud está ahora pendiente de revisión por el Líder SIG.'
                     )
-                    return redirect('digitalizador:detalle_tarea', tarea_id=tarea_id)
+                    return redirect('digitalizador:digitalizador_dashboard')
 
             except Exception as e:
                 messages.error(
@@ -229,7 +234,7 @@ def subir_precat(request, tarea_id):
         'form': form,
     }
 
-    return render(request, 'includes/digitalizador/tablas/subir_precat.html', context)
+    return render(request, 'includes/digitalizador/subir_precat.html', context)
 
 
 @login_required
@@ -257,3 +262,70 @@ def descargar_precat(request, archivo_id):
     )
     response['Content-Disposition'] = f'attachment; filename="{archivo.get_nombre_archivo()}"'
     return response
+
+
+@login_required
+@requiere_ser_digitalizador
+def listar_archivos_digitalizador(request):
+    """
+    Listar archivos subidos por el digitalizador actual
+    """
+    # Obtener archivos subidos por el usuario
+    archivos_precat = PrecatArchivo.objects.filter(
+        subido_por=request.user
+    ).select_related(
+        'solicitud',
+        'solicitud__colonia'
+    ).order_by('-fecha_subida')
+
+    # Estadísticas
+    estadisticas = {
+        'total': archivos_precat.count(),
+        'precat': archivos_precat.filter(tipo_archivo=PrecatArchivo.TIPO_PRECAT).count(),
+        'planos': archivos_precat.filter(tipo_archivo=PrecatArchivo.TIPO_PLANOS).count(),
+        'tamanio_total_mb': sum(a.get_tamanio_mb() for a in archivos_precat),
+    }
+
+    context = {
+        'archivos': archivos_precat,
+        'estadisticas': estadisticas,
+        'usuario': request.user,
+    }
+
+    return render(request, 'digitalizador/archivos_precat.html', context)
+
+
+@login_required
+@requiere_ser_digitalizador
+def descargar_archivo_digitalizador(request, archivo_id):
+    """
+    Descargar archivo Precat (para digitalizador)
+    """
+    archivo = get_object_or_404(PrecatArchivo, pk=archivo_id)
+
+    # Verificar permisos: solo el que subió o líder SIG puede descargar
+    puede_descargar = (
+        archivo.subido_por == request.user or
+        request.user.groups.filter(name__icontains='SIG_LIDER').exists()
+    )
+
+    if not puede_descargar:
+        messages.error(
+            request, "No tiene permisos para descargar este archivo.")
+        return redirect('digitalizador:digitalizador_dashboard')
+
+    # Verificar que el archivo existe
+    if not archivo.archivo_existe:
+        messages.error(request, "El archivo no existe en el servidor.")
+        return redirect('digitalizador:listar_archivos_digitalizador')
+
+    try:
+        response = FileResponse(
+            archivo.archivo.open('rb'),
+            content_type='application/octet-stream'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{archivo.get_nombre_archivo()}"'
+        return response
+    except Exception as e:
+        messages.error(request, f"Error al descargar el archivo: {str(e)}")
+        return redirect('digitalizador:listar_archivos_digitalizador')
