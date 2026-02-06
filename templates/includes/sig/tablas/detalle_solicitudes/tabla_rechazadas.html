@@ -1,42 +1,69 @@
+<!-- includes/sig/tablas/detalle_solicitudes/tabla_rechazadas.html -->
 {% if solicitudes_rechazadas %}
 <div class="table-responsive">
     <table class="beautiful-table table-hover" width="100%" cellspacing="0">
         <thead class="table-light">
             <tr>
                 <th class="text-center">#</th>
-                <th class="text-center">Ubicación</th>
-                <th class="text-center">Colonia</th>
-                <th class="text-center">Tipo</th>
-                <th class="text-center">Fecha</th>
+                <th class="text-center">Creación</th>
+                <th class="text-center">Datos Geográficos</th>
+                <th class="text-center">Motivo Rechazo</th>
+                <th class="text-center">Digitalizador</th>
+                <th class="text-center">Fecha Rechazo</th>
+                <th class="text-center">Prioridad</th>
+                <th class="text-center">Estado</th>
                 <th class="text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for solicitud in solicitudes_rechazadas %}
             <tr>
-                <td class="text-center">{{ solicitud.id }}</td>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">
+                    <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
+                    <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                </td>
                 <td>
                     {% with distrito=solicitud.colonia.distritos.first %}
                         {% if distrito %}
-                            <small class="text-muted">{{ distrito.departamento.nombre }}</small>
-                            <br>{{ distrito.nombre }}
+                            <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                            <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
                         {% else %}
                             <span class="text-muted">Sin ubicación</span>
                         {% endif %}
                     {% endwith %}
                 </td>
-                <td>
-                    <strong>{{ solicitud.colonia.nombre }}</strong>
-                    <br><small class="text-muted">Cód: {{ solicitud.colonia.codigo }}</small>
+                <td class="text-center">
+                    <small class="text-danger">
+                        {{ solicitud.motivo_rechazo|default:"-"|truncatechars:50 }}
+                    </small>
                 </td>
                 <td class="text-center">
-                    <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                        {{ solicitud.get_tipo_display }}
+                    <span class="badge bg-primary">
+                        <i class="fas fa-user me-1"></i>
+                        {{ solicitud.usuario_asignado.username|default:"-" }}
                     </span>
                 </td>
                 <td class="text-center">
-                    <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
-                    <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                    {% if solicitud.fecha_modificacion %}
+                        <small>{{ solicitud.fecha_modificacion|date:"d/m/Y" }}</small>
+                        <br><small class="text-muted">{{ solicitud.fecha_modificacion|date:"H:i" }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <span class="badge 
+                        {% if solicitud.prioridad == 'alta' %}bg-danger
+                        {% elif solicitud.prioridad == 'media' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
+                        {{ solicitud.get_prioridad_display }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-danger">
+                        {{ solicitud.get_estado_display }}
+                    </span>
                 </td>
                 <td class="text-center">
                     <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
@@ -45,13 +72,14 @@
                         <i class="fas fa-eye"></i>
                     </a>
                     
+                    <!-- Botón para reasignar (solo líder) -->
                     {% if es_lider %}
-                    <button class="btn btn-sm btn-primary btn-asignar" 
-                            data-solicitud-id="{{ solicitud.id }}"
-                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                            title="Asignar digitalizador">
-                        <i class="fas fa-user-plus"></i>
-                    </button>
+                        <button class="btn btn-sm btn-warning btn-reasignar me-1"
+                                data-solicitud-id="{{ solicitud.id }}"
+                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                title="Reasignar digitalizador">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
                     {% endif %}
                 </td>
             </tr>
@@ -59,11 +87,10 @@
         </tbody>
     </table>
 </div>
-
 {% else %}
-<div class="text-center py-5">
-    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-    <h5 class="text-muted">No hay solicitudes rechazadas</h5>
-    <p class="text-muted">No hay solicitudes rechazadas de asignación en tu grupo</p>
-</div>
+    <div class="text-center py-5">
+        <i class="fas fa-times-circle fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No hay solicitudes rechazadas</h5>
+        <p class="text-muted">No hay solicitudes rechazadas en tu grupo</p>
+    </div>
 {% endif %}

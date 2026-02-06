@@ -1,0 +1,52 @@
+<!-- Modal para iniciar digitalización -->
+<div class="modal fade" id="modalIniciar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Confirmar Inicio de Digitalización</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro que desea iniciar la digitalización de la colonia <span id="coloniaNombreIniciar" class="fw-bold"></span>?</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Al iniciar, la tarea cambiará a estado "En Proceso de Digitalización"
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-info" id="btnConfirmarIniciar">
+                    <i class="fas fa-play me-2"></i>Iniciar Digitalización
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Confirmar inicio
+        document.getElementById('btnConfirmarIniciar').addEventListener('click', function() {
+            const tareaId = this.getAttribute('data-tarea-id');
+            const url = `/digitalizador/tarea/${tareaId}/iniciar/`;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert(data.message || 'Error al iniciar digitalización');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error de conexión');
+            });
+        });
+</script>

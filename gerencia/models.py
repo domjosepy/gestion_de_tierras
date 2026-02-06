@@ -25,53 +25,64 @@ class SolicitudRelevamiento(models.Model):
     ]
 
     ESTADOS = [
+        # ESTADOS SIG
         ("pendiente_asignacion_sig", "Pendiente de Asignación SIG"),
         ("asignado_a_digitalizador", "Asignado a Digitalizador"),
         ("en_proceso_digitalizacion", "En Proceso de Digitalización"),
         ("pendiente_revision_sig", "Pendiente de Revisión SIG"),
-        ("pendiente_asignacion_analista", "Pendiente de Asignación Análisis"),
-        ("pendiente_revision_analista", "Pendiente de Revisión Análisis"),
-        ("en_proceso_analisis", "En Proceso de Análisis"),
         ("rechazado", "Rechazado"),
+
+        # ESTADOS ANALISIS
+        ("pendiente_asignacion_analista", "Pendiente de Asignación Análisis"),
+        ("asignado_a_analista", "Asignado a Analista"),
+        ("en_proceso_analisis", "En Proceso de Análisis"),
+        ("pendiente_revision_analista", "Pendiente de Revisión Análisis"),
+
+        # APROBACIONES
         ("pendiente_aprobacion_campo", "Pendiente Aprobación para Campo"),
         ("aprobado_para_campo", "Aprobado para Campo"),
+
+        # ESTADOS COORDINACION
         ("asignado_coordinacion", "Asignado a Coordinación"),
-        ("preparacion_campo", "En Preparación de Campo"),
+        ("orden_trabajo_generada", "Orden de Trabajo Generada"),
+
+        # ESTADOS RELEVAMIENTO
+        ("asignado_relevadores", "Asignado a Relevadores"),
         ("en_ejecucion_campo", "En Ejecución de Campo"),
         ("pendiente_cierre", "Pendiente de Cierre"),
         ("finalizado", "Finalizado"),
     ]
 
-    # Mapeo de estados a grupos (para lógica de asignación automática)
     GRUPOS_POR_ESTADO = {
         # Estados SIG
         "pendiente_asignacion_sig": ["SIG"],
         "asignado_a_digitalizador": ["SIG"],
         "en_proceso_digitalizacion": ["SIG"],
         "pendiente_revision_sig": ["SIG"],
+        "rechazado": ["SIG"],
 
         # Estados Análisis
         "pendiente_asignacion_analista": ["ANALISIS"],
         "asignado_a_analista": ["ANALISIS"],
         "en_proceso_analisis": ["ANALISIS"],
+        "pendiente_revision_analista": ["ANALISIS"],
 
-        # Estado de aprobación campo (dinámico por tipo)
+        # Aprobación campo
         "pendiente_aprobacion_campo": {
-            "relevamiento": ["SIG"],           # Para nuevos: SIG aprueba
-            # Para actualizaciones: Análisis aprueba
+            "relevamiento": ["SIG"],
             "actualizacion": ["ANALISIS"]
         },
-
-        # Estados Coordinación y Monitoreo
         "aprobado_para_campo": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
-        "asignado_coordinacion": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
-        "preparacion_campo": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
-        "en_ejecucion_campo": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
-        "pendiente_cierre": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
 
-        # Estados finales (sin grupo)
-        "rechazado": [],
-        "finalizado": [],
+        # Coordinación
+        "asignado_coordinacion": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
+        "orden_trabajo_generada": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
+
+        # Relevamiento
+        "asignado_relevadores": ["RELEVAMIENTO"],
+        "en_ejecucion_campo": ["RELEVAMIENTO"],
+        "pendiente_cierre": ["RELEVAMIENTO"],
+        "finalizado": ["RELEVAMIENTO"],
     }
 
     # CAMPOS PRINCIPALES
@@ -133,14 +144,53 @@ class SolicitudRelevamiento(models.Model):
         related_name="solicitudes_actuales",
         verbose_name="Grupo asignado"
     )
+    usuario_digitalizador = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitudes_digitalizadas",
+        verbose_name="Digitalizador asignado"
+    )
+
+    usuario_analista = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitudes_analizadas",
+        verbose_name="Analista asignado"
+    )
+
+    coordinador_asignado = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="solicitudes_coordinadas",
+        verbose_name="Coordinador asignado"
+    )
+
+    # Campo para saber quién hizo la última asignación
+    ultima_asignacion_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ultimas_asignaciones",
+        verbose_name="Última asignación por"
+    )
+
+    # Mantener el usuario_asignado actual (puede ser cualquiera)
     usuario_asignado = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="tareas_asignadas",
-        verbose_name="Usuario asignado"
+        related_name="tareas_asignadas_actualmente",
+        verbose_name="Usuario asignado actualmente"
     )
+
     asignado_por = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -182,6 +232,33 @@ class SolicitudRelevamiento(models.Model):
         verbose_name="Tiempo total proceso"
     )
 
+    numero_orden_trabajo = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Número de Orden de Trabajo"
+    )
+    fecha_generacion_orden = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha generación orden"
+    )
+    usuario_generador_orden = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ordenes_generadas",
+        verbose_name="Generador de orden"
+    )
+
+    # Campo para relevadores asignados (si son múltiples)
+    relevadores_asignados = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="relevamientos_asignados",
+        verbose_name="Relevadores asignados"
+    )
+
     # FECHAS ESPECÍFICAS
     fecha_aprobacion_campo = models.DateTimeField(
         null=True,
@@ -203,7 +280,13 @@ class SolicitudRelevamiento(models.Model):
         blank=True,
         verbose_name="Fecha de finalización"
     )
-    # Agrega estos métodos a la clase SolicitudRelevamiento (al final de la clase, antes de la clase Meta)
+    cambiado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='auditorias_realizadas'
+    )
 
     @classmethod
     def obtener_estadisticas(cls):
@@ -243,6 +326,66 @@ class SolicitudRelevamiento(models.Model):
             }
 
         return estadisticas
+
+    def generar_orden_trabajo(self, usuario_generador, numero_orden=None):
+        """Generar orden de trabajo"""
+        if self.estado != "aprobado_para_campo":
+            raise ValidationError(
+                "Solo se puede generar orden desde 'Aprobado para Campo")
+
+        if not numero_orden:
+            numero_orden = f"OT-{self.pk}-{timezone.now().strftime('%Y%m%d')}"
+
+        self.numero_orden_trabajo = numero_orden
+        self.usuario_generador_orden = usuario_generador
+        self.estado = "orden_trabajo_generada"
+        self.save()
+
+        SolicitudRelevamientoAudit.objects.create(
+            solicitud=self,
+            campo='estado',
+            valor_anterior="aprobado_para_campo",
+            valor_nuevo="orden_trabajo_generada",
+            cambiado_por=usuario_generador,
+            comentario=f"Orden de trabajo {numero_orden} generada por {usuario_generador.get_full_name()}"
+        )
+
+        return numero_orden
+
+    def asignar_relevadores(self, relevadores, asignado_por, motivo=""):
+        """Asignar múltiples relevadores"""
+        if self.estado != "orden_trabajo_generada":
+            raise ValidationError(
+                "Solo se puede asignar relevadores con orden generada")
+
+        # Guardar relevadores en ManyToMany
+        self.relevadores_asignados.set(relevadores)
+
+        # Asignar el primero como usuario principal
+        if relevadores:
+            self.usuario_asignado = relevadores[0]
+
+        self.asignado_por = asignado_por
+        self.ultima_asignacion_por = asignado_por
+        self.fecha_asignacion = timezone.now()
+        self.estado = "asignado_relevadores"
+        self.save()
+
+        # Auditoría detallada
+        nombres_relevadores = ", ".join(
+            [r.get_full_name() for r in relevadores])
+        comentario = f"Relevadores asignados: {nombres_relevadores} por {asignado_por.get_full_name()}"
+        if motivo:
+            comentario += f". Motivo: {motivo}"
+
+        SolicitudRelevamientoAudit.objects.create(
+            solicitud=self,
+            campo='relevadores_asignados',
+            valor_anterior="",
+            valor_nuevo=nombres_relevadores,
+            cambiado_por=asignado_por,
+            comentario=comentario
+        )
 
     @classmethod
     def obtener_solicitudes_recientes(cls, limite=10):
@@ -362,6 +505,14 @@ class SolicitudRelevamiento(models.Model):
             if self.colonia.tiene_relevamiento:
                 self.tipo = self.TIPO_ACTUALIZACION
                 self.estado = "pendiente_asignacion_analista"
+                # Si ya hay un analista anterior, sugerirlo automáticamente
+                anterior = SolicitudRelevamiento.objects.filter(
+                    colonia=self.colonia,
+                    usuario_analista__isnull=False
+                ).last()
+                if anterior and anterior.usuario_analista:
+                    self.usuario_analista = anterior.usuario_analista
+                    self.usuario_asignado = anterior.usuario_analista
             else:
                 self.tipo = self.TIPO_RELEVAMIENTO
                 self.estado = "pendiente_asignacion_sig"
@@ -390,23 +541,6 @@ class SolicitudRelevamiento(models.Model):
 
                 # Reasignar grupo si el estado cambió
                 self._asignar_grupo_automaticamente()
-
-                # Limpiar asignación de usuario cuando cambia el grupo
-                # EXCEPCIÓN: No limpiar cuando asignamos por primera vez
-                if estado_cambio:
-                    # Verificar si es la asignación inicial a digitalizador
-                    if not (estado_anterior == 'pendiente_asignacion_sig'
-                            and self.estado == 'asignado_a_digitalizador'):
-                        if self.estado != 'pendiente_revision_sig':
-                            # Solo si NO es la asignación inicial, verificar cambios de grupo
-                            try:
-                                grupo_anterior = original.grupo_asignado
-                                if grupo_anterior != self.grupo_asignado:
-                                    self.usuario_asignado = None
-                                    self.asignado_por = None
-                                    self.fecha_asignacion = None
-                            except:
-                                pass
 
         # Guardar primero
         super().save(*args, **kwargs)
@@ -518,15 +652,6 @@ class SolicitudRelevamiento(models.Model):
 
     def _asignar_grupo_automaticamente(self):
         """Asignar grupo automáticamente basado en el estado actual"""
-        if self.estado in ['asignado_a_digitalizador', 'en_proceso_digitalizacion', 'pendiente_revision_sig'] and self.usuario_asignado:
-            # Mantener la asignación existente
-            pass
-        else:
-            # Solo limpiar si no hay usuario asignado o no estamos en estados de asignación activa
-            self.usuario_asignado = None
-            self.asignado_por = None
-            self.fecha_asignacion = None
-
         # Obtener nombres de grupos para este estado
         nombres_grupos = self.GRUPOS_POR_ESTADO.get(self.estado, [])
 
@@ -579,7 +704,7 @@ class SolicitudRelevamiento(models.Model):
             return True
 
         # Verificar si el usuario pertenece al grupo asignado
-        if self.grupo_asignado and usuario in self.grupo_asignado.miembros.all():
+        if self.grupo_asignado and usuario in self.grupo_asignado.usuarios.all():
             return True
 
         return False
@@ -599,6 +724,8 @@ class SolicitudRelevamiento(models.Model):
         """Obtener los estados a los que se puede cambiar desde el estado actual"""
 
         # Definir transiciones básicas
+        # Modificar transiciones en obtener_estados_siguientes:
+
         transiciones = {
             # Flujo SIG (colonias nuevas)
             "pendiente_asignacion_sig": ["asignado_a_digitalizador"],
@@ -607,22 +734,28 @@ class SolicitudRelevamiento(models.Model):
             "pendiente_revision_sig": ["pendiente_aprobacion_campo", "rechazado"],
 
             # Flujo Análisis
-            "pendiente_asignacion_analista": ["en_proceso_analisis"],
-            "en_proceso_analisis": ["pendiente_aprobacion_campo", "rechazado"],
+            "pendiente_asignacion_analista": ["asignado_a_analista"],
+            "asignado_a_analista": ["en_proceso_analisis"],
+            "en_proceso_analisis": ["pendiente_revision_analista", "rechazado"],
+            "pendiente_revision_analista": ["pendiente_aprobacion_campo", "rechazado"],
+
+            # Aprobación para campo
             "pendiente_aprobacion_campo": ["aprobado_para_campo", "rechazado"],
 
-            # Flujo Campo
+            # Flujo Coordinación
             "aprobado_para_campo": ["asignado_coordinacion"],
-            "asignado_coordinacion": ["preparacion_campo"],
-            "preparacion_campo": ["en_ejecucion_campo"],
+            "asignado_coordinacion": ["orden_trabajo_generada"],
+            "orden_trabajo_generada": ["asignado_relevadores"],
+
+            # Flujo Campo
+            "asignado_relevadores": ["en_ejecucion_campo"],
             "en_ejecucion_campo": ["pendiente_cierre"],
             "pendiente_cierre": ["finalizado"],
 
             # Estados finales
             "rechazado": [],
-            "finalizado": [],
+            "finalizado": []
         }
-
         # Administradores pueden revertir a estados anteriores
         if usuario.is_superuser or usuario.has_perm('solicitudes.cambiar_estado'):
             estados_permitidos = list(transiciones.get(self.estado, []))
@@ -637,6 +770,84 @@ class SolicitudRelevamiento(models.Model):
             return estados_permitidos
 
         return transiciones.get(self.estado, [])
+
+    def asignar_digitalizador(self, usuario, asignado_por):
+        """Asignar digitalizador específico"""
+        if not self.grupo_asignado or "SIG" not in self.grupo_asignado.nombre.upper():
+            raise ValidationError("La solicitud no está asignada al grupo SIG")
+
+        # Verificar que el usuario pertenezca al grupo SIG
+        if not self.grupo_asignado.usuarios.filter(id=usuario.id).exists():
+            raise ValidationError(
+                f"El usuario no pertenece al grupo {self.grupo_asignado}")
+
+        self.usuario_digitalizador = usuario
+        self.usuario_asignado = usuario
+        self.asignado_por = asignado_por
+        self.ultima_asignacion_por = asignado_por
+        self.fecha_asignacion = timezone.now()
+        self.save()
+
+        # Registrar auditoría
+        SolicitudRelevamientoAudit.objects.create(
+            solicitud=self,
+            campo='usuario_digitalizador',
+            valor_anterior=None,
+            valor_nuevo=f"{usuario.get_full_name()} ({usuario.username})",
+            cambiado_por=asignado_por,
+            comentario=f"Asignado como digitalizador por {asignado_por.get_full_name()}"
+        )
+
+    def asignar_analista(self, usuario, asignado_por):
+        """Asignar analista específico"""
+        if not self.grupo_asignado or "ANALISIS" not in self.grupo_asignado.nombre.upper():
+            raise ValidationError(
+                "La solicitud no está asignada al grupo ANÁLISIS")
+
+        if not self.grupo_asignado.usuarios.filter(id=usuario.id).exists():
+            raise ValidationError(
+                f"El usuario no pertenece al grupo {self.grupo_asignado}")
+
+        self.usuario_analista = usuario
+        self.usuario_asignado = usuario
+        self.asignado_por = asignado_por
+        self.ultima_asignacion_por = asignado_por
+        self.fecha_asignacion = timezone.now()
+        self.save()
+
+        SolicitudRelevamientoAudit.objects.create(
+            solicitud=self,
+            campo='usuario_analista',
+            valor_anterior=None,
+            valor_nuevo=f"{usuario.get_full_name()}",
+            cambiado_por=asignado_por,
+            comentario=f"Asignado como analista por {asignado_por.get_full_name()}"
+        )
+
+    def reasignar_usuario_actual(self, nuevo_usuario, reasignado_por, motivo=""):
+        """Reasignar el usuario actual (genérico)"""
+        usuario_anterior = self.usuario_asignado
+
+        self.usuario_asignado = nuevo_usuario
+        self.asignado_por = reasignado_por
+        self.ultima_asignacion_por = reasignado_por
+        self.fecha_asignacion = timezone.now()
+        self.save()
+
+        # Registrar auditoría detallada
+        comentario = f"Reasignado de {usuario_anterior.get_full_name() if usuario_anterior else 'Ninguno'} "
+        comentario += f"a {nuevo_usuario.get_full_name()} por {reasignado_por.get_full_name()}"
+        if motivo:
+            comentario += f". Motivo: {motivo}"
+
+        SolicitudRelevamientoAudit.objects.create(
+            solicitud=self,
+            campo='usuario_asignado',
+            valor_anterior=f"{usuario_anterior.get_full_name() if usuario_anterior else ''}",
+            valor_nuevo=f"{nuevo_usuario.get_full_name()}",
+            cambiado_por=reasignado_por,
+            comentario=comentario
+        )
 
     def asignar_usuario(self, usuario, asignado_por):
         """Asignar usuario específico a la solicitud"""
@@ -694,6 +905,29 @@ class SolicitudRelevamiento(models.Model):
         else:
             return "Pendiente"
 
+    @property
+    def responsable_actual(self):
+        """Obtener el responsable actual según el estado"""
+        if "digitalizacion" in self.estado:
+            return self.usuario_digitalizador
+        elif "analisis" in self.estado or "analista" in self.estado:
+            return self.usuario_analista
+        elif "coordinacion" in self.estado:
+            return self.coordinador_asignado
+        elif "relevadores" in self.estado:
+            return self.usuario_asignado  # Relevador principal
+        return self.usuario_asignado
+
+    @property
+    def digitalizador_original(self):
+        """Obtener el digitalizador original (para trazabilidad)"""
+        return self.usuario_digitalizador
+
+    @property
+    def analista_original(self):
+        """Obtener el analista original (para trazabilidad)"""
+        return self.usuario_analista
+
     @classmethod
     def obtener_solicitudes_por_grupo(cls, grupo):
         """Obtener todas las solicitudes asignadas a un grupo"""
@@ -707,6 +941,13 @@ class SolicitudRelevamiento(models.Model):
         return cls.objects.filter(usuario_asignado=usuario).exclude(
             estado__in=["rechazado", "finalizado"]
         )
+
+    def obtener_historial_asignaciones(self):
+        """Obtener historial completo de asignaciones"""
+        return self.auditorias.filter(
+            campo__in=['usuario_asignado', 'usuario_digitalizador',
+                       'usuario_analista', 'coordinador_asignado']
+        ).order_by('-fecha')
 
 
 class SolicitudRelevamientoAudit(models.Model):

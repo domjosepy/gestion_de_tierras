@@ -132,6 +132,33 @@ class PrecatArchivo(models.Model):
         from django.urls import reverse
         return reverse('digitalizador:descargar_precat', args=[self.id])
 
+    @property
+    def puede_descargar(self, usuario):
+        """Verifica si un usuario puede descargar este archivo"""
+        if usuario.is_superuser:
+            return True
+
+        # El que subió el archivo
+        if self.subido_por == usuario:
+            return True
+
+        # El digitalizador asignado a la solicitud
+        if hasattr(self.solicitud, 'usuario_digitalizador') and self.solicitud.usuario_digitalizador == usuario:
+            return True
+
+        # Líder SIG del grupo asignado
+        if self.solicitud.grupo_asignado and self.solicitud.grupo_asignado.lider == usuario:
+            return True
+
+        # Usuario pertenece al grupo SIG
+        if usuario.grupos_pertenece.filter(
+            nombre__icontains='SIG',
+            id=self.solicitud.grupo_asignado.id
+        ).exists():
+            return True
+
+        return False
+
 
 @receiver(post_delete, sender=PrecatArchivo)
 def eliminar_archivo_fisico(sender, instance, **kwargs):

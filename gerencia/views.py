@@ -18,11 +18,12 @@ from django.views.generic import (
     UpdateView,
 )
 
-from administrador.models import Grupo, Rol
+from administrador.models import Grupo
 from core.forms import ColoniaForm, DistritoForm
 from core.models import Colonia, Departamento, Distrito
-from gerencia.forms import EditarSolicitudRelevamientoForm, SolicitudRelevamientoForm, CrearSolicitudRelevamientoForm
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
+from gerencia.forms import CrearSolicitudRelevamientoForm, EditarSolicitudRelevamientoForm
+
 
 # MUESTRA LA VISTA DEL ADMINISTRADOR
 
@@ -73,10 +74,18 @@ def lista_solicitudes_relevamiento(request):
             solicitud.distrito = None
             solicitud.departamento = None
 
-        # Propiedades para el template
-        solicitud.puede_editar = solicitud.puede_gestionar(
+        # Determina si la solicitud puede ser editada
+        puede_editar_estado = solicitud.estado == 'pendiente_asignacion_sig'
+        tiene_permisos_editar = solicitud.puede_gestionar(
             request.user) or request.user.is_superuser
-        solicitud.puede_borrar = request.user.is_superuser or request.user == solicitud.creado_por
+
+        solicitud.puede_editar = puede_editar_estado and tiene_permisos_editar
+
+        # Determina si la solicitud puede ser eliminada
+        puede_eliminar_estado = solicitud.estado == 'pendiente_asignacion_sig'
+        es_superuser_o_creador = request.user.is_superuser or request.user == solicitud.creado_por
+
+        solicitud.puede_borrar = puede_eliminar_estado and es_superuser_o_creador
 
     # Obtener mensaje toast de la sesión si existe
     toast_message = request.session.pop(
@@ -86,9 +95,9 @@ def lista_solicitudes_relevamiento(request):
     estadisticas = SolicitudRelevamiento.obtener_estadisticas()
     estadisticas_por_estado = SolicitudRelevamiento.obtener_estadisticas_por_estado()
 
-    # Solicitudes recientes (últimas 5)
+    # Solicitudes recientes (últimas 10)
     solicitudes_recientes = SolicitudRelevamiento.obtener_solicitudes_recientes(
-        5)
+        10)
 
     return render(request, "includes/gerencia/tablas/listar_solicitud_relevamiento.html", {
         "solicitudes": solicitudes,
@@ -192,11 +201,17 @@ def cambiar_estado(request, solicitud_id):
     comentario = request.POST.get('comentario', '')
 
     # Validar permiso para cambiar estado
-    if not solicitud.puede_gestionar(request.user):
-        return JsonResponse({'error': 'No tiene permisos para cambiar el estado'}, status=403)
+    if not solicitud.puede_cambiar_estado(request.user, nuevo_estado):
+        return JsonResponse({'error': 'No tiene permisos para cambiar a este estado'}, status=403)
 
     # Validar transición de estado
     estado_anterior = solicitud.estado
+
+    # Verificar si el nuevo estado está permitido
+    estados_permitidos = solicitud.obtener_estados_siguientes(request.user)
+    if nuevo_estado not in estados_permitidos:
+        return JsonResponse({'error': 'Transición de estado no permitida'}, status=400)
+
     solicitud.estado = nuevo_estado
 
     try:
@@ -204,21 +219,20 @@ def cambiar_estado(request, solicitud_id):
     except ValidationError as e:
         return JsonResponse({'error': str(e)}, status=400)
 
-    # Crear auditoría
+    # Registrar auditoría del cambio de estado
     SolicitudRelevamientoAudit.objects.create(
         solicitud=solicitud,
-        previo=estado_anterior,
-        nuevo=nuevo_estado,
+        campo='estado',
+        valor_anterior=estado_anterior,
+        valor_nuevo=nuevo_estado,
         cambiado_por=request.user,
-        comentario=comentario
+        comentario=comentario or f"Estado cambiado de {estado_anterior} a {nuevo_estado}"
     )
 
     return JsonResponse({
         'success': True,
         'message': f'Estado cambiado a {solicitud.get_estado_display()}'
     })
-
-# LAS VISTAS EXISTENTES (MANTENIENDO COMPATIBILIDAD)
 
 
 @login_required
@@ -265,8 +279,8 @@ def obtener_datos_solicitud(request, pk):
             'id': solicitud.id,
             'tipo': solicitud.tipo,
             'tipo_display': solicitud.get_tipo_display(),
-            'prioridad': solicitud.prioridad,  # NUEVO
-            'prioridad_display': solicitud.get_prioridad_display(),  # NUEVO
+            'prioridad': solicitud.prioridad,
+            'prioridad_display': solicitud.get_prioridad_display(),
             'estado': solicitud.estado,
             'estado_display': solicitud.get_estado_display(),
             'observaciones': solicitud.observaciones,
@@ -294,7 +308,7 @@ def obtener_datos_solicitud(request, pk):
         'tipo': solicitud.tipo,
         'tipo_display': solicitud.get_tipo_display(),
         'observaciones': solicitud.observaciones,
-        'prioridad': solicitud.prioridad,  # NUEVO - Para el modal de edición
+        'prioridad': solicitud.prioridad,
         'grupo_asignado_id': solicitud.grupo_asignado.id if solicitud.grupo_asignado else None,
         'usuario_asignado_id': solicitud.usuario_asignado.id if solicitud.usuario_asignado else None,
         'motivo_rechazo': solicitud.motivo_rechazo,
@@ -343,17 +357,40 @@ def crear_solicitud_relevamiento(request, colonia_id):
                 solicitud.colonia = colonia
                 solicitud.creado_por = request.user
 
+                # Marcar que se creará auditoría manual (para evitar duplicación en signals)
+                solicitud._auditoria_creada = True
+                solicitud._cambiado_por = request.user
+
                 # Determinar automáticamente el tipo basado en si existe relevamiento previo
                 if colonia.tiene_relevamiento:
                     solicitud.tipo = 'actualizacion'
+                    # Para actualizaciones, va directamente a analista
                     solicitud.estado = 'pendiente_asignacion_analista'
+                    # Para actualizaciones, no asignar grupo SIG
+                    solicitud.grupo_asignado = None
                 else:
                     solicitud.tipo = 'relevamiento'
+                    # Para relevamientos nuevos, va a SIG
                     solicitud.estado = 'pendiente_asignacion_sig'
+                    # Asignar automáticamente grupo SIG si está configurado
+                    # (esto depende de tu lógica de negocio)
+                    if not solicitud.grupo_asignado:
+                        # Aquí puedes agregar lógica para asignar grupo por defecto
+                        # Por ejemplo, el primer grupo SIG activo
+                        grupo_sig = Grupo.objects.filter(
+                            nombre__icontains='SIG',
+                            activo=True
+                        ).first()
+                        if grupo_sig:
+                            solicitud.grupo_asignado = grupo_sig
 
-                # Si no se especifica prioridad, establecer media por defecto
+                # Si no se especifica prioridad, establecer baja por defecto
                 if not solicitud.prioridad:
                     solicitud.prioridad = 'baja'
+
+                if solicitud.estado == 'pendiente_asignacion_sig':
+                    solicitud.usuario_asignado = None
+                    solicitud.usuario_digitalizador = None
 
                 # GUARDAR ahora sí
                 solicitud.save()
@@ -365,10 +402,29 @@ def crear_solicitud_relevamiento(request, colonia_id):
                     valor_anterior='',
                     valor_nuevo=f"Solicitud creada con prioridad {solicitud.get_prioridad_display()}",
                     cambiado_por=request.user,
-                    comentario=f"Solicitud de {solicitud.tipo} creada para {colonia.nombre}"
+                    comentario=f"Solicitud de {solicitud.get_tipo_display()} creada para {colonia.nombre}"
                 )
 
-                print(f"Solicitud creada exitosamente: ID {solicitud.id}")
+                # También crear auditoría para estado inicial
+                SolicitudRelevamientoAudit.objects.create(
+                    solicitud=solicitud,
+                    campo='estado',
+                    valor_anterior='',
+                    valor_nuevo=solicitud.estado,
+                    cambiado_por=request.user,
+                    comentario=f"Solicitud creada. Tipo: {solicitud.get_tipo_display()}"
+                )
+
+                # Si se asignó grupo, crear auditoría para eso también
+                if solicitud.grupo_asignado:
+                    SolicitudRelevamientoAudit.objects.create(
+                        solicitud=solicitud,
+                        campo='grupo_asignado',
+                        valor_anterior='',
+                        valor_nuevo=str(solicitud.grupo_asignado),
+                        cambiado_por=request.user,
+                        comentario=f"Asignado automáticamente al grupo {solicitud.grupo_asignado.nombre}"
+                    )
 
                 # Guardar mensaje para toast en sesión
                 request.session['toast_message'] = {
@@ -411,6 +467,13 @@ def crear_solicitud_relevamiento(request, colonia_id):
 def editar_solicitud_relevamiento(request, pk):
     """Editar solicitud (AJAX) - AHORA INCLUYE PRIORIDAD"""
     solicitud = get_object_or_404(SolicitudRelevamiento, pk=pk)
+
+    # NUEVO: Validar que esté en estado permitido
+    if solicitud.estado != 'pendiente_asignacion_sig':
+        return JsonResponse({
+            'success': False,
+            'message': 'Solo se pueden editar solicitudes en estado "Pendiente de asignación SIG"'
+        }, status=403)
 
     if not solicitud.puede_gestionar(request.user):
         return JsonResponse({
@@ -484,11 +547,18 @@ def eliminar_solicitud_relevamiento(request, pk):
     """Eliminar solicitud (AJAX)"""
     solicitud = get_object_or_404(SolicitudRelevamiento, pk=pk)
 
+    # Validar que esté en estado permitido
+    if solicitud.estado != 'pendiente_asignacion_sig':
+        return JsonResponse({
+            'success': False,
+            'message': 'Solo se pueden eliminar solicitudes en estado "Pendiente de asignación SIG"'
+        }, status=403)
+
     if not (request.user.is_superuser or request.user == solicitud.creado_por):
         return JsonResponse({
             'success': False,
             'message': 'No tiene permisos para eliminar esta solicitud'
-        }, status=403)  # 403 Forbidden que no tiene permisos: solo superusuario o creador
+        }, status=403)
 
     if request.method == "POST":
         try:
@@ -507,12 +577,12 @@ def eliminar_solicitud_relevamiento(request, pk):
             return JsonResponse({
                 'success': False,
                 'message': f'Error al eliminar: {str(e)}'
-            }, status=500)  # 500 Internal Server Error en caso de error
+            }, status=500)
 
     return JsonResponse({
         'success': False,
         'message': 'Método no permitido'
-    }, status=405)  # 405 Method Not Allowed que no está permitido el método
+    }, status=405)
 
 
 @login_required

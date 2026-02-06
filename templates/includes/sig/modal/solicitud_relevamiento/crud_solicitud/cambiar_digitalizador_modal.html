@@ -1,0 +1,164 @@
+<div class="modal fade modal-warning" id="cambiarDigitalizadorModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="cambiarDigitalizadorForm" method="post">
+        {% csrf_token %}
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-user-pen me-2"></i>Cambiar Digitalizador
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <div class="modal-body">
+          <input type="hidden" name="solicitud_id" id="solicitudIdCambiar">
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-map-marker-alt me-1"></i>Colonia
+            </label>
+            <div class="form-control bg-light" id="coloniaNombreCambiar"></div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-user me-1"></i>Digitalizador Actual
+            </label>
+            <div class="form-control bg-light" id="digitalizadorActualCambiar"></div>
+            <input type="hidden" id="observacionActualCambiar">
+          </div>
+          
+          <div class="mb-3">
+            <label for="usuarioAsignadoCambiar" class="form-label fw-bold">
+              <i class="fas fa-user-plus me-1"></i>Nuevo Digitalizador
+            </label>
+            <select class="form-select" id="usuarioAsignadoCambiar" name="usuario_id" required>
+              <option value="">Seleccione un digitalizador</option>
+              {% for usuario in usuarios_grupo %}
+                <option value="{{ usuario.id }}">
+                  {{ usuario.username }} 
+                  {% if usuario.get_full_name %}
+                    - {{ usuario.get_full_name }}
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="comentarioCambio" class="form-label">
+              <i class="fas fa-comment me-1"></i>Comentario del cambio (opcional)
+            </label>
+            <textarea class="form-control" id="comentarioCambio" 
+                      name="comentario" rows="2"
+                      placeholder="Motivo del cambio..."></textarea>
+          </div>
+          
+          <div id="cambiarError" class="text-danger small mb-3"></div>
+        </div>
+        
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-warning">
+            <i class="fas fa-exchange-alt me-1"></i>Cambiar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para cuando se abre el modal
+    const cambiarModal = document.getElementById('cambiarDigitalizadorModal');
+    if (cambiarModal) {
+        cambiarModal.addEventListener('show.bs.modal', function(event) {
+            // Botón que disparó el modal
+            const button = event.relatedTarget;
+            
+            // Extraer datos del botón
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            const digitalizadorActual = button.getAttribute('data-digitalizador-actual');
+            
+            // Actualizar el modal
+            document.getElementById('solicitudIdCambiar').value = solicitudId;
+            document.getElementById('coloniaNombreCambiar').textContent = coloniaNombre;
+            document.getElementById('digitalizadorActualCambiar').textContent = digitalizadorActual;
+            
+            // Limpiar formulario
+            document.getElementById('usuarioAsignadoCambiar').value = '';
+            document.getElementById('comentarioCambio').value = '';
+            document.getElementById('cambiarError').textContent = '';
+        });
+    }
+
+    // Listener para el submit del formulario
+    const cambiarForm = document.getElementById('cambiarDigitalizadorForm');
+    if (cambiarForm) {
+        cambiarForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const solicitudId = formData.get('solicitud_id');
+            const usuarioId = formData.get('usuario_id');
+            const comentario = formData.get('comentario') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            
+            // Validación
+            if (!usuarioId) {
+                document.getElementById('cambiarError').textContent = 'Debe seleccionar un digitalizador';
+                return;
+            }
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cambiando...';
+            
+            try {
+                const response = await fetch(`/sig/solicitud/${solicitudId}/cambiar-usuario/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(cambiarModal);
+                    if (modal) modal.hide();
+                    
+                    
+                    
+                    // Recargar después de 1 segundo
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    document.getElementById('cambiarError').textContent = data.error || data.message;
+                    
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.error || data.message, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('cambiarError').textContent = 'Error de conexión. Intente nuevamente.';
+                
+                if (window.ToastManager) {
+                    window.ToastManager.mostrarToast('Error de conexión. Intente nuevamente.', 'error');
+                }
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
+            }
+        });
+    }
+});
+</script>

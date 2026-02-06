@@ -92,7 +92,13 @@
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Creado por:</td>
-                                    <td>{{ tarea.creado_por.get_full_name|default:tarea.creado_por.username }}</td>
+                                    <td>
+                                        {% if tarea.creado_por %}
+                                            {{ tarea.creado_por.get_full_name|default:tarea.creado_por.username }}
+                                        {% else %}
+                                            <span class="text-muted">Usuario desconocido</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Fecha creación:</td>
@@ -130,7 +136,7 @@
                         <h6 class="text-muted mb-2">Tiempos</h6>
                         <table class="table table-sm table-borderless">
                             <tr>
-                                <td class="text-muted">Tiempo asignado:</td>
+                                <td class="text-muted">Tiempo transcurrido:</td>
                                 <td>{{ tarea.obtener_tiempo_transcurrido|format_timedelta }}</td>
                             </tr>
                             <tr>
@@ -147,6 +153,29 @@
                     </div>
                     {% endif %}
 
+                    {% if tarea.estado == 'pendiente_aprobacion_campo' %}
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-hourglass-half me-2"></i>
+                            <strong>En espera de aprobación final:</strong>
+                            <p class="mb-0 mt-2">
+                                Tu trabajo está siendo revisado por el líder SIG para su aprobación final para campo.
+                            </p>
+                        </div>
+                        {% elif tarea.estado == 'aprobado_para_campo' %}
+                        <div class="alert alert-success mt-3">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>¡Aprobado para campo!</strong>
+                            <p class="mb-0 mt-2">
+                                Tu trabajo ha sido aprobado y está listo para ser asignado a coordinación y campo.
+                                <br>
+                                <small class="text-muted">
+                                    {% if tarea.fecha_aprobacion_campo %}
+                                        Fecha de aprobación: {{ tarea.fecha_aprobacion_campo|date:"d/m/Y H:i" }}
+                                    {% endif %}
+                                </small>
+                            </p>
+                        </div>
+                    {% endif %}
                     <!-- Archivos Subidos -->
                     <div class="mt-4">
                         <h6 class="text-muted mb-2">
@@ -177,116 +206,52 @@
             </div>
         </div>
     </div>
-
-    <!-- Auditorías -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-white py-3">
-            <h6 class="m-0 font-weight-bold text-white fw-bold">
-                <i class="fas fa-history me-2"></i>Historial de Cambios
-            </h6>
-        </div>
-        <div class="card-body">
-            {% if auditorias %}
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Campo</th>
-                                <th>Valor Anterior</th>
-                                <th>Valor Nuevo</th>
-                                <th>Usuario</th>
-                                <th>Comentario</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for auditoria in auditorias %}
-                            <tr>
-                                <td>{{ auditoria.fecha|date:"d/m/Y H:i" }}</td>
-                                <td><span class="badge bg-secondary">{{ auditoria.campo }}</span></td>
-                                <td><small>{{ auditoria.valor_anterior|default:"-" }}</small></td>
-                                <td><small>{{ auditoria.valor_nuevo|default:"-" }}</small></td>
-                                <td>{{ auditoria.cambiado_por.get_full_name|default:auditoria.cambiado_por.username }}</td>
-                                <td><small>{{ auditoria.comentario|default:"-" }}</small></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="text-muted text-center py-3">No hay historial de cambios registrado.</p>
-            {% endif %}
-        </div>
-    </div>
 </div>
 
-<!-- Modal para iniciar digitalización -->
-<div class="modal fade" id="modalIniciar" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">Confirmar Inicio de Digitalización</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro que desea iniciar la digitalización de la colonia <span id="coloniaNombreIniciar" class="fw-bold"></span>?</p>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Al iniciar, la tarea cambiará a estado "En Proceso de Digitalización"
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-info" id="btnConfirmarIniciar">
-                    <i class="fas fa-play me-2"></i>Iniciar Digitalización
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+{% include 'includes/digitalizador/modal/iniciar_digitalizacion_modal.html' %}
 {% endblock %}
 
-{% block scripts %}
+{% block scripts %} 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Modal para iniciar digitalización
-    const modalIniciar = document.getElementById('modalIniciar');
-    if (modalIniciar) {
-        modalIniciar.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const tareaId = button.getAttribute('data-tarea-id');
-            const coloniaNombre = button.getAttribute('data-colonia-nombre');
-            
-            modalIniciar.querySelector('#coloniaNombreIniciar').textContent = coloniaNombre;
-            modalIniciar.querySelector('#btnConfirmarIniciar').setAttribute('data-tarea-id', tareaId);
-        });
-
-        document.getElementById('btnConfirmarIniciar').addEventListener('click', function() {
-            const tareaId = this.getAttribute('data-tarea-id');
-            
-            // Usar URL relativa basada en la estructura de URLs
-            fetch(`/digitalizador/tarea/${tareaId}/iniciar/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Redirigir usando la URL del JSON response
-                    window.location.href = data.redirect_url;
-                } else {
-                    alert(data.message || 'Error al iniciar digitalización');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error de conexión');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal para iniciar digitalización
+        const modalIniciar = document.getElementById('modalIniciar');
+        if (modalIniciar) {
+            modalIniciar.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const tareaId = button.getAttribute('data-tarea-id');
+                const coloniaNombre = button.getAttribute('data-colonia-nombre');
+                
+                modalIniciar.querySelector('#coloniaNombreIniciar').textContent = coloniaNombre;
+                modalIniciar.querySelector('#btnConfirmarIniciar').setAttribute('data-tarea-id', tareaId);
             });
-        });
-    }
-});
+
+            document.getElementById('btnConfirmarIniciar').addEventListener('click', function() {
+                const tareaId = this.getAttribute('data-tarea-id');
+                
+                // Usar URL relativa basada en la estructura de URLs
+                fetch(`/digitalizador/tarea/${tareaId}/iniciar/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Redirigir usando la URL del JSON response
+                        window.location.href = data.redirect_url;
+                    } else {
+                        alert(data.message || 'Error al iniciar digitalización');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error de conexión');
+                });
+            });
+        }
+    });
 </script>
 {% endblock %}

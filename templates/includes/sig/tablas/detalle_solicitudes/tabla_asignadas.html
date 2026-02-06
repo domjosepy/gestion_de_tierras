@@ -17,7 +17,7 @@
         <tbody>
             {% for solicitud in solicitudes_asignadas %}
             <tr>
-                <td class="text-center">{{ solicitud.id }}</td>
+                <td class="text-center">{{ forloop.counter }}</td>
                 <td class="text-center">
                     <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
                     <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
@@ -59,35 +59,55 @@
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-primary">
+                    <span class="badge 
+                        {% if solicitud.estado == 'asignado_a_digitalizador' %}bg-primary
+                        {% elif solicitud.estado == 'en_proceso_digitalizacion' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
                         {{ solicitud.get_estado_display }}
                     </span>
                 </td>
                 <td class="text-center">
                     <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                       class="btn btn-sm btn-info me-1" 
-                       title="Ver detalles">
+                    class="btn btn-sm btn-info me-1" 
+                    title="Ver detalles">
                         <i class="fas fa-eye"></i>
                     </a>
                     
-                    {% if es_lider %}
-                    <button class="btn btn-sm btn-warning btn-cambiar-asignacion me-1" 
-                            data-solicitud-id="{{ solicitud.id }}"
-                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                            data-digitalizador-actual="{{ solicitud.usuario_asignado.username }}"
-                            data-observacion-actual="{{ solicitud.observaciones }}"
-                            title="Cambiar digitalizador">
-                        <i class="fa-solid fa-user-pen"></i>
-                    </button>
+                    <!-- Botón Cambiar Asignación -->
+                    {% if solicitud.estado == 'asignado_a_digitalizador' and es_lider %}
+                        <button class="btn btn-sm btn-warning"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#cambiarDigitalizadorModal"
+                                data-solicitud-id="{{ solicitud.id }}"
+                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                data-digitalizador-actual="{{ solicitud.usuario_asignado.username }}"
+                                title="Cambiar asignación">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                    {% elif solicitud.estado == 'en_proceso_digitalizacion' and es_lider %}
+                        <button class="btn btn-sm btn-secondary me-1" disabled
+                                title="No se puede cambiar (En proceso de digitalización)">
+                            <i class="fa-solid fa-user-pen"></i>
+                        </button>
+                    {% endif %}
                     
-                    <button class="btn btn-sm btn-danger btn-eliminar-asignacion" 
-                            data-solicitud-id="{{ solicitud.id }}"
-                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                            data-digitalizador="{{ solicitud.usuario_asignado.username }}"
-                            title="Eliminar asignación">
-                        <i class="fa-solid fa-user-minus"></i>
-                    </button>
-                {% endif %}
+                    <!-- Botón Eliminar Asignación -->
+                    {% if solicitud.estado == 'asignado_a_digitalizador' and es_lider %}
+                        <button class="btn btn-sm btn-danger" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#eliminarAsignacionModal"
+                                data-solicitud-id="{{ solicitud.id }}"
+                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                data-digitalizador="{{ solicitud.usuario_asignado.username }}"
+                                title="Eliminar asignación">
+                            <i class="fa-solid fa-user-minus"></i>
+                        </button>
+                    {% elif solicitud.estado == 'en_proceso_digitalizacion' and es_lider %}
+                        <button class="btn btn-sm btn-secondary" disabled
+                                title="No se puede eliminar (En proceso de digitalización)">
+                            <i class="fa-solid fa-user-minus"></i>
+                        </button>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

@@ -1,0 +1,161 @@
+<div class="modal fade modal-primary" id="asignarDigitalizadorModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="asignarDigitalizadorForm" method="post">
+        {% csrf_token %} 
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-user-plus me-2"></i>Asignar Digitalizador
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        
+        <div class="modal-body">
+          <input type="hidden" name="solicitud_id" id="solicitudIdAsignar">
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-map-marker-alt me-1"></i>Colonia
+            </label>
+            <div class="form-control bg-light" id="coloniaNombreAsignar"></div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="usuarioAsignado" class="form-label fw-bold">
+              <i class="fas fa-user me-1"></i>Seleccionar Digitalizador
+            </label>
+            <select class="form-select" id="usuarioAsignado" name="usuario_id" required>
+              <option value="">Seleccione un digitalizador</option>
+              {% for usuario in usuarios_grupo %}
+                <option value="{{ usuario.id }}">
+                  {{ usuario.username }} 
+                  {% if usuario.get_full_name %}
+                    - {{ usuario.get_full_name }}
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label for="comentarioAsignacion" class="form-label">
+              <i class="fas fa-comment me-1"></i>Comentario (opcional)
+            </label>
+            <textarea class="form-control" id="comentarioAsignacion" 
+                      name="comentario" rows="2"
+                      placeholder="Observaciones sobre la asignación..."></textarea>
+          </div>
+          
+          <div id="asignarError" class="text-danger small mb-3"></div>
+        </div>
+        
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-primary">
+            <i class="fas fa-save me-1"></i>Asignar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para cuando se abre el modal
+    const asignarModal = document.getElementById('asignarDigitalizadorModal');
+    if (asignarModal) {
+        asignarModal.addEventListener('show.bs.modal', function(event) {
+            // Botón que disparó el modal
+            const button = event.relatedTarget;
+            
+            // Extraer datos del botón
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            
+            // Actualizar el modal
+            document.getElementById('solicitudIdAsignar').value = solicitudId;
+            document.getElementById('coloniaNombreAsignar').textContent = coloniaNombre;
+            
+            // Limpiar formulario
+            document.getElementById('usuarioAsignado').value = '';
+            document.getElementById('comentarioAsignacion').value = '';
+            document.getElementById('asignarError').textContent = '';
+        });
+    }
+
+    // Listener para el submit del formulario
+    const asignarForm = document.getElementById('asignarDigitalizadorForm');
+    if (asignarForm) {
+        asignarForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const solicitudId = formData.get('solicitud_id');
+            const usuarioId = formData.get('usuario_id');
+            const comentario = formData.get('comentario') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            
+            // Validación
+            if (!usuarioId) {
+                document.getElementById('asignarError').textContent = 'Debe seleccionar un digitalizador';
+                return;
+            }
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Asignando...';
+            
+            try {
+                const response = await fetch(`/sig/solicitud/${solicitudId}/asignar-usuario/`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        usuario_id: usuarioId,
+                        comentario: comentario
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(asignarModal);
+                    if (modal) modal.hide();
+                    
+                    // Mostrar mensaje de éxito
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.message, 'success');
+                    }
+                    
+                    // Recargar después de 1 segundo
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    document.getElementById('asignarError').textContent = data.error || data.message;
+                    
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.error || data.message, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('asignarError').textContent = 'Error de conexión. Intente nuevamente.';
+                
+                if (window.ToastManager) {
+                    window.ToastManager.mostrarToast('Error de conexión. Intente nuevamente.', 'error');
+                }
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
+            }
+        });
+    }
+});
+</script>

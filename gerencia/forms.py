@@ -4,20 +4,25 @@ from .models import SolicitudRelevamiento
 
 
 class CrearSolicitudRelevamientoForm(forms.ModelForm):
-    """Formulario específico para CREAR una nueva solicitud"""
+    """Formulario para CREAR una nueva solicitud, con colonia predefinida"""
     class Meta:
         model = SolicitudRelevamiento
-        fields = ["prioridad", "observaciones"]  # AGREGAR prioridad
+        fields = ["prioridad", "observaciones"]
         widgets = {
             "observaciones": forms.Textarea(attrs={
                 "class": "form-control",
                 "rows": 3,
-                "placeholder": "Observaciones adicionales (opcional)"
+                "placeholder": "Observaciones adicionales (opcional)",
+                "style": "text-transform: uppercase;"
             }),
-            "prioridad": forms.Select(attrs={
-                "class": "form-select",
-            })
+            "prioridad": forms.Select(attrs={"class": "form-select"})
         }
+
+    def clean_observaciones(self):
+        observaciones = self.cleaned_data.get("observaciones")
+        if observaciones:
+            return observaciones.upper()
+        return observaciones
 
     def __init__(self, *args, colonia=None, **kwargs):
         # Extraer colonia del kwargs antes de pasar al padre
@@ -36,34 +41,6 @@ class CrearSolicitudRelevamientoForm(forms.ModelForm):
         return cleaned_data
 
 
-class SolicitudRelevamientoForm(forms.ModelForm):
-    """Formulario para CREAR una nueva solicitud"""
-    class Meta:
-        model = SolicitudRelevamiento
-        fields = ["prioridad", "observaciones"]  # AGREGAR prioridad
-        widgets = {
-            "observaciones": forms.Textarea(attrs={
-                "class": "form-control",
-                "rows": 3,
-                "placeholder": "Observaciones adicionales (opcional)"
-            }),
-            "prioridad": forms.Select(attrs={
-                'class': 'form-select',
-            })
-        }
-        error_messages = {
-            "observaciones": {
-                "max_length": "Las observaciones son demasiado largas."
-            },
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # No mostrar labels innecesarios
-        self.fields['observaciones'].label = ""
-        self.fields['prioridad'].initial = 'media'
-
-
 class EditarSolicitudRelevamientoForm(forms.ModelForm):
     """Formulario solo para editar observaciones y prioridad"""
     class Meta:
@@ -72,12 +49,19 @@ class EditarSolicitudRelevamientoForm(forms.ModelForm):
         widgets = {
             "observaciones": forms.Textarea(attrs={
                 "class": "form-control",
-                "rows": 3
+                "rows": 3,
+                "style": "text-transform: uppercase;"
             }),
             "prioridad": forms.Select(attrs={
                 'class': 'form-select',
             })
         }
+
+    def clean_observaciones(self):
+        observaciones = self.cleaned_data.get("observaciones")
+        if observaciones:
+            return observaciones.upper()
+        return observaciones
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,0 +1,84 @@
+<!-- Modal para revisión SIG -->
+<div class="modal fade" id="modalRevisionSIG" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalRevisionTitle">Revisión SIG</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formRevisionSIG">
+                {% csrf_token %}
+                <input type="hidden" id="solicitudIdRevision" name="solicitud_id">
+                <input type="hidden" id="accionRevision" name="accion">
+                <input type="hidden" id="estadoActualRevision" name="estado_actual">
+                
+                <div class="modal-body">
+                    <div id="revisionContent">
+                        <p id="textoAccionRevision"></p>
+                        
+                        <div class="mb-3">
+                            <label for="observacionRevision" class="form-label">Observación:</label>
+                            <textarea class="form-control" id="observacionRevision" name="observacion" rows="3" 
+                                      placeholder="Ingrese una observación (obligatoria para rechazo)"></textarea>
+                            <div class="form-text" id="ayudaObservacion"></div>
+                        </div>
+                        
+                        <div class="alert" id="alertaRevision">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <span id="textoAlertaRevision"></span>
+                        </div>
+                    </div>
+                    <div id="revisionError" class="alert alert-danger d-none"></div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn" id="btnConfirmarRevision">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para aprobación para campo -->
+<div class="modal fade" id="modalAprobarCampoSIG" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Aprobar para Campo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAprobarCampoSIG">
+                {% csrf_token %}
+                <input type="hidden" id="solicitudIdCampo" name="solicitud_id">
+                
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 id="coloniaNombreCampo" class="text-primary"></h6>
+                        <p class="text-muted mb-3">¿Está seguro de aprobar este relevamiento para campo?</p>
+                        
+                        <div class="form-group">
+                            <label class="form-label fw-bold">Observaciones (opcional)</label>
+                            <textarea class="form-control" id="observacionCampo" name="observacion" rows="3" 
+                                      placeholder="Ingrese observaciones sobre la aprobación..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> Al aprobar, la solicitud quedará disponible para el equipo de Coordinación
+                    </div>
+                </div>
+                
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-outline-success">
+                        <i class="fas fa-check me-1"></i>Aprobar para Campo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

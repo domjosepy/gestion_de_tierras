@@ -1,0 +1,36 @@
+<!-- Modal para aprobación/rechazo SIG - pendiente -->
+<div class="modal fade" id="modalRevisionSIGPendiente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalRevisionTitlePendiente">Revisión SIG</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="revisionContentPendiente">
+                    <p>¿Está seguro de <span id="accionTextoPendiente">aprobar</span> la solicitud de 
+                       <strong id="coloniaNombreRevisionPendiente"></strong>?</p>
+                    
+                    <div class="mb-3">
+                        <label for="comentarioRevisionPendiente" class="form-label">Comentario:</label>
+                        <textarea class="form-control" id="comentarioRevisionPendiente" rows="3" 
+                                  placeholder="Ingrese un comentario (opcional)"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="infoAccionPendiente">
+                            Al aprobar, la solicitud pasará a "Pendiente de Aprobación para Campo".
+                            Al rechazar, la solicitud será marcada como rechazada.
+                        </span>
+                    </div>
+                </div>
+                <div id="revisionErrorPendiente" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-outline-success" id="btnConfirmarRevisionPendiente">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>

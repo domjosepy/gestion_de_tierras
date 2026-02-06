@@ -1,3 +1,5 @@
+import os
+from urllib import request
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponseForbidden, FileResponse
@@ -7,11 +9,15 @@ from django.utils import timezone
 from django.db import transaction
 from django.template.loader import render_to_string
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
+from gerencia.utils import procesar_auditorias
+from django.db.models import Q
 from .decorators import requiere_ser_digitalizador
 from .froms import PrecatSubirForm
 from .models import PrecatArchivo
 from administrador.models import User
-import os
+from django.db import models
+
+# digitalizador/views.py
 
 
 @login_required
@@ -20,11 +26,19 @@ def digitalizador_dashboard(request):
     """
     Dashboard para técnicos digitalizadores
     """
-    # Obtener tareas asignadas al usuario actual
+    # Obtener tareas donde el usuario es el digitalizador asignado
     tareas = SolicitudRelevamiento.objects.filter(
-        usuario_asignado=request.user,
-        estado__in=['asignado_a_digitalizador',
-                    'en_proceso_digitalizacion', 'pendiente_revision_sig']
+        Q(usuario_digitalizador=request.user) | Q(
+            usuario_asignado=request.user)
+    ).filter(
+        # Solo mostrar tareas que están en el flujo SIG
+        estado__in=[
+            'asignado_a_digitalizador',
+            'en_proceso_digitalizacion',
+            'pendiente_revision_sig',
+            'pendiente_aprobacion_campo',
+            'aprobado_para_campo'
+        ]
     ).select_related(
         'colonia', 'grupo_asignado', 'creado_por', 'grupo_asignado__lider'
     ).prefetch_related(
@@ -36,19 +50,25 @@ def digitalizador_dashboard(request):
         'pendientes': tareas.filter(estado='asignado_a_digitalizador').count(),
         'en_proceso': tareas.filter(estado='en_proceso_digitalizacion').count(),
         'pendientes_revision': tareas.filter(estado='pendiente_revision_sig').count(),
+        'pendientes_aprobacion': tareas.filter(estado='pendiente_aprobacion_campo').count(),
+        'aprobadas_campo': tareas.filter(estado='aprobado_para_campo').count(),
         'total': tareas.count(),
     }
 
-    # Tareas por estado para mostrar en secciones
     tareas_pendientes = tareas.filter(estado='asignado_a_digitalizador')
     tareas_en_proceso = tareas.filter(estado='en_proceso_digitalizacion')
     tareas_pendientes_revision = tareas.filter(estado='pendiente_revision_sig')
+    tareas_pendientes_aprobacion = tareas.filter(
+        estado='pendiente_aprobacion_campo')
+    tareas_aprobadas_campo = tareas.filter(estado='aprobado_para_campo')
 
     context = {
         'estadisticas': estadisticas,
         'tareas_pendientes': tareas_pendientes,
         'tareas_en_proceso': tareas_en_proceso,
         'tareas_pendientes_revision': tareas_pendientes_revision,
+        'tareas_pendientes_aprobacion': tareas_pendientes_aprobacion,
+        'tareas_aprobadas_campo': tareas_aprobadas_campo,
         'usuario': request.user,
     }
 
@@ -61,19 +81,14 @@ def detalle_tarea(request, tarea_id):
     """
     Detalle de una tarea específica para digitalización
     """
-
     tarea = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
-            'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
+            'colonia', 'creado_por', 'grupo_asignado', 'usuario_digitalizador'
         ).prefetch_related('precat_archivos'),
-        pk=tarea_id,
-        usuario_asignado=request.user
+        Q(usuario_digitalizador=request.user) | Q(
+            usuario_asignado=request.user),
+        pk=tarea_id
     )
-
-    # Verificar que tiene permisos para esta tarea
-    if tarea.usuario_asignado != request.user:
-        messages.error(request, "No tiene permisos para acceder a esta tarea.")
-        return redirect('digitalizador:digitalizador_dashboard')
 
     # Obtener archivos ya subidos
     archivos_precat = tarea.precat_archivos.filter(
@@ -81,17 +96,18 @@ def detalle_tarea(request, tarea_id):
     archivos_planos = tarea.precat_archivos.filter(
         tipo_archivo=PrecatArchivo.TIPO_PLANOS).last()
 
-    # Obtener auditorías de la solicitud
-    auditorias = tarea.auditorias.all().select_related('cambiado_por')[:10]
+    # Obtener y procesar auditorías
+    auditorias_raw = tarea.auditorias.all().select_related('cambiado_por')[:10]
+    auditorias_procesadas = procesar_auditorias(auditorias_raw)
 
     context = {
         'tarea': tarea,
         'archivos_precat': archivos_precat,
         'archivos_planos': archivos_planos,
-        'auditorias': auditorias,
+        'auditorias': auditorias_procesadas,
         'puede_iniciar': tarea.estado == 'asignado_a_digitalizador',
         'puede_subir': tarea.estado == 'en_proceso_digitalizacion',
-        'puede_ver': tarea.estado == 'pendiente_revision_sig',
+        'puede_ver': tarea.estado in ['pendiente_revision_sig', 'pendiente_aprobacion_campo', 'aprobado_para_campo'],
     }
 
     return render(request, 'includes/digitalizador/detalle_tarea.html', context)
@@ -108,8 +124,9 @@ def iniciar_digitalizacion(request, tarea_id):
 
     tarea = get_object_or_404(
         SolicitudRelevamiento,
-        pk=tarea_id,
-        usuario_asignado=request.user
+        Q(usuario_digitalizador=request.user) | Q(
+            usuario_asignado=request.user),
+        pk=tarea_id
     )
 
     if tarea.estado != 'asignado_a_digitalizador':
@@ -120,6 +137,10 @@ def iniciar_digitalizacion(request, tarea_id):
 
     try:
         with transaction.atomic():
+            # Marcar para evitar auditoría duplicada
+            tarea._auditoria_creada = True
+            tarea._cambiado_por = request.user
+
             # Cambiar estado
             tarea.estado = 'en_proceso_digitalizacion'
             tarea.fecha_inicio_etapa = timezone.now()
@@ -164,7 +185,7 @@ def subir_precat(request, tarea_id):
     tarea = get_object_or_404(
         SolicitudRelevamiento,
         pk=tarea_id,
-        usuario_asignado=request.user
+        usuario_digitalizador=request.user
     )
 
     if tarea.estado != 'en_proceso_digitalizacion':
@@ -243,10 +264,14 @@ def descargar_precat(request, archivo_id):
     """Descargar archivo Precat con autenticación"""
     archivo = get_object_or_404(PrecatArchivo, pk=archivo_id)
 
-    # Verificar permisos: solo el usuario que subió o líder SIG puede descargar
+    # Verificar permisos: solo el digitalizador que subió o líder SIG puede descargar
     puede_descargar = (
         archivo.subido_por == request.user or
-        request.user.groups.filter(name__icontains='SIG_LIDER').exists()
+        request.user.grupos_pertenece.filter(
+            nombre__icontains='SIG',
+            lider=request.user
+        ).exists() or
+        archivo.solicitud.usuario_digitalizador == request.user
     )
 
     if not puede_descargar:
@@ -270,9 +295,10 @@ def listar_archivos_digitalizador(request):
     """
     Listar archivos subidos por el digitalizador actual
     """
-    # Obtener archivos subidos por el usuario
+    # Obtener archivos subidos por el usuario O donde es digitalizador
     archivos_precat = PrecatArchivo.objects.filter(
-        subido_por=request.user
+        models.Q(subido_por=request.user) |
+        models.Q(solicitud__usuario_digitalizador=request.user)
     ).select_related(
         'solicitud',
         'solicitud__colonia'

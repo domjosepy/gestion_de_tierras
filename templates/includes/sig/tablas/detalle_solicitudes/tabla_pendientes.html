@@ -15,7 +15,7 @@
             <tbody>
                 {% for solicitud in solicitudes_pendientes %}
                     <tr>
-                        <td class="text-center">{{ solicitud.id }}</td>
+                        <td class="text-center">{{ forloop.counter }}</td>
                         <td>
                             {% with distrito=solicitud.colonia.distritos.first %}
                                 {% if distrito %}
@@ -42,7 +42,8 @@
                                     {% else %}bg-secondary{% endif %}">
                                     {{ solicitud.get_prioridad_display }}
                                 </span>
-                            </td>
+                        </td>
+                        <!-- En la sección de acciones de pendientes.html -->
                         <td class="text-center">
                             <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
                             class="btn btn-sm btn-info me-1" 
@@ -50,11 +51,18 @@
                                 <i class="fas fa-eye"></i>
                             </a>
                             
-                            {% if es_lider %}
-                                <button class="btn btn-sm btn-primary btn-asignar" 
+                            {% if solicitud.puede_asignar_lider %}
+                                <button class="btn btn-sm btn-primary"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#asignarDigitalizadorModal"
                                         data-solicitud-id="{{ solicitud.id }}"
                                         data-colonia-nombre="{{ solicitud.colonia.nombre }}"
                                         title="Asignar digitalizador">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                            {% elif es_lider %}
+                                <button class="btn btn-sm btn-secondary" disabled
+                                        title="No se puede asignar en estado: {{ solicitud.get_estado_display }}">
                                     <i class="fas fa-user-plus"></i>
                                 </button>
                             {% endif %}

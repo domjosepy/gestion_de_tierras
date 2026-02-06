@@ -1,0 +1,142 @@
+<!-- includes/sig/modal/solicitud_relevamiento/revision_solicitud/aprobar_digitalizacion_modal.html -->
+<div class="modal fade modal-success" id="aprobarDigitalizacionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>Aprobar Digitalización
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAprobarDigitalizacion">
+                {% csrf_token %}
+                <input type="hidden" id="solicitudIdAprobar" name="solicitud_id">
+                
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="textoAprobarInfo">¿Aprobar la digitalización?</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-map-marker-alt me-1"></i>Colonia
+                        </label>
+                        <div class="form-control bg-light" id="coloniaNombreAprobar"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacionAprobar" class="form-label">
+                            <i class="fas fa-comment me-1"></i>Observaciones (Opcional)
+                        </label>
+                        <textarea class="form-control" id="observacionAprobar" name="observacion" 
+                                  rows="3" placeholder="Comentarios sobre la aprobación..."></textarea>
+                    </div>
+                    
+                    <div id="aprobarError" class="alert alert-danger d-none"></div>
+                </div>
+                
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-1"></i>Aprobar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para cuando se abre el modal
+    const aprobarModal = document.getElementById('aprobarDigitalizacionModal');
+    if (aprobarModal) {
+        aprobarModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            const estadoActual = button.getAttribute('data-estado-actual');
+            
+            // Actualizar el modal
+            document.getElementById('solicitudIdAprobar').value = solicitudId;
+            document.getElementById('coloniaNombreAprobar').textContent = coloniaNombre;
+            
+            // Cambiar texto según estado
+            const textoInfo = document.getElementById('textoAprobarInfo');
+            if (estadoActual === 'en_proceso_digitalizacion') {
+                textoInfo.textContent = `¿Aprobar la digitalización de "${coloniaNombre}" para pasar a revisión SIG?`;
+            } else if (estadoActual === 'pendiente_revision_sig') {
+                textoInfo.textContent = `¿Aprobar la revisión SIG de "${coloniaNombre}"?`;
+            }
+            
+            // Limpiar formulario
+            document.getElementById('observacionAprobar').value = '';
+            const errorDiv = document.getElementById('aprobarError');
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.classList.add('d-none');
+            }
+        });
+    }
+
+    // Listener para el submit
+    const aprobarForm = document.getElementById('formAprobarDigitalizacion');
+    if (aprobarForm) {
+        aprobarForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const solicitudId = formData.get('solicitud_id');
+            const observacion = formData.get('observacion') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+            
+            try {
+                const response = await fetch(`/sig/solicitud/${solicitudId}/aprobar-digitalizacion/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ observacion: observacion }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(aprobarModal);
+                    if (modal) modal.hide();
+                    
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.message, 'success');
+                    }
+                    
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    const errorDiv = document.getElementById('aprobarError');
+                    if (errorDiv) {
+                        errorDiv.textContent = data.message;
+                        errorDiv.classList.remove('d-none');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const errorDiv = document.getElementById('aprobarError');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+                    errorDiv.classList.remove('d-none');
+                }
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
+            }
+        });
+    }
+});
+</script>

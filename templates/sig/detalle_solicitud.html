@@ -1,367 +1,440 @@
 {% extends "base.html" %}
 {% load static %}
-
+ 
 {% block title %}SIG - Detalle de Solicitud{% endblock %}
 
 {% block content %}
-<div class="container-fluid fade-in">
-    
-    <!-- Encabezado -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <div>
-            <h6 class="h3 mb-2 text-info fw-bold">
-                Informacion General de la Solicitud
-            </h6>
-            <h2 class="h4 mb-0 text-warning fw-bold">
-                <i class="fas fa-tractor me-2"></i> {{ solicitud.colonia.nombre }}
-            </h2>
-        </div>
+    <div class="container-fluid fade-in">
         
-        <div class="btn-group" role="group">
-            <a href="{% url 'sig:sig_dashboard' %}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-1"></i>Volver
-            </a>
+        <!-- Encabezado -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h6 class="h3 mb-2 text-info fw-bold">
+                    Informacion General de la Solicitud
+                </h6>
+                <h2 class="h4 mb-0 text-warning fw-bold">
+                    <i class="fas fa-tractor me-2"></i> {{ solicitud.colonia.nombre }}
+                </h2>
+            </div>
             
-            {% if es_responsable or puede_asignar %}
             <div class="btn-group" role="group">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                    <i class="fas fa-cog me-1"></i>Acciones
-                </button>
-                <ul class="dropdown-menu">
-                    {% if es_responsable and solicitud.estado == 'asignado_a_digitalizador' %}
-                    <li>
-                        <a class="dropdown-item" href="{% url 'sig:iniciar_digitalizacion' solicitud.id %}">
-                            <i class="fas fa-play text-success me-2"></i>Iniciar Digitalización
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    {% if es_responsable and solicitud.estado == 'en_proceso_digitalizacion' %}
-                    <li>
-                        <button class="dropdown-item btn-finalizar-detalle" 
-                                data-solicitud-id="{{ solicitud.id }}">
-                            <i class="fas fa-check text-warning me-2"></i>Finalizar Digitalización
+                <a href="{% url 'sig:sig_dashboard' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i>Volver
+                </a>
+                
+                {% if es_lider and solicitud.estado != 'en_proceso_digitalizacion' %}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Acciones
                         </button>
-                    </li>
-                    {% endif %}
-                    
-                    {% if puede_asignar and solicitud.estado in 'pendiente_asignacion_sig,asignado_a_digitalizador' %}
-                    <li>
-                        <button class="dropdown-item btn-asignar" 
-                                data-solicitud-id="{{ solicitud.id }}"
-                                data-colonia-nombre="{{ solicitud.colonia.nombre }}">
-                            <i class="fas fa-user-plus text-primary me-2"></i>Asignar Digitalizador
+                        <ul class="dropdown-menu">
+                            <!-- Asignar (solo en pendientes y rechazadas) -->
+                            {% if solicitud.estado in 'pendiente_asignacion_sig,rechazado' %}
+                                <li>
+                                    <button class="dropdown-item btn-asignar" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            title="Asignar digitalizador">
+                                        <i class="fas fa-user-plus text-primary me-2"></i>Asignar Digitalizador
+                                    </button>
+                                </li>
+                            {% endif %}
+                            
+                            <!-- Cambiar asignación (solo en asignadas) -->
+                            {% if solicitud.estado == 'asignado_a_digitalizador' %}
+                                <li>
+                                    <button class="dropdown-item btn-cambiar-asignacion" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            data-digitalizador-actual="{{ solicitud.usuario_asignado.get_full_name|default:solicitud.usuario_asignado.username }}"
+                                            data-observacion-actual="{{ solicitud.observaciones|default:'' }}"
+                                            title="Cambiar digitalizador">
+                                        <i class="fas fa-user-edit text-warning me-2"></i>Cambiar Digitalizador
+                                    </button>
+                                </li>
+                            {% endif %}
+                            
+                            <!-- Eliminar asignación (solo en asignadas) -->
+                            {% if solicitud.estado == 'asignado_a_digitalizador' %}
+                                <li>
+                                    <button class="dropdown-item btn-eliminar-asignacion" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            data-digitalizador="{{ solicitud.usuario_asignado.get_full_name|default:solicitud.usuario_asignado.username }}"
+                                            title="Eliminar asignación">
+                                        <i class="fas fa-user-minus text-danger me-2"></i>Eliminar Asignación
+                                    </button>
+                                </li>
+                            {% endif %}
+                            
+                            <!-- Revisar digitalización (solo en pendiente_revision_sig) -->
+                            {% if solicitud.estado == 'pendiente_revision_sig' %}
+                                <li>
+                                    <button class="dropdown-item btn-revisar-detalle" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-accion="aprobar_revision">
+                                        <i class="fas fa-check text-success me-2"></i>Aprobar Digitalización
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item btn-revisar-detalle" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-accion="rechazar_revision">
+                                        <i class="fas fa-times text-danger me-2"></i>Rechazar Digitalización SIG
+                                    </button>
+                                </li>
+                            {% endif %}
+
+                            <!-- Aprobar para campo (solo en pendiente_aprobacion_campo y tipo relevamiento) -->
+                            {% if solicitud.estado == 'pendiente_aprobacion_campo' and solicitud.tipo == 'relevamiento' %}
+                                <li>
+                                    <button class="dropdown-item btn-aprobar-campo" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-accion="aprobar_campo">
+                                        <i class="fas fa-check-circle text-success me-2"></i>Aprobar Relevamiento
+                                    </button>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endif %}
+                
+                {% if es_responsable and solicitud.estado in 'asignado_a_digitalizador,en_proceso_digitalizacion' %}
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Acciones
                         </button>
-                    </li>
-                    {% endif %}
-                    
-                    {% if puede_asignar and solicitud.estado == 'pendiente_revision_sig' %}
-                    <li>
-                        <button class="dropdown-item btn-revisar-detalle" 
-                                data-solicitud-id="{{ solicitud.id }}"
-                                data-accion="aprobar">
-                            <i class="fas fa-check text-success me-2"></i>Aprobar
-                        </button>
-                    </li>
-                    <li>
-                        <button class="dropdown-item btn-revisar-detalle" 
-                                data-solicitud-id="{{ solicitud.id }}"
-                                data-accion="rechazar">
-                            <i class="fas fa-times text-danger me-2"></i>Rechazar
-                        </button>
-                    </li>
-                    {% endif %}
-                </ul>
+                        <ul class="dropdown-menu">
+                            <!-- Acciones para digitalizador responsable -->
+                            {% if solicitud.estado == 'asignado_a_digitalizador' %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'sig:iniciar_digitalizacion' solicitud.id %}">
+                                        <i class="fas fa-play text-success me-2"></i>Iniciar Digitalización
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% if solicitud.estado == 'en_proceso_digitalizacion' %}
+                                <li>
+                                    <button class="dropdown-item btn-finalizar-detalle" 
+                                            data-solicitud-id="{{ solicitud.id }}">
+                                        <i class="fas fa-check text-warning me-2"></i>Finalizar Digitalización
+                                    </button>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
-    </div>
-    
-    <!-- Tarjetas de información -->
-    <div class="row mb-4">
-        <!-- Información de la solicitud -->
-        <div class="col-xl-4 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100">
-                <div class="card-header bg-primary text-white py-3">
-                    <h6 class="m-0 fw-bold">
-                        <i class="fas fa-info-circle me-2"></i>Información General
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Estado</small>
-                        <span class="badge bg-warning" data-estado="{{ solicitud.estado }}">
-                            {{ solicitud.get_estado_display }}
-                        </span>
+        <!-- Tarjetas de información  -->
+        <div class="row mb-4">
+            <!-- Información de la solicitud -->
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100">
+                    <div class="card-header bg-primary text-white py-3">
+                        <h6 class="m-0 fw-bold">
+                            <i class="fas fa-info-circle me-2"></i>Información General
+                        </h6>
                     </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Tipo de Estudio</small>
-                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                            {{ solicitud.get_tipo_display }}
-                        </span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Creado por</small>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-user text-primary"></i>
-                            </div>
-                            <span>{{ solicitud.creado_por.get_full_name|default:solicitud.creado_por.username }}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Fecha de creación</small>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-calendar-plus text-primary"></i>
-                            </div>
-                            <span>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Información de asignación -->
-        <div class="col-xl-4 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100">
-                <div class="card-header bg-success text-white py-3">
-                    <h6 class="m-0 fw-bold">
-                        <i class="fas fa-users me-2"></i>Asignación
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Grupo asignado</small>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-users text-success"></i>
-                            </div>
-                            <div>
-                                <strong>{{ solicitud.grupo_asignado.nombre }}</strong>
-                                {% if solicitud.grupo_asignado.lider %}
-                                <br><small class="text-muted">Líder: {{ solicitud.grupo_asignado.lider.username }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Digitalizador asignado</small>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-user text-success"></i>
-                            </div>
-                            <div>
-                                {% if solicitud.usuario_asignado %}
-                                <strong>{{ solicitud.usuario_asignado.get_full_name|default:solicitud.usuario_asignado.username }}</strong>
-                                {% if solicitud.fecha_asignacion %}
-                                <br><small class="text-muted">Asignado el: {{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}</small>
-                                {% endif %}
-                                {% else %}
-                                <span class="text-muted fst-italic">Sin asignar</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if solicitud.asignado_por %}
+                    <div class="card-body">
                         <div class="mb-3">
-                            <small class="text-muted d-block">Asignado por</small>
+                            <small class="text-muted d-block">Estado</small>
+                            <span class="badge bg-primary" data-estado="{{ solicitud.estado }}">
+                                {{ solicitud.get_estado_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Tipo de Estudio</small>
+                            <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                                {{ solicitud.get_tipo_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Creado por</small>
                             <div class="d-flex align-items-center">
                                 <div class="bg-light rounded-circle p-2 me-2">
-                                    <i class="fas fa-user-check text-success"></i>
+                                    <i class="fas fa-user text-primary"></i>
                                 </div>
-                                <span>{{ solicitud.asignado_por.username }}</span>
+                                <span>
+                                    {% if solicitud.creado_por %}
+                                        {{ solicitud.creado_por.get_full_name|default:solicitud.creado_por.username }}
+                                    {% else %}
+                                        <em class="text-muted">Usuario desconocido</em>
+                                    {% endif %}
+                                </span>
                             </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Fecha de creación</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-calendar-plus text-primary"></i>
+                                </div>
+                                <span>{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información de asignación -->
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card border-left-success shadow h-100">
+                    <div class="card-header bg-success text-white py-3">
+                        <h6 class="m-0 fw-bold">
+                            <i class="fas fa-users me-2"></i>Asignación
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Grupo asignado</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-users text-success"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ solicitud.grupo_asignado.nombre }}</strong>
+                                    {% if solicitud.grupo_asignado and solicitud.grupo_asignado.lider %}
+                                    <br><small class="text-muted">Líder: {{ solicitud.grupo_asignado.lider.get_full_name|default:solicitud.grupo_asignado.lider.username }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Digitalizador asignado</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-user text-success"></i>
+                                </div>
+                                <div>
+                                    {% if solicitud.usuario_asignado %}
+                                        <strong>{{ solicitud.usuario_asignado.get_full_name|default:solicitud.usuario_asignado.username }}</strong>
+                                        {% if solicitud.fecha_asignacion %}
+                                            <br><small class="text-muted">Asignado el: {{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted fst-italic">Sin asignar</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if solicitud.asignado_por %}
+                            <div class="mb-3">
+                                <small class="text-muted d-block">Asignado por</small>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="fas fa-user-check text-success"></i>
+                                    </div>
+                                    <span>{{ solicitud.asignado_por.get_full_name|default:solicitud.asignado_por.username }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información de la colonia -->
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100">
+                    <div class="card-header bg-warning text-white py-3">
+                        <h6 class="m-0 fw-bold">
+                            <i class="fas fa-map-marked-alt me-2"></i>Ubicación
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Colonia</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-tractor text-warning"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ solicitud.colonia.nombre }}</strong>
+                                    <br><small class="text-muted">Código: {{ solicitud.colonia.codigo }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {% if distritos %}
+                                <small class="text-muted d-block">Distrito</small>
+                                {% for distrito in distritos %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map text-success"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ distrito.nombre }}</strong>
+                                            <br><small class="text-muted">Código:{{ distrito.codigo }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {% if departamentos %}
+                                <small class="text-muted d-block">Departamento</small>
+                                {% for departamento in departamentos %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map-marked-alt text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ departamento.nombre }}</strong>
+                                            <br><small class="text-muted">Código: {{ departamento.codigo }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Estado de relevamiento</small>
+                            <span class="badge {% if solicitud.colonia.tiene_relevamiento %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if solicitud.colonia.tiene_relevamiento %}
+                                <i class="fas fa-check me-1"></i>Con relevamiento
+                                {% else %}
+                                <i class="fas fa-times me-1"></i>Sin relevamiento
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Observaciones -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white py-3">
+                <h6 class="m-0 fw-bold">
+                    <i class="fas fa-comment-dots me-2"></i>Observaciones
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if solicitud.observaciones %}
+                <div class="p-3 bg-light rounded">
+                    {{ solicitud.observaciones|linebreaks }}
+                </div>
+                {% else %}
+                <p class="text-muted fst-italic mb-0">No hay observaciones registradas.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Historial de auditorías -->
+        <div class="card shadow">
+            <div class="card-header bg-secondary text-white py-3 d-flex justify-content-between align-items-center" 
+                style="cursor: pointer;" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#collapseHistorial">
+                <h6 class="m-0 fw-bold">
+                    <i class="fas fa-history me-2"></i>Historial de Cambios
+                    <small class="ms-2">({{ auditorias|length }} registros)</small>
+                </h6>
+                <i class="fas fa-chevron-down transition-icon"></i>
+            </div>
+            
+            <div class="collapse" id="collapseHistorial">
+                <div class="card-body">
+                    {% if auditorias %}
+                        <div class="timeline">
+                            {% for auditoria in auditorias %}
+                            <div class="timeline-item mb-4">
+                                <div class="timeline-marker">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-user-edit me-1 text-info"></i>
+                                            {{ auditoria.cambiado_por_display }}
+                                        </h6>
+                                        <small class="text-muted">{{ auditoria.fecha|date:"d/m/Y H:i" }}</small>
+                                    </div>
+                                    
+                                    <p class="mb-1">
+                                        <strong>{{ auditoria.campo_display }}:</strong>
+                                        <span class="text-muted">{{ auditoria.valor_anterior|default:"-" }}</span>
+                                        <i class="fas fa-arrow-right mx-2 text-primary"></i>
+                                        <span class="fw-bold">{{ auditoria.valor_nuevo|default:"-" }}</span>
+                                    </p>
+                                    
+                                    {% if auditoria.comentario %}
+                                    <div class="alert alert-light border-start border-primary border-3 mt-2">
+                                        <i class="fas fa-comment text-primary me-2"></i>
+                                        {{ auditoria.comentario }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No hay historial registrado</p>
                         </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-        
-        <!-- Información de la colonia -->
-        <div class="col-xl-4 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100">
-                <div class="card-header bg-warning text-white py-3">
-                    <h6 class="m-0 fw-bold">
-                        <i class="fas fa-map-marked-alt me-2"></i>Ubicación
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Colonia</small>
-                        <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle p-2 me-2">
-                                <i class="fas fa-tractor text-warning"></i>
-                            </div>
-                            <div>
-                                <strong>{{ solicitud.colonia.nombre }}</strong>
-                                <br><small class="text-muted">Código: {{ solicitud.colonia.codigo }}</small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    
-                    <div class="mb-3">
-                        {% if distritos %}
-                            <small class="text-muted d-block">Distrito</small>
-                            {% for distrito in distritos %}
-                                <div class="d-flex align-items-center mb-2">
-                                    <div class="bg-light rounded-circle p-2 me-2">
-                                        <i class="fas fa-map text-success"></i>
-                                    </div>
-                                    <div>
-                                        <strong>{{ distrito.nombre }}</strong>
-                                        <br><small class="text-muted">Código:{{ distrito.codigo }}</small>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    <div class="mb-3">
-                        {% if departamentos %}
-                            <small class="text-muted d-block">Departamento</small>
-                            {% for departamento in departamentos %}
-                                <div class="d-flex align-items-center mb-2">
-                                    <div class="bg-light rounded-circle p-2 me-2">
-                                        <i class="fas fa-map-marked-alt text-primary"></i>
-                                    </div>
-                                    <div>
-                                        <strong>{{ departamento.nombre }}</strong>
-                                        <br><small class="text-muted">Código: {{ departamento.codigo }}</small>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
-                    
-                    
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Estado de relevamiento</small>
-                        <span class="badge {% if solicitud.colonia.tiene_relevamiento %}bg-success{% else %}bg-secondary{% endif %}">
-                            {% if solicitud.colonia.tiene_relevamiento %}
-                            <i class="fas fa-check me-1"></i>Con relevamiento
-                            {% else %}
-                            <i class="fas fa-times me-1"></i>Sin relevamiento
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
-    
-    <!-- Observaciones -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-info text-white py-3">
-            <h6 class="m-0 fw-bold">
-                <i class="fas fa-comment-dots me-2"></i>Observaciones
-            </h6>
-        </div>
-        <div class="card-body">
-            {% if solicitud.observaciones %}
-            <div class="p-3 bg-light rounded">
-                {{ solicitud.observaciones|linebreaks }}
-            </div>
-            {% else %}
-            <p class="text-muted fst-italic mb-0">No hay observaciones registradas.</p>
-            {% endif %}
-        </div>
-    </div>
-    
-    <!-- Historial de auditorías -->
-    <div class="card shadow">
-        <div class="card-header bg-secondary text-white py-3">
-            <h6 class="m-0 fw-bold">
-                <i class="fas fa-history me-2"></i>Historial de Cambios
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="timeline">
-                {% for auditoria in auditorias %}
-                <div class="timeline-item mb-4">
-                    <div class="timeline-marker">
-                        <i class="fas fa-circle"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <div class="d-flex justify-content-between mb-1">
-                            <h6 class="mb-0">
-                                <i class="fas fa-user-edit me-1"></i>
-                                {{ auditoria.cambiado_por.username|default:"Sistema" }}
-                            </h6>
-                            <small class="text-muted">{{ auditoria.fecha|date:"d/m/Y H:i" }}</small>
-                        </div>
-                        
-                        {% if auditoria.campo %}
-                        <p class="mb-1">
-                            <strong>{{ auditoria.campo|title }}:</strong>
-                            <span class="text-muted">{{ auditoria.valor_anterior|default:"Ninguno" }}</span>
-                            <i class="fas fa-arrow-right mx-2 text-primary"></i>
-                            <span class="fw-bold">{{ auditoria.valor_nuevo|default:"Ninguno" }}</span>
-                        </p>
-                        {% endif %}
-                        
-                        {% if auditoria.comentario %}
-                        <div class="alert alert-light border-start border-primary border-3 mt-2">
-                            <i class="fas fa-comment text-primary me-2"></i>
-                            {{ auditoria.comentario }}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% empty %}
-                <div class="text-center py-4">
-                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
-                    <p class="text-muted">No hay historial registrado</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Incluir modales -->
-{% if puede_asignar %}
-    {% include 'includes/sig/modal/solicitud_relevamiento/asignar_digitalizador_modal.html' %}
-{% endif %}
-    {% include 'includes/sig/modal/solicitud_relevamiento/finalizar_digitalizacion_modal.html' %}
-    {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
+    <!-- Incluir modales -->
+    <!-- Incluir modales -->
+    {% if es_lider and usuarios_grupo %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/asignar_digitalizador_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/cambiar_digitalizador_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/eliminar_asignacion_modal.html' %}
+    {% endif %}
+    {% if es_responsable and solicitud.estado == 'en_proceso_digitalizacion' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/finalizar_digitalizacion_modal.html' %}
+    {% endif %}
+    {% if puede_asignar and solicitud.estado == 'pendiente_revision_sig' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
+    {% endif %}
+
 {% endblock %}
-
-
 {% block scripts %}
-<script>
-    // Event delegation para botones de modales
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Event delegation para botones de modales en dropdown
             document.addEventListener('click', function(event) {
-                // Botón para asignar digitalizador
+                // Botón para asignar digitalizador (en dropdown)
                 if (event.target.closest('.btn-asignar')) {
                     const btn = event.target.closest('.btn-asignar');
                     const solicitudId = btn.dataset.solicitudId;
                     const coloniaNombre = btn.dataset.coloniaNombre;
                     
-                    document.getElementById('solicitudIdAsignar').value = solicitudId;
-                    document.getElementById('coloniaNombreAsignar').textContent = coloniaNombre;
-                    
-                    // Limpiar selección anterior
-                    const usuarioAsignado = document.getElementById('usuarioAsignado');
-                    if (usuarioAsignado) usuarioAsignado.value = '';
-                    const comentarioAsignacion = document.getElementById('comentarioAsignacion');
-                    if (comentarioAsignacion) comentarioAsignacion.value = '';
-                    const asignarError = document.getElementById('asignarError');
-                    if (asignarError) asignarError.textContent = '';
-                    
-                    const modalElement = document.getElementById('asignarDigitalizadorModal');
-                    if (modalElement) {
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.show();
+                    if (document.getElementById('solicitudIdAsignar')) {
+                        document.getElementById('solicitudIdAsignar').value = solicitudId;
+                        document.getElementById('coloniaNombreAsignar').textContent = coloniaNombre;
+                        
+                        // Limpiar selección anterior
+                        const usuarioAsignado = document.getElementById('usuarioAsignado');
+                        if (usuarioAsignado) usuarioAsignado.value = '';
+                        const comentarioAsignacion = document.getElementById('comentarioAsignacion');
+                        if (comentarioAsignacion) comentarioAsignacion.value = '';
+                        const asignarError = document.getElementById('asignarError');
+                        if (asignarError) asignarError.textContent = '';
+                        
+                        const modalElement = document.getElementById('asignarDigitalizadorModal');
+                        if (modalElement) {
+                            const modal = new bootstrap.Modal(modalElement);
+                            modal.show();
+                        }
                     }
+                    event.preventDefault();
+                    return false;
                 }
                 
-                // Botón para cambiar asignación
+                // Botón para cambiar asignación (en dropdown)
                 if (event.target.closest('.btn-cambiar-asignacion')) {
                     const btn = event.target.closest('.btn-cambiar-asignacion');
                     const solicitudId = btn.dataset.solicitudId;
@@ -369,51 +442,206 @@
                     const digitalizadorActual = btn.dataset.digitalizadorActual;
                     const observacionActual = btn.dataset.observacionActual || '';
                     
-                    document.getElementById('solicitudIdCambiar').value = solicitudId;
-                    document.getElementById('coloniaNombreCambiar').textContent = coloniaNombre;
-                    document.getElementById('digitalizadorActualCambiar').textContent = digitalizadorActual;
-                    document.getElementById('observacionActualCambiar').value = observacionActual;
-                    
-                    // Limpiar selección anterior
-                    const usuarioAsignadoCambiar = document.getElementById('usuarioAsignadoCambiar');
-                    if (usuarioAsignadoCambiar) usuarioAsignadoCambiar.value = '';
-                    const comentarioCambio = document.getElementById('comentarioCambio');
-                    if (comentarioCambio) comentarioCambio.value = '';
-                    const cambiarError = document.getElementById('cambiarError');
-                    if (cambiarError) cambiarError.textContent = '';
-                    
-                    const modalElement = document.getElementById('cambiarDigitalizadorModal');
-                    if (modalElement) {
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.show();
+                    if (document.getElementById('solicitudIdCambiar')) {
+                        document.getElementById('solicitudIdCambiar').value = solicitudId;
+                        document.getElementById('coloniaNombreCambiar').textContent = coloniaNombre;
+                        document.getElementById('digitalizadorActualCambiar').textContent = digitalizadorActual;
+                        document.getElementById('observacionActualCambiar').value = observacionActual;
+                        
+                        // Limpiar selección anterior
+                        const usuarioAsignadoCambiar = document.getElementById('usuarioAsignadoCambiar');
+                        if (usuarioAsignadoCambiar) usuarioAsignadoCambiar.value = '';
+                        const comentarioCambio = document.getElementById('comentarioCambio');
+                        if (comentarioCambio) comentarioCambio.value = '';
+                        const cambiarError = document.getElementById('cambiarError');
+                        if (cambiarError) cambiarError.textContent = '';
+                        
+                        const modalElement = document.getElementById('cambiarDigitalizadorModal');
+                        if (modalElement) {
+                            const modal = new bootstrap.Modal(modalElement);
+                            modal.show();
+                        }
                     }
+                    event.preventDefault();
+                    return false;
                 }
                 
-                // Botón para eliminar asignación
+                // Botón para eliminar asignación (en dropdown)
                 if (event.target.closest('.btn-eliminar-asignacion')) {
                     const btn = event.target.closest('.btn-eliminar-asignacion');
                     const solicitudId = btn.dataset.solicitudId;
                     const coloniaNombre = btn.dataset.coloniaNombre;
                     const digitalizador = btn.dataset.digitalizador;
                     
-                    document.getElementById('solicitudIdEliminar').value = solicitudId;
-                    document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
-                    document.getElementById('digitalizadorActualEliminar').textContent = digitalizador;
+                    if (document.getElementById('solicitudIdEliminar')) {
+                        // Actualizar formulario
+                        document.getElementById('solicitudIdEliminar').value = solicitudId;
+                        document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
+                        document.getElementById('digitalizadorEliminar').textContent = digitalizador;
+                        
+                        // Actualizar acción del formulario
+                        const form = document.getElementById('formEliminarAsignacion');
+                        if (form) {
+                            // Usar la URL base y reemplazar el ID
+                            const baseUrl = "{% url 'sig:eliminar_asignacion' 0 %}";
+                            form.action = baseUrl.replace('/0/', `/${solicitudId}/`);
+                        }
+                        
+                        // Limpiar error anterior
+                        const errorDiv = document.getElementById('eliminarError');
+                        if (errorDiv) {
+                            errorDiv.classList.add('d-none');
+                            errorDiv.textContent = '';
+                        }
+                        
+                        // Mostrar modal
+                        const modalElement = document.getElementById('eliminarAsignacionModal');
+                        if (modalElement) {
+                            const modal = new bootstrap.Modal(modalElement);
+                            modal.show();
+                        }
+                    }
+                    event.preventDefault();
+                    return false;
+                }
+                
+                // Botón para finalizar digitalización
+                if (event.target.closest('.btn-finalizar-detalle')) {
+                    const btn = event.target.closest('.btn-finalizar-detalle');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const modalElement = document.getElementById('finalizarDigitalizacionModal');
                     
-                    // Limpiar formulario
-                    const comentarioEliminacion = document.getElementById('comentarioEliminacion');
-                    if (comentarioEliminacion) comentarioEliminacion.value = '';
-                    const eliminarError = document.getElementById('eliminarError');
-                    if (eliminarError) eliminarError.textContent = '';
-                    
-                    const modalElement = document.getElementById('eliminarAsignacionModal');
                     if (modalElement) {
+                        const solicitudInput = modalElement.querySelector('input[name="solicitud_id"]');
+                        if (solicitudInput) {
+                            solicitudInput.value = solicitudId;
+                        }
+                        
                         const modal = new bootstrap.Modal(modalElement);
                         modal.show();
                     }
+                    event.preventDefault();
+                    return false;
                 }
             });
-        
-</script>
-
-{% endblock %}
+            
+            // Inicializar formulario de eliminar asignación
+            const formEliminarAsignacion = document.getElementById('formEliminarAsignacion');
+            if (formEliminarAsignacion) {
+                formEliminarAsignacion.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    const url = this.action;
+                    const errorDiv = document.getElementById('eliminarError');
+                    
+                    fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Cerrar modal
+                            const modalElement = document.getElementById('eliminarAsignacionModal');
+                            const modal = bootstrap.Modal.getInstance(modalElement);
+                            if (modal) modal.hide();
+                            
+                            // Recargar la página
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                            
+                            // Mostrar mensaje de éxito
+                            if (window.ToastManager) {
+                                window.ToastManager.mostrarToast(data.message, 'success');
+                            }
+                        } else {
+                            if (errorDiv) {
+                                errorDiv.textContent = data.error || 'Error al eliminar asignación';
+                                errorDiv.classList.remove('d-none');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        if (errorDiv) {
+                            errorDiv.textContent = 'Error de conexión: ' + error.message;
+                            errorDiv.classList.remove('d-none');
+                        }
+                    });
+                });
+            }
+            
+            // Inicializar formulario de cambiar asignación
+            const cambiarForm = document.getElementById('cambiarDigitalizadorForm');
+            if (cambiarForm) {
+                cambiarForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    const solicitudId = formData.get('solicitud_id');
+                    const btnSubmit = this.querySelector('button[type="submit"]');
+                    const originalText = btnSubmit.innerHTML;
+                    
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cambiando...';
+                    
+                    try {
+                        const response = await fetch(`/sig/solicitud/${solicitudId}/cambiar-usuario/`, {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Mostrar mensaje de éxito
+                            if (window.ToastManager) {
+                                window.ToastManager.mostrarToast(data.message, 'success');
+                            }
+                            
+                            // Cerrar modal
+                            const modalElement = document.getElementById('cambiarDigitalizadorModal');
+                            if (modalElement) {
+                                const modal = bootstrap.Modal.getInstance(modalElement);
+                                if (modal) modal.hide();
+                            }
+                            
+                            // Recargar después de 1.5 segundos
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            const cambiarError = document.getElementById('cambiarError');
+                            if (cambiarError) cambiarError.textContent = data.error;
+                            
+                            // Mostrar error
+                            if (window.ToastManager) {
+                                window.ToastManager.mostrarToast(data.error, 'error');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        const cambiarError = document.getElementById('cambiarError');
+                        if (cambiarError) cambiarError.textContent = 'Error de conexión. Intente nuevamente.';
+                        
+                        // Mostrar error de conexión
+                        if (window.ToastManager) {
+                            window.ToastManager.mostrarToast('Error de conexión. Intente nuevamente.', 'error');
+                        }
+                    } finally {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerHTML = originalText;
+                    }
+                });
+            }
+        });
+    </script>
+{% endblock scripts %}

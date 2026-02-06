@@ -3,40 +3,49 @@
     <table class="beautiful-table table-hover" width="100%" cellspacing="0">
         <thead class="table-light">
             <tr>
-                <th>#</th>
-                <th>Colonia</th>
-                <th>Ubicación</th>
-                <th>Tipo</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
+                <th class="text-center">#</th>
+                <th class="text-center">Datos Geográficos</th>
+                <th class="text-center">Digitalizador</th>
+                <th class="text-center">Fecha Creación</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for solicitud in solicitudes_revision %}
             <tr>
-                <td class="text-center">{{ solicitud.id }}</td>
+                <td class="text-center">{{ forloop.counter }}</td>
                 <td>
                     {% with distrito=solicitud.colonia.distritos.first %}
                         {% if distrito %}
-                            <small class="text-muted">{{ distrito.departamento.nombre }}</small>
-                            <br>{{ distrito.nombre }}
+                            <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                            <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
                         {% else %}
                             <span class="text-muted">Sin ubicación</span>
                         {% endif %}
                     {% endwith %}
                 </td>
-                <td>
-                    <strong>{{ solicitud.colonia.nombre }}</strong>
-                    <br><small class="text-muted">Cód: {{ solicitud.colonia.codigo }}</small>
-                </td>
                 <td class="text-center">
-                    <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                        {{ solicitud.get_tipo_display }}
-                    </span>
+                    {% if solicitud.usuario_asignado %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-user me-1"></i>
+                            {{ solicitud.usuario_asignado.username }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted">Sin asignar</span>
+                    {% endif %}
                 </td>
                 <td class="text-center">
                     <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
                     <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                </td>
+                <td class="text-center">
+                    <span class="badge 
+                        {% if solicitud.estado == 'en_proceso_digitalizacion' %}bg-warning
+                        {% elif solicitud.estado == 'pendiente_revision_sig' %}bg-info
+                        {% else %}bg-secondary{% endif %}">
+                        {{ solicitud.get_estado_display }}
+                    </span>
                 </td>
                 <td class="text-center">
                     <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
@@ -46,12 +55,39 @@
                     </a>
                     
                     {% if es_lider %}
-                    <button class="btn btn-sm btn-primary btn-asignar" 
-                            data-solicitud-id="{{ solicitud.id }}"
-                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                            title="Asignar digitalizador">
-                        <i class="fas fa-user-plus"></i>
-                    </button>
+                        <!-- Botones para EN PROCESO DE DIGITALIZACIÓN -->
+                        {% if solicitud.estado == 'pendiente_revision_sig' %}
+                             <button class="btn btn-sm btn-warning me-1"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#devolverCorreccionModal"
+                                    data-solicitud-id="{{ solicitud.id }}"
+                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                    data-estado-actual="{{ solicitud.estado }}"
+                                    title="Devolver para corrección">
+                                <i class="fas fa-redo"></i>
+                            </button>
+
+                            <button class="btn btn-sm btn-success me-1"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#aprobarDigitalizacionModal"
+                                    data-solicitud-id="{{ solicitud.id }}"
+                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                    data-estado-actual="{{ solicitud.estado }}"
+                                    title="Aprobar revisión SIG">
+                                <i class="fas fa-check-circle"></i>
+                            </button>
+                            
+                            <button class="btn btn-sm btn-danger"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#rechazarDigitalizacionModal"
+                                    data-solicitud-id="{{ solicitud.id }}"
+                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                    data-estado-actual="{{ solicitud.estado }}"
+                                    title="Rechazar revisión SIG">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                            
+                        {% endif %}
                     {% endif %}
                 </td>
             </tr>
@@ -63,53 +99,7 @@
 {% else %}
 <div class="text-center py-5">
     <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-    <h5 class="text-muted">No hay solicitudes revision</h5>
-    <p class="text-muted">No hay solicitudes revision de asignación en tu grupo</p>
+    <h5 class="text-muted">No hay solicitudes por revisar</h5>
+    <p class="text-muted">No hay solicitudes pendientes de revisión en tu grupo</p>
 </div>
 {% endif %}
-
-<script>    
-    // Botones de revisión
-            document.querySelectorAll('.btn-revisar').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const solicitudId = this.dataset.solicitudId;
-                    const accion = this.dataset.accion;
-                    const coloniaNombre = this.dataset.coloniaNombre;
-                    
-                    if (document.getElementById('solicitudIdRevisar')) {
-                        document.getElementById('solicitudIdRevisar').value = solicitudId;
-                        document.getElementById('accionRevisar').value = accion;
-                        document.getElementById('coloniaNombreRevisar').innerHTML = `
-                            <strong>Solicitud #${solicitudId}</strong><br>
-                            <small class="text-muted">${coloniaNombre}</small>
-                        `;
-                        
-                        // Configurar modal según acción
-                        const modalElement = document.getElementById('modalRevisarSolicitud');
-                        const alerta = document.getElementById('alertaRevisar');
-                        const btnConfirmar = document.getElementById('btnConfirmarRevision');
-                        
-                        if (accion === 'aprobar') {
-                            modalElement.querySelector('.modal-header').className = 'modal-header bg-success text-white';
-                            document.getElementById('textoAccion').textContent = '¿Aprobar esta solicitud para enviar a Coordinacion?';
-                            document.getElementById('tituloAlerta').textContent = 'Atención:';
-                            document.getElementById('textoAlerta').textContent = 'La solicitud será enviada al equipo de Coordinacion.';
-                            alerta.className = 'alert alert-success';
-                            btnConfirmar.className = 'btn btn-success';
-                            btnConfirmar.innerHTML = '<i class="fas fa-check me-1"></i>Aprobar';
-                        } else {
-                            modalElement.querySelector('.modal-header').className = 'modal-header bg-danger text-white';
-                            document.getElementById('textoAccion').textContent = '¿Rechazar esta solicitud?';
-                            document.getElementById('tituloAlerta').textContent = 'Importante:';
-                            document.getElementById('textoAlerta').textContent = 'La solicitud será marcada como rechazada y no podrá continuar el flujo.';
-                            alerta.className = 'alert alert-danger';
-                            btnConfirmar.className = 'btn btn-danger';
-                            btnConfirmar.innerHTML = '<i class="fas fa-times me-1"></i>Rechazar';
-                        }
-                        
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.show();
-                    }
-                });
-            });
-</script>

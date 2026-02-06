@@ -1,0 +1,144 @@
+<!-- includes/sig/modal/solicitud_relevamiento/revision_solicitud/devolver_correccion_modal.html -->
+<div class="modal fade modal-warning" id="devolverCorreccionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-redo me-2"></i>Devolver para Corrección
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formDevolverCorreccion">
+                {% csrf_token %}
+                <input type="hidden" id="solicitudIdDevolver" name="solicitud_id">
+                
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        La solicitud volverá a "En proceso de digitalización" para que el digitalizador realice las correcciones.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-map-marker-alt me-1"></i>Colonia
+                        </label>
+                        <div class="form-control bg-light" id="coloniaNombreDevolver"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacionDevolver" class="form-label fw-bold">
+                            <i class="fas fa-comment-dots me-1"></i>Observaciones / Correcciones Requeridas <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="observacionDevolver" name="observacion" 
+                                  rows="4" placeholder="Especifique las correcciones que debe realizar el digitalizador..." required></textarea>
+                        <div class="form-text">Estas observaciones serán visibles para el digitalizador.</div>
+                    </div>
+                    
+                    <div id="devolverError" class="alert alert-danger d-none"></div>
+                </div>
+                
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-redo me-1"></i>Devolver
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para cuando se abre el modal
+    const devolverModal = document.getElementById('devolverCorreccionModal');
+    if (devolverModal) {
+        devolverModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            
+            // Actualizar el modal
+            document.getElementById('solicitudIdDevolver').value = solicitudId;
+            document.getElementById('coloniaNombreDevolver').textContent = coloniaNombre;
+            
+            // Limpiar formulario
+            document.getElementById('observacionDevolver').value = '';
+            const errorDiv = document.getElementById('devolverError');
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.classList.add('d-none');
+            }
+        });
+    }
+
+    // Listener para el submit
+    const devolverForm = document.getElementById('formDevolverCorreccion');
+    if (devolverForm) {
+        devolverForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const solicitudId = formData.get('solicitud_id');
+            const observacion = formData.get('observacion') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            
+            // Validación
+            if (!observacion.trim()) {
+                const errorDiv = document.getElementById('devolverError');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Las observaciones son obligatorias';
+                    errorDiv.classList.remove('d-none');
+                }
+                return;
+            }
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+            
+            try {
+                const response = await fetch(`/sig/solicitud/${solicitudId}/devolver-correccion/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ observacion: observacion }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(devolverModal);
+                    if (modal) modal.hide();
+                    
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.message, 'success');
+                    }
+                    
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    const errorDiv = document.getElementById('devolverError');
+                    if (errorDiv) {
+                        errorDiv.textContent = data.message;
+                        errorDiv.classList.remove('d-none');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const errorDiv = document.getElementById('devolverError');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+                    errorDiv.classList.remove('d-none');
+                }
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
+            }
+        });
+    }
+});
+</script>

@@ -1,0 +1,157 @@
+<!-- Modal para eliminar asignación -->
+<div class="modal fade" id="eliminarAsignacionModal" tabindex="-1" aria-labelledby="eliminarAsignacionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="eliminarAsignacionModalLabel">
+                    <i class="fas fa-user-minus me-2"></i>Eliminar Asignación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEliminarAsignacion" method="post" action="{% url 'sig:eliminar_asignacion' 0 %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="solicitud_id" id="solicitudIdEliminar">
+                    
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                            <div>
+                                <h6 class="alert-heading mb-2">¿Está seguro de eliminar esta asignación?</h6>
+                                <p class="mb-1">Esta acción eliminará al digitalizador asignado y la solicitud volverá al estado "Pendiente de asignación".</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="coloniaNombreEliminar" class="form-label">Colonia:</label>
+                        <div id="coloniaNombreEliminar" class="form-control bg-light"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="digitalizadorActualEliminar" class="form-label">Digitalizador actual:</label>
+                        <div id="digitalizadorActualEliminar" class="form-control bg-light"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="comentarioEliminacion" class="form-label">Comentario (opcional):</label>
+                        <textarea name="comentario" id="comentarioEliminacion" class="form-control" 
+                                  rows="3" placeholder="Motivo de la eliminación de asignación..."></textarea>
+                    </div>
+                    
+                    <div id="eliminarError" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-1"></i>Eliminar Asignación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Listener para cuando se abre el modal
+    const eliminarModal = document.getElementById('eliminarAsignacionModal');
+    if (eliminarModal) {
+        eliminarModal.addEventListener('show.bs.modal', function(event) {
+            // Botón que disparó el modal
+            const button = event.relatedTarget;
+            
+            // Extraer datos del botón
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+            const digitalizador = button.getAttribute('data-digitalizador');
+            
+            // Actualizar el modal
+            document.getElementById('solicitudIdEliminar').value = solicitudId;
+            document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
+            document.getElementById('digitalizadorActualEliminar').textContent = digitalizador;
+            
+            // Limpiar formulario
+            document.getElementById('comentarioEliminacion').value = '';
+            const errorDiv = document.getElementById('eliminarError');
+            if (errorDiv) {
+                errorDiv.textContent = '';
+                errorDiv.classList.add('d-none');
+            }
+        });
+    }
+
+    // Listener para el submit del formulario
+    const eliminarForm = document.getElementById('formEliminarAsignacion');
+    if (eliminarForm) {
+        eliminarForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const solicitudId = formData.get('solicitud_id');
+            const comentario = formData.get('comentario') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.innerHTML;
+            
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Eliminando...';
+            
+            try {
+                const response = await fetch(`/sig/solicitud/${solicitudId}/eliminar-asignacion/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Cerrar modal
+                    const modal = bootstrap.Modal.getInstance(eliminarModal);
+                    if (modal) modal.hide();
+                    
+                    // Mostrar mensaje de éxito
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.message, 'success');
+                    }
+                    
+                    // Recargar después de 1 segundo
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    const errorDiv = document.getElementById('eliminarError');
+                    if (errorDiv) {
+                        errorDiv.textContent = data.error || data.message;
+                        errorDiv.classList.remove('d-none');
+                    }
+                    
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.error || data.message, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const errorDiv = document.getElementById('eliminarError');
+                if (errorDiv) {
+                    errorDiv.textContent = 'Error de conexión. Intente nuevamente.';
+                    errorDiv.classList.remove('d-none');
+                }
+                
+                if (window.ToastManager) {
+                    window.ToastManager.mostrarToast('Error de conexión. Intente nuevamente.', 'error');
+                }
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalText;
+            }
+        });
+    }
+});
+</script>
