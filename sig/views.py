@@ -118,14 +118,27 @@ def sig_solicitudes(request):
         'colonia__distritos__departamento'
     )
 
+    # PARA MOSTRAR SOLICITUDES ASIGNADAS AL GRUPO DE COORDINACION.
+    query_aprobadas = SolicitudRelevamiento.objects.filter(
+        # Digitalizadas por alguien del grupo SIG
+        Q(usuario_digitalizador__in=grupos_usuario.first().usuarios.all()) |
+        Q(estado='asignado_coordinacion', fecha_aprobacion_campo__isnull=False)
+    ).filter(
+        estado='asignado_coordinacion',
+        fecha_aprobacion_campo__isnull=False
+    ).select_related(
+        'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado', 'usuario_digitalizador'
+    ).prefetch_related(
+        'colonia__distritos__departamento'
+    )
+
     # Obtener solicitudes por estado
     estados = {
         'pendientes': query.filter(estado='pendiente_asignacion_sig'),
         'asignadas': query.filter(estado='asignado_a_digitalizador'),
         'en_proceso': query.filter(estado='en_proceso_digitalizacion'),
         'pendiente_revision': query.filter(estado='pendiente_revision_sig'),
-        'pendiente_aprobacion_campo': query.filter(estado='pendiente_aprobacion_campo'),
-        'aprobadas': query.filter(estado='aprobado_para_campo'),
+        'aprobadas': query_aprobadas,
         'rechazadas': query.filter(estado='rechazado'),
         'finalizadas': query.filter(estado='finalizado'),
     }
@@ -159,8 +172,6 @@ def sig_solicitudes(request):
                 elif solicitud.estado == 'pendiente_revision_sig':
                     solicitud.acciones_revision = [
                         'aprobar_revision', 'rechazar_revision']
-                elif solicitud.estado == 'pendiente_aprobacion_campo' and solicitud.tipo == 'relevamiento':
-                    solicitud.acciones_revision = ['aprobar_campo']
                 else:
                     solicitud.acciones_revision = []
 
@@ -199,7 +210,6 @@ def sig_solicitudes(request):
         'solicitudes_asignadas': estados['asignadas'],
         'solicitudes_en_proceso': estados['en_proceso'],
         'solicitudes_revision': estados['pendiente_revision'],
-        'solicitudes_aprobacion_campo': estados['pendiente_aprobacion_campo'],
         'solicitudes_aprobadas': estados['aprobadas'],
         'solicitudes_rechazadas': estados['rechazadas'],
         'solicitudes_finalizadas': estados['finalizadas'],
@@ -474,297 +484,6 @@ def eliminar_asignacion(request, solicitud_id):
     })
 
 
-@login_required
-@requiere_ser_sig
-def obtener_estados_dashboard(request):
-    """
-    Obtener estadísticas y estados para el dashboard
-    """
-    grupos_usuario = request.user.grupos_pertenece.filter(
-        nombre__icontains='SIG',
-        activo=True
-    )
-
-    es_lider = grupos_usuario.filter(lider=request.user).exists()
-
-    # Estados a mostrar
-    estados_config = [
-        {'key': 'pendiente_asignacion_sig', 'nombre': 'Pendientes de asignación'},
-        {'key': 'asignado_a_digitalizador', 'nombre': 'Asignadas'},
-        {'key': 'en_proceso_digitalizacion', 'nombre': 'En proceso'},
-        {'key': 'pendiente_revision_sig', 'nombre': 'Pendientes de revisión'},
-        {'key': 'pendiente_aprobacion_campo',
-            'nombre': 'Pendientes aprobación campo'},
-        {'key': 'rechazado', 'nombre': 'Rechazadas'},
-        {'key': 'finalizado', 'nombre': 'Finalizadas'},
-    ]
-
-    query = SolicitudRelevamiento.objects.filter(
-        grupo_asignado__in=grupos_usuario
-    )
-
-    # Calcular estadísticas
-    estadisticas = {}
-    estados_con_datos = []
-
-    for estado in estados_config:
-        qs = query.filter(estado=estado['key'])
-
-        # Si no es líder, filtrar según corresponda
-        if not es_lider and estado['key'] in ['asignado_a_digitalizador', 'en_proceso_digitalizacion']:
-            qs = qs.filter(usuario_asignado=request.user)
-
-        count = qs.count()
-        estadisticas[estado['key']] = count
-
-        if count > 0 or estado['key'] in ['pendiente_asignacion_sig', 'asignado_a_digitalizador']:
-            estados_con_datos.append({
-                'key': estado['key'],
-                'nombre': estado['nombre'],
-                'count': count
-            })
-
-    estadisticas['total'] = query.count()
-
-    return JsonResponse({
-        'success': True,
-        'estadisticas': estadisticas,
-        'estados': estados_con_datos,
-        'es_lider': es_lider
-    })
-
-
-@login_required
-@requiere_ser_sig
-def cargar_tabla_estado(request, estado):
-    """
-    Cargar tabla de solicitudes para un estado específico
-    """
-    grupos_usuario = request.user.grupos_pertenece.filter(
-        nombre__icontains='SIG',
-        activo=True
-    )
-
-    es_lider = grupos_usuario.filter(lider=request.user).exists()
-
-    # Base de consulta
-    query = SolicitudRelevamiento.objects.filter(
-        grupo_asignado__in=grupos_usuario,
-        estado=estado
-    ).select_related(
-        'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
-    ).prefetch_related(
-        'colonia__distritos__departamento'
-    )
-
-    # Si no es líder, filtrar según estado
-    if not es_lider and estado in ['asignado_a_digitalizador', 'en_proceso_digitalizacion']:
-        query = query.filter(usuario_asignado=request.user)
-
-    # Usuarios del grupo para asignación (solo líderes)
-    usuarios_grupo = []
-    if es_lider and estado in ['pendiente_asignacion_sig', 'asignado_a_digitalizador']:
-        grupo_principal = grupos_usuario.first()
-        usuarios_grupo = grupo_principal.usuarios.filter(
-            estado='ACTIVO',
-            is_active=True
-        ).order_by('username')
-
-    # Renderizar template
-    html = render_to_string('includes/sig/tablas/tabla_estado.html', {
-        'solicitudes': query,
-        'estado': estado,
-        'es_lider': es_lider,
-        'usuarios_grupo': usuarios_grupo,
-        'request': request
-    })
-
-    return JsonResponse({'html': html})
-
-
-@login_required
-@requiere_ser_sig
-def iniciar_digitalizacion(request, solicitud_id):
-    """
-    Iniciar el proceso de digitalización (para el usuario asignado)
-    """
-    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
-
-    # Verificar que el usuario sea el asignado
-    if solicitud.usuario_asignado != request.user:
-        messages.error(request, "No está asignado a esta solicitud.")
-        return redirect('sig:sig_dashboard')
-
-    # Verificar estado
-    if solicitud.estado != 'asignado_a_digitalizador':
-        messages.error(
-            request, "La solicitud no está lista para iniciar digitalización.")
-        return redirect('sig:detalle_solicitud', solicitud_id=solicitud_id)
-
-    # Cambiar estado
-    solicitud.estado = 'en_proceso_digitalizacion'
-    solicitud.save()
-
-    messages.success(request, "Digitalización iniciada correctamente.")
-    return redirect('sig:detalle_solicitud', solicitud_id=solicitud_id)
-
-
-@login_required
-@requiere_ser_sig
-def finalizar_digitalizacion(request, solicitud_id):
-    """
-    Finalizar el proceso de digitalización (para el usuario asignado)
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
-
-    # Verificar que el usuario sea el asignado
-    if solicitud.usuario_asignado != request.user:
-        return JsonResponse({
-            'error': 'No está asignado a esta solicitud'
-        }, status=403)
-
-    # Verificar estado
-    if solicitud.estado != 'en_proceso_digitalizacion':
-        return JsonResponse({
-            'error': 'La solicitud no está en proceso de digitalización'
-        }, status=400)
-
-    # Obtener observaciones del formulario
-    observaciones = request.POST.get('observaciones', '')
-
-    # Cambiar estado
-    solicitud.estado = 'pendiente_revision_sig'
-    solicitud.observaciones = observaciones
-    solicitud.save()
-
-    messages.success(
-        request, "Digitalización finalizada. Pendiente de revisión.")
-
-    return JsonResponse({
-        'success': True,
-        'message': 'Digitalización finalizada correctamente',
-        'redirect_url': reverse('sig:detalle_solicitud', args=[solicitud_id])
-    })
-
-
-@login_required
-@requiere_ser_lider_sig
-def revisar_solicitud(request, solicitud_id):
-    """
-    Revisar una solicitud (para líderes)
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
-    accion = request.POST.get('accion')  # 'aprobar' o 'rechazar'
-    observaciones = request.POST.get('observaciones', '')
-    feedback = request.POST.get('feedback', '')
-
-    # Verificar que el usuario sea líder del grupo
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
-        return JsonResponse({
-            'error': 'No es líder del grupo asignado'
-        }, status=403)
-
-    # Verificar estado
-    if solicitud.estado != 'pendiente_revision_sig':
-        return JsonResponse({
-            'error': 'La solicitud no está pendiente de revisión'
-        }, status=400)
-
-    # Procesar acción
-    if accion == 'aprobar':
-        # Diferente estado según tipo
-        if solicitud.tipo == 'relevamiento':
-            # Para relevamientos nuevos: va a aprobación campo
-            solicitud.estado = 'pendiente_aprobacion_campo'
-            mensaje = "Solicitud aprobada. Pendiente de aprobación para campo."
-        else:
-            # Para actualizaciones: va a análisis
-            solicitud.estado = 'pendiente_asignacion_analista'
-            mensaje = "Solicitud aprobada. Pendiente de asignación a analista."
-
-    elif accion == 'rechazar':
-        solicitud.estado = 'en_proceso_digitalizacion'
-        # Guardar feedback para el digitalizador
-        if feedback:
-            solicitud.observaciones += f"\n\n--- FEEDBACK LÍDER SIG ---\n{feedback}"
-        mensaje = "Digitalización rechazada. Se ha enviado feedback al digitalizador."
-    else:
-        return JsonResponse({'error': 'Acción no válida'}, status=400)
-
-    solicitud.save()
-
-    # Crear auditoría
-    SolicitudRelevamientoAudit.objects.create(
-        solicitud=solicitud,
-        campo='estado',
-        valor_anterior='pendiente_revision_sig',
-        valor_nuevo=solicitud.estado,
-        cambiado_por=request.user,
-        comentario=f'Revisión SIG: {accion}. {feedback}'
-    )
-
-    return JsonResponse({
-        'success': True,
-        'message': mensaje,
-        'redirect_url': reverse('sig:sig_dashboard')
-    })
-
-
-@login_required
-@requiere_ser_lider_sig
-def aprobar_para_campo(request, solicitud_id):
-    """
-    Aprobar para campo (solo para líderes SIG en relevamientos nuevos)
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
-    comentario = request.POST.get('comentario', '')
-
-    # Verificar que sea líder del grupo SIG
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
-        return JsonResponse({'error': 'No es líder del grupo asignado'}, status=403)
-
-    # Verificar estado y tipo
-    if solicitud.estado != 'pendiente_aprobacion_campo':
-        return JsonResponse({
-            'error': 'La solicitud no está pendiente de aprobación para campo'
-        }, status=400)
-
-    if solicitud.tipo != 'relevamiento':
-        return JsonResponse({
-            'error': 'Solo los relevamientos nuevos requieren aprobación SIG para campo'
-        }, status=400)
-
-    # Cambiar estado
-    estado_anterior = solicitud.estado
-    solicitud.estado = 'aprobado_para_campo'
-    solicitud.save()
-
-    # Crear auditoría
-    SolicitudRelevamientoAudit.objects.create(
-        solicitud=solicitud,
-        campo='estado',
-        valor_anterior=estado_anterior,
-        valor_nuevo='aprobado_para_campo',
-        cambiado_por=request.user,
-        comentario=f'Aprobado para campo por líder SIG. {comentario}'
-    )
-
-    return JsonResponse({
-        'success': True,
-        'message': 'Solicitud aprobada para campo. Pasando a coordinación.',
-        'redirect_url': reverse('sig:sig_dashboard')
-    })
-
-
 # ------------------ Gestión de Archivos Precat ------------------ #
 
 
@@ -884,78 +603,7 @@ def obtener_archivos_solicitud(request, solicitud_id):
     return JsonResponse({'html': html})
 
 
-@login_required
-@requiere_ser_lider_sig
-def revisar_solicitud_sig(request, solicitud_id):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    solicitud = get_object_or_404(
-        SolicitudRelevamiento.objects.select_related('colonia'),
-        pk=solicitud_id
-    )
-
-    if solicitud.estado != 'pendiente_revision_sig':
-        return JsonResponse({
-            'success': False,
-            'message': f'La solicitud no está en estado pendiente de revisión SIG'
-        }, status=400)
-
-    data = json.loads(request.body)
-    accion = data.get('accion')
-    comentario = data.get('comentario', '')
-
-    try:
-        with transaction.atomic():
-            estado_anterior = solicitud.estado
-
-            if accion == 'aprobar_revision':
-                # Pasar a pendiente de aprobación para campo
-                solicitud.estado = 'pendiente_aprobacion_campo'
-                nuevo_estado_display = 'Pendiente de Aprobación para Campo'
-                comentario_auditoria = f'Revisión SIG aprobada por {request.user.get_full_name()}'
-            elif accion == 'rechazar_revision':
-                # Rechazar
-                solicitud.estado = 'rechazado'
-                solicitud.motivo_rechazo = comentario
-                nuevo_estado_display = 'Rechazado'
-                comentario_auditoria = f'Revisión SIG rechazada por {request.user.get_full_name()}'
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Acción no válida'
-                }, status=400)
-
-            if comentario:
-                solicitud.observaciones = f"{solicitud.observaciones}\n\nRevisión SIG ({timezone.now().strftime('%d/%m/%Y %H:%M')}): {comentario}"
-
-            solicitud.save()
-
-            # Registrar auditoría
-            SolicitudRelevamientoAudit.objects.create(
-                solicitud=solicitud,
-                campo='estado',
-                valor_anterior=estado_anterior,
-                valor_nuevo=solicitud.estado,
-                cambiado_por=request.user,
-                comentario=comentario_auditoria +
-                (f'. Comentario: {comentario}' if comentario else '')
-            )
-
-            return JsonResponse({
-                'success': True,
-                'message': f'Solicitud {nuevo_estado_display}',
-                'estado': solicitud.get_estado_display()
-            })
-
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': f'Error al procesar la revisión: {str(e)}'
-        }, status=500)
-
-
-# ------------------ Vistas para Aprobar y Rechazar Digitalización ------------------ #
+# ------------------ Vistas para Aprobar y Rechazar Digitalización Devolver para correccion ------------------ #
 
 @login_required
 @requiere_ser_lider_sig
@@ -966,8 +614,14 @@ def aprobar_digitalizacion(request, solicitud_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-    data = json.loads(request.body)
-    observacion = data.get('observacion', '').strip()
+    try:
+        data = json.loads(request.body)
+        observacion = data.get('observacion', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos JSON inválidos'
+        }, status=400)
 
     solicitud = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
@@ -988,7 +642,7 @@ def aprobar_digitalizacion(request, solicitud_id):
     if solicitud.estado not in estados_validos:
         return JsonResponse({
             'success': False,
-            'message': f'La solicitud no está en un estado válido para aprobación'
+            'message': f'La solicitud no está en un estado válido para aprobación. Estado actual: {solicitud.get_estado_display()}'
         }, status=400)
 
     try:
@@ -1004,11 +658,17 @@ def aprobar_digitalizacion(request, solicitud_id):
                 mensaje = 'Digitalización aprobada. Pendiente de revisión SIG.'
 
             elif solicitud.estado == 'pendiente_revision_sig':
-                # Aprobar revisión SIG
+                # Aprobar revisión SIG según tipo de solicitud
                 if solicitud.tipo == 'relevamiento':
-                    nuevo_estado = 'pendiente_aprobacion_campo'
-                    mensaje = 'Revisión SIG aprobada. Pendiente de aprobación para campo.'
-                else:
+                    # Para RELEVAMIENTOS: aprobado_para_campo (se auto-transiciona a asignado_coordinacion)
+                    nuevo_estado = 'aprobado_para_campo'
+                    mensaje = 'Revisión SIG aprobada. Aprobado para campo y asignado a coordinación.'
+
+                    # Registrar fecha de aprobación para campo
+                    solicitud.fecha_aprobacion_campo = timezone.now()
+
+                else:  # actualizacion
+                    # Para ACTUALIZACIONES: directo a análisis
                     nuevo_estado = 'pendiente_asignacion_analista'
                     mensaje = 'Revisión SIG aprobada. Pendiente de asignación a analista.'
 
@@ -1018,7 +678,7 @@ def aprobar_digitalizacion(request, solicitud_id):
             if nuevo_estado not in estados_siguientes:
                 return JsonResponse({
                     'success': False,
-                    'message': f'Transición no permitida de {solicitud.estado} a {nuevo_estado}'
+                    'message': f'Transición no permitida de {solicitud.get_estado_display()} a {dict(solicitud.ESTADOS).get(nuevo_estado)}'
                 }, status=400)
 
             # Actualizar estado
@@ -1027,11 +687,15 @@ def aprobar_digitalizacion(request, solicitud_id):
 
             # Agregar observación si existe
             if observacion:
-                if solicitud.observaciones:
-                    solicitud.observaciones += f"\n\n--- APROBACIÓN SIG ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
-                else:
-                    solicitud.observaciones = f"--- APROBACIÓN SIG ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
+                timestamp = timezone.now().strftime('%d/%m/%Y %H:%M')
+                obs_text = f"APROBACIÓN SIG ({timestamp}) por {request.user.get_full_name()}:\n{observacion}"
 
+                if solicitud.observaciones:
+                    solicitud.observaciones += f"\n\n--- {obs_text}"
+                else:
+                    solicitud.observaciones = f"--- {obs_text}"
+
+            # Guardar (esto disparará la transición automática en el save del modelo)
             solicitud.save()
 
             # Registrar auditoría
@@ -1039,16 +703,16 @@ def aprobar_digitalizacion(request, solicitud_id):
                 solicitud=solicitud,
                 campo='estado',
                 valor_anterior=estado_anterior,
-                valor_nuevo=nuevo_estado,
+                valor_nuevo=solicitud.estado,  # Usar el estado final después del save
                 cambiado_por=request.user,
-                comentario=f'Aprobación SIG realizada por {request.user.get_full_name()}. {observacion}'
+                comentario=f'Aprobación SIG realizada por {request.user.get_full_name()}. {observacion if observacion else "Sin observaciones"}'
             )
 
             return JsonResponse({
                 'success': True,
                 'message': mensaje,
                 'estado': solicitud.get_estado_display(),
-                'nuevo_estado': nuevo_estado
+                'nuevo_estado': solicitud.estado
             })
 
     except Exception as e:
@@ -1164,8 +828,14 @@ def devolver_para_correccion(request, solicitud_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-    data = json.loads(request.body)
-    observacion = data.get('observacion', '').strip()
+    try:
+        data = json.loads(request.body)
+        observacion = data.get('observacion', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos JSON inválidos'
+        }, status=400)
 
     solicitud = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
@@ -1181,34 +851,44 @@ def devolver_para_correccion(request, solicitud_id):
             'message': 'No tiene permisos para devolver esta solicitud'
         }, status=403)
 
-    # Solo se puede devolver desde en_proceso_digitalizacion
-    if solicitud.estado != 'en_proceso_digitalizacion':
+    # CAMBIO: Aceptar AMBOS estados
+    estados_validos = ['en_proceso_digitalizacion', 'pendiente_revision_sig']
+    if solicitud.estado not in estados_validos:
         return JsonResponse({
             'success': False,
-            'message': 'Solo se pueden devolver solicitudes en proceso de digitalización'
+            'message': f'Solo se pueden devolver solicitudes en proceso de digitalización o pendiente de revisión SIG. Estado actual: {solicitud.get_estado_display()}'
+        }, status=400)
+
+    # Validar que hay observación
+    if not observacion:
+        return JsonResponse({
+            'success': False,
+            'message': 'Las observaciones son obligatorias para devolver una solicitud'
         }, status=400)
 
     try:
         with transaction.atomic():
             estado_anterior = solicitud.estado
 
-            # No cambiamos el estado principal, solo agregamos observaciones
-            if observacion:
-                if solicitud.observaciones:
-                    solicitud.observaciones += f"\n\n--- CORRECCIÓN REQUERIDA ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
-                else:
-                    solicitud.observaciones = f"--- CORRECCIÓN REQUERIDA ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
+            # CAMBIO: Volver al estado "en_proceso_digitalizacion"
+            solicitud.estado = 'en_proceso_digitalizacion'
+
+            # Agregar observaciones
+            if solicitud.observaciones:
+                solicitud.observaciones += f"\n\n--- CORRECCIÓN REQUERIDA ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
+            else:
+                solicitud.observaciones = f"--- CORRECCIÓN REQUERIDA ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
 
             solicitud.save()
 
             # Registrar auditoría
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=solicitud,
-                campo='observaciones',
-                valor_anterior='',
-                valor_nuevo=f'Correcciones solicitadas: {observacion[:100]}...',
+                campo='estado',
+                valor_anterior=estado_anterior,
+                valor_nuevo='en_proceso_digitalizacion',
                 cambiado_por=request.user,
-                comentario=f'Digitalización devuelta para corrección por {request.user.get_full_name()}. {observacion}'
+                comentario=f'Solicitud devuelta para corrección por {request.user.get_full_name()}. {observacion}'
             )
 
             return JsonResponse({

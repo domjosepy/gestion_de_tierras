@@ -34,14 +34,6 @@
                         <div class="form-text">Este motivo será visible para el digitalizador.</div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="observacionRechazar" class="form-label">
-                            <i class="fas fa-comment me-1"></i>Observaciones Adicionales (Opcional)
-                        </label>
-                        <textarea class="form-control" id="observacionRechazar" name="observacion" 
-                                  rows="2" placeholder="Observaciones adicionales..."></textarea>
-                    </div>
-                    
                     <div id="rechazarError" class="alert alert-danger d-none"></div>
                 </div>
                 
@@ -83,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Limpiar formulario
             document.getElementById('motivoRechazo').value = '';
-            document.getElementById('observacionRechazar').value = '';
             const errorDiv = document.getElementById('rechazarError');
             if (errorDiv) {
                 errorDiv.textContent = '';
@@ -101,7 +92,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             const solicitudId = formData.get('solicitud_id');
             const motivoRechazo = formData.get('motivo_rechazo') || '';
-            const observacion = formData.get('observacion') || '';
             const btnSubmit = this.querySelector('button[type="submit"]');
             const originalText = btnSubmit.innerHTML;
             

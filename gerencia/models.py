@@ -39,7 +39,6 @@ class SolicitudRelevamiento(models.Model):
         ("pendiente_revision_analista", "Pendiente de Revisión Análisis"),
 
         # APROBACIONES
-        ("pendiente_aprobacion_campo", "Pendiente Aprobación para Campo"),
         ("aprobado_para_campo", "Aprobado para Campo"),
 
         # ESTADOS COORDINACION
@@ -68,11 +67,10 @@ class SolicitudRelevamiento(models.Model):
         "pendiente_revision_analista": ["ANALISIS"],
 
         # Aprobación campo
-        "pendiente_aprobacion_campo": {
+        "aprobado_para_campo": {
             "relevamiento": ["SIG"],
             "actualizacion": ["ANALISIS"]
         },
-        "aprobado_para_campo": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
 
         # Coordinación
         "asignado_coordinacion": ["COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
@@ -329,9 +327,9 @@ class SolicitudRelevamiento(models.Model):
 
     def generar_orden_trabajo(self, usuario_generador, numero_orden=None):
         """Generar orden de trabajo"""
-        if self.estado != "aprobado_para_campo":
+        if self.estado != "asignado_coordinacion":
             raise ValidationError(
-                "Solo se puede generar orden desde 'Aprobado para Campo")
+                "Solo se puede generar orden desde 'Asignado a coordinacion")
 
         if not numero_orden:
             numero_orden = f"OT-{self.pk}-{timezone.now().strftime('%Y%m%d')}"
@@ -344,7 +342,7 @@ class SolicitudRelevamiento(models.Model):
         SolicitudRelevamientoAudit.objects.create(
             solicitud=self,
             campo='estado',
-            valor_anterior="aprobado_para_campo",
+            valor_anterior="asignado_coordinacion",
             valor_nuevo="orden_trabajo_generada",
             cambiado_por=usuario_generador,
             comentario=f"Orden de trabajo {numero_orden} generada por {usuario_generador.get_full_name()}"
@@ -579,14 +577,24 @@ class SolicitudRelevamiento(models.Model):
     def _procesar_cambio_estado(self, estado_anterior, estado_nuevo, ahora):
         """Procesar lógica al cambiar de estado"""
 
-        # Registrar fechas específicas
+        # TRANSICIÓN AUTOMÁTICA: aprobado_para_campo → asignado_coordinacion
         if estado_nuevo == "aprobado_para_campo":
+            # Registrar fecha de aprobación
             self.fecha_aprobacion_campo = ahora
-        elif estado_nuevo == "en_ejecucion_campo":
+
+            # Cambiar automáticamente a asignado_coordinacion
+            self.estado = "asignado_coordinacion"
+
+            # Crear auditoría de la transición automática
+            # (se creará después del save principal)
+            self._crear_auditoria_auto_transicion = True
+
+        # Registrar otras fechas específicas
+        if self.estado == "en_ejecucion_campo":
             self.fecha_inicio_campo = ahora
-        elif estado_nuevo == "pendiente_cierre" and estado_anterior == "en_ejecucion_campo":
+        elif self.estado == "pendiente_cierre" and estado_anterior == "en_ejecucion_campo":
             self.fecha_fin_campo = ahora
-        elif estado_nuevo == "finalizado":
+        elif self.estado == "finalizado":
             self.fecha_finalizacion = ahora
 
         # Calcular tiempos de etapas
@@ -597,7 +605,7 @@ class SolicitudRelevamiento(models.Model):
         ]
 
         # Si el nuevo estado inicia una etapa, registrar inicio
-        if estado_nuevo in estados_inicio:
+        if self.estado in estados_inicio:
             self.fecha_inicio_etapa = ahora
 
         # Si salimos de una etapa, calcular duración
@@ -617,33 +625,25 @@ class SolicitudRelevamiento(models.Model):
                 self.tiempo_campo or timezone.timedelta(0)) + duracion
 
         # Calcular tiempo total al finalizar
-        if estado_nuevo == "finalizado":
+        if self.estado == "finalizado":
             self.tiempo_total = ahora - self.fecha_creacion
 
-            # IMPORTANTE: Solo actualizar si es un RELEVAMIENTO NUEVO
             if self.tipo == self.TIPO_RELEVAMIENTO:
-                # Verificar que realmente no tenía relevamiento
                 if not self.colonia.tiene_relevamiento:
                     self.colonia.tiene_relevamiento = True
-                    # Usar update para evitar recursión
                     Colonia.objects.filter(pk=self.colonia.pk).update(
                         tiene_relevamiento=True
                     )
 
-        # Si se revierte la finalización (solo admin puede hacer esto)
-        if estado_anterior == "finalizado" and estado_nuevo != "finalizado":
-            # Solo revertir si era un relevamiento nuevo
+        # Si se revierte la finalización
+        if estado_anterior == "finalizado" and self.estado != "finalizado":
             if self.tipo == self.TIPO_RELEVAMIENTO:
-                # Considerar si hay otras solicitudes finalizadas
-
-                # Contar si hay otras solicitudes finalizadas para esta colonia
                 otras_finalizadas = SolicitudRelevamiento.objects.filter(
                     colonia=self.colonia,
                     estado="finalizado",
                     tipo=self.TIPO_RELEVAMIENTO
                 ).exclude(pk=self.pk)
 
-                # Si NO hay otras relevamientos finalizados, entonces sí revertir
                 if not otras_finalizadas.exists():
                     self.colonia.tiene_relevamiento = False
                     Colonia.objects.filter(pk=self.colonia.pk).update(
@@ -724,23 +724,20 @@ class SolicitudRelevamiento(models.Model):
         """Obtener los estados a los que se puede cambiar desde el estado actual"""
 
         # Definir transiciones básicas
-        # Modificar transiciones en obtener_estados_siguientes:
 
         transiciones = {
             # Flujo SIG (colonias nuevas)
             "pendiente_asignacion_sig": ["asignado_a_digitalizador"],
             "asignado_a_digitalizador": ["en_proceso_digitalizacion"],
             "en_proceso_digitalizacion": ["pendiente_revision_sig", "rechazado"],
-            "pendiente_revision_sig": ["pendiente_aprobacion_campo", "rechazado"],
+            "pendiente_revision_sig": ["aprobado_para_campo", "rechazado"],
 
             # Flujo Análisis
             "pendiente_asignacion_analista": ["asignado_a_analista"],
             "asignado_a_analista": ["en_proceso_analisis"],
             "en_proceso_analisis": ["pendiente_revision_analista", "rechazado"],
-            "pendiente_revision_analista": ["pendiente_aprobacion_campo", "rechazado"],
+            "pendiente_revision_analista": ["aprobado_para_campo", "rechazado"],
 
-            # Aprobación para campo
-            "pendiente_aprobacion_campo": ["aprobado_para_campo", "rechazado"],
 
             # Flujo Coordinación
             "aprobado_para_campo": ["asignado_coordinacion"],

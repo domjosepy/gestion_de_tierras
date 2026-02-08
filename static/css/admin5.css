@@ -1739,8 +1739,12 @@ table.dataTable td .dropdown-item:hover {
 /* 1. GRUPO PENDIENTES (Amarillo / Alerta) 
    Esperando que alguien tome una acción inicial o revisión */
 .status-dot[data-estado="pendiente_asignacion_sig"],
+.status-dot[data-estado="pendiente_asignacion_analista"]{
+    background-color: #747370;
+    box-shadow: 0 0 5px rgba(185, 174, 142, 0.5);
+}
+
 .status-dot[data-estado="pendiente_revision_sig"],
-.status-dot[data-estado="pendiente_asignacion_analista"],
 .status-dot[data-estado="pendiente_revision_analista"],
 .status-dot[data-estado="pendiente_aprobacion_campo"],
 .status-dot[data-estado="pendiente_cierre"] {
