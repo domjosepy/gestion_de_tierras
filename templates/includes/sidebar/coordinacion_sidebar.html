@@ -1,0 +1,143 @@
+<!-- coordinacion_sidebar.html -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-map-marked-alt"></i>
+    </div>
+    <div class="sidebar-brand-text">GRT - Coordinación</div>
+  </div>
+
+  <ul class="nav flex-column">
+    <!-- Panel de Control -->
+    <li class="nav-item">
+      <a class="nav-link active" title="Panel de Control" data-bs-toggle="tooltip" 
+         href="{% url 'coordinacion:coordinacion_dashboard' %}">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Panel de Control</span>
+      </a>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <!-- Sección: Solicitudes -->
+    <div class="sidebar-heading text-uppercase small px-3">
+      Solicitudes
+    </div>
+
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'coordinacion:solicitudes_pendientes' %}"
+         title="Solicitudes Pendientes">
+        <i class="fas fa-inbox"></i>
+        <span>Solicitudes Pendientes</span>
+
+      </a>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <!-- Sección: Órdenes de Trabajo -->
+    <div class="sidebar-heading text-uppercase small px-3">
+      Órdenes de Trabajo
+    </div>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
+         data-bs-target="#collapseOrdenes" aria-expanded="false" aria-controls="collapseOrdenes"
+         title="Gestión de Órdenes">
+        <i class="fas fa-clipboard-list"></i>
+        <span>Gestión de Órdenes</span>
+      </a>
+      <div id="collapseOrdenes" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}">
+            <i class="fas fa-list me-2"></i>Todas las Órdenes
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=generada">
+            <i class="fas fa-file-signature me-2"></i>Generadas
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=asignada">
+            <i class="fas fa-user-check me-2"></i>Asignadas
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=en_proceso">
+            <i class="fas fa-spinner me-2"></i>En Proceso
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=completada">
+            <i class="fas fa-check-circle me-2"></i>Completadas
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <!-- Sección: Equipos -->
+    <div class="sidebar-heading text-uppercase small px-3">
+      Equipos de Campo
+    </div>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
+         data-bs-target="#collapseEquipos" aria-expanded="false" aria-controls="collapseEquipos"
+         title="Gestión de Equipos">
+        <i class="fas fa-users-gear"></i>
+        <span>Gestión de Equipos</span>
+      </a>
+      <div id="collapseEquipos" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'coordinacion:equipos_relevamiento' %}">
+            <i class="fas fa-list me-2"></i>Lista de Equipos
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:crear_equipo' %}">
+            <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Equipo
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <!-- Sección: Reportes -->
+    <div class="sidebar-heading text-uppercase small px-3">
+      Reportes y Estadísticas
+    </div>
+
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
+         data-bs-target="#collapseReportes" aria-expanded="false" aria-controls="collapseReportes"
+         title="Reportes y Estadísticas">
+        <i class="fas fa-chart-bar"></i>
+        <span>Reportes y Estadísticas</span>
+      </a>
+      <div id="collapseReportes" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'coordinacion:reportes' %}">
+            <i class="fas fa-chart-line me-2"></i>Reportes Generales
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-chart-pie me-2"></i>Estadísticas por Equipo
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-calendar-alt me-2"></i>Reportes por Período
+          </a>
+        </div>
+      </div>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <!-- Sección: Configuración -->
+    <div class="sidebar-heading text-uppercase small px-3">
+      Configuración
+    </div>
+
+
+  <button id="sidebarToggle">
+    <i class="fas fa-angle-double-right"></i>
+  </button>
+</div>
+
+<!-- content wrapper -->
+<div id="content-wrapper">
+  {% block content %}
+  {% endblock %}
+</div>

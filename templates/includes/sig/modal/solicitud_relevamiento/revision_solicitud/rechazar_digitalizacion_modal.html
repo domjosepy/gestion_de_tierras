@@ -41,7 +41,7 @@
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-danger">
+                    <button type="submit" class="btn btn-outline-danger">
                         <i class="fas fa-ban me-1"></i>Rechazar
                     </button>
                 </div>
@@ -67,9 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Cambiar texto según estado
             const textoInfo = document.getElementById('textoRechazarInfo');
-            if (estadoActual === 'en_proceso_digitalizacion') {
-                textoInfo.textContent = `¿Rechazar la digitalización de "${coloniaNombre}"?`;
-            } else if (estadoActual === 'pendiente_revision_sig') {
+            if (estadoActual === 'pendiente_revision_sig') {
                 textoInfo.textContent = `¿Rechazar la revisión SIG de "${coloniaNombre}"?`;
             }
             
@@ -113,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     body: JSON.stringify({
                         motivo_rechazo: motivoRechazo,
-                        observacion: observacion
                     }),
                     headers: {
                         'Content-Type': 'application/json',
@@ -126,12 +123,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     const modal = bootstrap.Modal.getInstance(rechazarModal);
                     if (modal) modal.hide();
-                    
-                    if (window.ToastManager) {
-                        window.ToastManager.mostrarToast(data.message, 'success');
-                    }
-                    
-                    setTimeout(() => location.reload(), 1000);
+            
+                    setTimeout(() => location.reload(), 5000);
                 } else {
                     const errorDiv = document.getElementById('rechazarError');
                     if (errorDiv) {

@@ -70,17 +70,34 @@
                             <!-- Revisar digitalización (solo en pendiente_revision_sig) -->
                             {% if solicitud.estado == 'pendiente_revision_sig' %}
                                 <li>
-                                    <button class="dropdown-item btn-revisar-detalle" 
+                                    <button class="dropdown-item btn-revision-sig me-1" 
                                             data-solicitud-id="{{ solicitud.id }}"
-                                            data-accion="aprobar_revision">
-                                        <i class="fas fa-check text-success me-2"></i>Aprobar Digitalización
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            data-accion="devolver_correccion"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            title="Solicitar corrección">
+                                        <i class="fas fa-redo text-warning me-2"></i> Corrección
                                     </button>
                                 </li>
                                 <li>
-                                    <button class="dropdown-item btn-revisar-detalle" 
+                                    <button class=" dropdown-item btn-revision-sig me-1" 
                                             data-solicitud-id="{{ solicitud.id }}"
-                                            data-accion="rechazar_revision">
-                                        <i class="fas fa-times text-danger me-2"></i>Rechazar Digitalización SIG
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            data-accion="aprobar"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            title="Aprobar revisión SIG">
+                                        <i class="fas fa-check-double text-success me-2"></i> Aprobar
+                                    </button>
+                                </li> 
+                               
+                                <li>
+                                    <button class="dropdown-item btn-revision-sig" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            data-accion="rechazar"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            title="Rechazar">
+                                        <i class="fas fa-times text-danger me-2"></i> Rechazar
                                     </button>
                                 </li>
                             {% endif %}
@@ -386,18 +403,30 @@
         </div>
     </div>
 
-    <!-- Incluir modales -->
+
+
     <!-- Incluir modales -->
     {% if es_lider and usuarios_grupo %}
         {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/asignar_digitalizador_modal.html' %}
         {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/cambiar_digitalizador_modal.html' %}
         {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/eliminar_asignacion_modal.html' %}
     {% endif %}
+
     {% if es_responsable and solicitud.estado == 'en_proceso_digitalizacion' %}
         {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/finalizar_digitalizacion_modal.html' %}
     {% endif %}
-    {% if puede_asignar and solicitud.estado == 'pendiente_revision_sig' %}
-        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud_modal.html' %}
+
+    <!-- CORRECCIÓN: Incluir modales de revisión SIG para el estado pendiente_revision_sig cuando es_lider -->
+    {% if es_lider and solicitud.estado == 'pendiente_revision_sig' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/devolver_correccion_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/aprobar_digitalizacion_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/rechazar_digitalizacion_modal.html' %}
+    {% endif %}
+
+    {% if es_lider and solicitud.estado == 'en_proceso_digitalizacion' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/aprobar_digitalizacion_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/rechazar_digitalizacion_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/devolver_correccion_modal.html' %}
     {% endif %}
 
 {% endblock %}
@@ -505,25 +534,115 @@
                     return false;
                 }
                 
-                // Botón para finalizar digitalización
-                if (event.target.closest('.btn-finalizar-detalle')) {
-                    const btn = event.target.closest('.btn-finalizar-detalle');
+                // NUEVO: Botones de revisión SIG (Corrección, Aprobar, Rechazar)
+                if (event.target.closest('.btn-revision-sig')) {
+                    const btn = event.target.closest('.btn-revision-sig');
                     const solicitudId = btn.dataset.solicitudId;
-                    const modalElement = document.getElementById('finalizarDigitalizacionModal');
+                    const coloniaNombre = btn.dataset.coloniaNombre;
+                    const accion = btn.dataset.accion;
                     
-                    if (modalElement) {
-                        const solicitudInput = modalElement.querySelector('input[name="solicitud_id"]');
-                        if (solicitudInput) {
-                            solicitudInput.value = solicitudId;
+                    console.log('Botón de revisión SIG clickeado:', {solicitudId, coloniaNombre, accion});
+                    
+                    // Según la acción, abrimos el modal correspondiente
+                    if (accion === 'devolver_correccion') {
+                        // Abrir modal de devolver corrección
+                        if (document.getElementById('solicitudIdDevolver')) {
+                            document.getElementById('solicitudIdDevolver').value = solicitudId;
+                            document.getElementById('coloniaNombreDevolver').textContent = coloniaNombre;
+                            
+                            // Limpiar comentario anterior
+                            const comentarioDevolver = document.getElementById('comentarioDevolver');
+                            if (comentarioDevolver) comentarioDevolver.value = '';
+                            
+                            const modalElement = document.getElementById('devolverCorreccionModal');
+                            if (modalElement) {
+                                const modal = new bootstrap.Modal(modalElement);
+                                modal.show();
+                            }
                         }
-                        
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.show();
+                    } else if (accion === 'aprobar') {
+                        // Abrir modal de aprobar
+                        if (document.getElementById('solicitudIdAprobar')) {
+                            document.getElementById('solicitudIdAprobar').value = solicitudId;
+                            document.getElementById('coloniaNombreAprobar').textContent = coloniaNombre;
+                            
+                            // Limpiar observación anterior
+                            const observacionAprobar = document.getElementById('observacionAprobar');
+                            if (observacionAprobar) observacionAprobar.value = '';
+                            
+                            const modalElement = document.getElementById('aprobarDigitalizacionModal');
+                            if (modalElement) {
+                                const modal = new bootstrap.Modal(modalElement);
+                                modal.show();
+                            }
+                        }
+                    } else if (accion === 'rechazar') {
+                        // Abrir modal de rechazar
+                        if (document.getElementById('solicitudIdRechazar')) {
+                            document.getElementById('solicitudIdRechazar').value = solicitudId;
+                            document.getElementById('coloniaNombreRechazar').textContent = coloniaNombre;
+                            
+                            // Limpiar motivo anterior
+                            const motivoRechazo = document.getElementById('motivoRechazo');
+                            if (motivoRechazo) motivoRechazo.value = '';
+                            
+                            const modalElement = document.getElementById('rechazarDigitalizacionModal');
+                            if (modalElement) {
+                                const modal = new bootstrap.Modal(modalElement);
+                                modal.show();
+                            }
+                        }
                     }
+                    
+                    event.preventDefault();
+                    return false;
+                }
+                
+                // Botón para aprobar campo (si existe)
+                if (event.target.closest('.btn-aprobar-campo')) {
+                    const btn = event.target.closest('.btn-aprobar-campo');
+                    const solicitudId = btn.dataset.solicitudId;
+                    const accion = btn.dataset.accion;
+                    
+                    // Aquí puedes agregar la lógica para aprobar campo
+                    if (confirm('¿Está seguro que desea aprobar este relevamiento para trabajo de campo?')) {
+                        // Llamar a la función correspondiente
+                        aprobarCampo(solicitudId);
+                    }
+                    
                     event.preventDefault();
                     return false;
                 }
             });
+            
+            // Función para aprobar campo (ejemplo)
+            async function aprobarCampo(solicitudId) {
+                try {
+                    const response = await fetch(`/sig/solicitud/${solicitudId}/aprobar-campo/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (window.ToastManager) {
+                            window.ToastManager.mostrarToast(data.message, 'success');
+                        }
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        alert(data.error || 'Error al aprobar para campo');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error de conexión');
+                }
+            }
             
             // Inicializar formulario de eliminar asignación
             const formEliminarAsignacion = document.getElementById('formEliminarAsignacion');

@@ -11,13 +11,9 @@
             <h2 class="h3 mb-2 text-primary fw-bold">
                 <i class="fas fa-file-archive me-2"></i>Mis Archivos Precat
             </h2>
-            <p class="mb-0">Archivos subidos por {{ usuario.get_full_name|default:usuario.username }}</p>
+            <p class="mb-0">Revisa los archivos precat que has subido para tus tareas de digitalización</p>
         </div>
-        <div class="d-flex align-items-center">
-            <span class="badge bg-success">
-                <i class="fas fa-user me-1"></i> Digitalizador
-            </span>
-        </div>
+
     </div>
 
     <!-- Estadísticas -->
@@ -79,65 +75,91 @@
 
     <!-- Tabla de archivos -->
     <div class="card shadow mb-4">
-        <div class="card-header bg-white py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-list me-2"></i>Mis Archivos Subidos
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-white">
+                <i class="fas fa-list me-2"></i>Mis Archivos
             </h6>
+            <div class="btn-group">
+                <button class="btn btn-sm text-white btn-outline-primary" onclick="filtrarPorTipo('precat')">
+                    <i class="fas fa-file-zipper me-1"></i>Solo Precat
+                </button>
+                <button class="btn btn-sm text-white btn-outline-primary" onclick="filtrarPorTipo('planos')">
+                    <i class="fas fa-file-pdf me-1"></i>Solo Planos
+                </button>
+                <button class="btn btn-sm fw-bold text-white btn-outline-primary" onclick="filtrarPorTipo('todos')">
+                    <i class="fas fa-list me-1"></i>Todos
+                </button>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="beautiful-table table-hover" id="misArchivosTable" width="100%" cellspacing="0">
                     <thead class="table-light">
                         <tr>
-                            <th>Tipo</th>
-                            <th>Nombre del Archivo</th>
-                            <th>Colonia</th>
-                            <th>Solicitud</th>
-                            <th>Fecha</th>
-                            <th>Tamaño</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
+                            <th class="text-center">#</th>
+                            <th class="text-center">Solicitud</th>
+                            <th class="text-center">Datos Geográficos</th>
+                            <th class="text-center">Observación</th>
+                            <th class="text-center">Tipo de archivo</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Fecha</th>
+                            <th class="text-center">Tamaño</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for archivo in archivos %}
-                        <tr>
+                        <tr data-tipo="{{ archivo.tipo_archivo }}">
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td class="text-center">
+                                    <a href="{% url 'sig:detalle_solicitud' archivo.solicitud.id %}" 
+                                    class="text-decoration-none">
+                                       <i class="fas fa-info-circle ms-1 text-primary"></i> {{ archivo.solicitud.id }}
+                                        
+                                    </a>
+                            </td>
                             <td>
+                                    {% with distrito=archivo.solicitud.colonia.distritos.first %}
+                                        {% if distrito %}
+                                            <small><strong>{{ archivo.solicitud.colonia.nombre }}</strong></small>
+                                            <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Sin ubicación</span>
+                                        {% endif %}
+                                    {% endwith %}
+                            </td>
+                            <td>
+                                 {% if archivo.observaciones %}
+                                        <small>{{ archivo.observaciones }}</small>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                            </td>
+                            <td class="text-center">
                                 <span class="badge {% if archivo.tipo_archivo == 'precat' %}bg-info{% else %}bg-danger{% endif %}">
                                     <i class="fas {% if archivo.tipo_archivo == 'precat' %}fa-file-zipper{% else %}fa-file-pdf{% endif %} me-1"></i>
                                     {{ archivo.get_tipo_archivo_display }}
                                 </span>
                             </td>
-                            <td>
-                                <strong>{{ archivo.get_nombre_archivo }}</strong>
-                                {% if archivo.observaciones %}
-                                <br><small class="text-muted">{{ archivo.observaciones|truncatechars:30 }}</small>
-                                {% endif %}
-                            </td>
-                            <td>{{ archivo.solicitud.colonia.nombre }}</td>
-                            <td>
-                                <a href="{% url 'digitalizador:detalle_tarea' archivo.solicitud.id %}" 
-                                   class="text-decoration-none">
-                                    #{{ archivo.solicitud.id }}
-                                </a>
-                            </td>
-                            <td>
-                                <small>{{ archivo.fecha_subida|date:"d/m/Y" }}</small>
-                                <br><small class="text-muted">{{ archivo.fecha_subida|date:"H:i" }}</small>
-                            </td>
-                            <td>
-                                <span class="badge bg-light text-dark">
-                                    {{ archivo.get_tamanio_mb }} MB
-                                </span>
-                            </td>
-                            <td>
+                            <td class="text-center">
                                 <span class="badge {% if archivo.solicitud.estado == 'pendiente_revision_sig' %}bg-warning
                                                  {% elif archivo.solicitud.estado == 'pendiente_asignacion_analista' %}bg-success
                                                  {% else %}bg-secondary{% endif %}">
                                     {{ archivo.solicitud.get_estado_display }}
                                 </span>
                             </td>
-                            <td>
+
+                            <td class="text-center">
+                                <small>{{ archivo.fecha_subida|date:"d/m/Y" }}</small>
+                                <br><small class="text-muted">{{ archivo.fecha_subida|date:"H:i" }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark">
+                                    {{ archivo.get_tamanio_mb }} MB
+                                </span>
+                            </td>
+
+                            <td class="text-center">
                                 <a href="{% url 'digitalizador:descargar_archivo_digitalizador' archivo.id %}" 
                                    class="btn btn-sm btn-outline-primary" 
                                    title="Descargar archivo">
@@ -185,6 +207,19 @@ document.addEventListener('DOMContentLoaded', function() {
             info: "Mostrando {start} a {end} de {rows} archivos"
         }
     });
+    
 });
+function filtrarPorTipo(tipo) {
+    const tabla = document.querySelector('#misArchivosTable');
+    const filas = tabla.querySelectorAll('tbody tr');
+    
+    filas.forEach(fila => {
+        if (tipo === 'todos' || fila.dataset.tipo === tipo) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+}
 </script>
 {% endblock %}

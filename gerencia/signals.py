@@ -34,7 +34,7 @@ def auditar_cambios_solicitud(sender, instance, **kwargs):
             'estado',
             'grupo_asignado',
             'usuario_asignado',
-            'usuario_digitalizador',  # AGREGAR ESTE CAMPO
+            'usuario_digitalizador',
             'motivo_rechazo',
             'observaciones',
             'asignado_por',
@@ -92,7 +92,7 @@ def crear_auditoria_despues_guardar(sender, instance, created, **kwargs):
         'estado',
         'grupo_asignado',
         'usuario_asignado',
-        'usuario_digitalizador',  # AGREGAR ESTE CAMPO
+        'usuario_digitalizador',
         'motivo_rechazo',
         'observaciones',
         'asignado_por',

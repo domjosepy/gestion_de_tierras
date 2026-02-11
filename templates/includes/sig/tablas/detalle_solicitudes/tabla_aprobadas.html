@@ -7,12 +7,10 @@
                 <th class="text-center">#</th>
                 <th class="text-center">Creación</th>
                 <th class="text-center">Datos Geográficos</th>
-                <th class="text-center">Tipo</th>
                 <th class="text-center">Digitalizador</th>
-                <th class="text-center">Fecha Aprobación Campo</th>
+                <th class="text-center">Fecha Aprobación</th>
                 <th class="text-center">Prioridad</th>
-                <th class="text-center">Estado</th>
-                <th class="text-center">Acciones</th>
+                <th class="text-center">Grupo Actual</th>
             </tr>
         </thead>
         <tbody>
@@ -32,11 +30,6 @@
                             <span class="text-muted">Sin ubicación</span>
                         {% endif %}
                     {% endwith %}
-                </td>
-                <td class="text-center">
-                    <span class="badge bg-info">
-                        {{ solicitud.get_tipo_display }}
-                    </span>
                 </td>
                 <td class="text-center">
                     {% if solicitud.usuario_digitalizador %}
@@ -65,16 +58,13 @@
                     </span>
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-success">
-                        {{ solicitud.get_estado_display }}
-                    </span>
-                </td>
-                <td class="text-center">
-                    <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                       class="btn btn-sm btn-info me-1" 
-                       title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </a>
+                            {% if solicitud.grupo_asignado %}
+                                <small class="badge" style="background-color: {{ solicitud.grupo_asignado.color|default:'#6c757d' }}">
+                                    {{ solicitud.grupo_asignado.nombre }}
+                                </small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -88,3 +78,24 @@
         <p class="text-muted">No hay solicitudes que hayan sido aprobadas para trabajo de campo en tu grupo</p>
     </div>
 {% endif %}
+
+<script>
+ 
+    const tablas = document.querySelectorAll('.beautiful-table');
+    tablas.forEach(tabla => {
+        if (tabla.rows.length > 1) {
+            new simpleDatatables.DataTable(tabla, {
+                perPage: 10,
+                perPageSelect: [5, 10, 20, 50],
+                labels: {
+                    placeholder: "Buscar...",
+                    perPage: "registros por página",
+                    noRows: "No se encontraron tareas",
+                    info: "Mostrando {start} a {end} de {rows} tareas"
+                }
+            });
+        }
+    });
+
+    
+</script>

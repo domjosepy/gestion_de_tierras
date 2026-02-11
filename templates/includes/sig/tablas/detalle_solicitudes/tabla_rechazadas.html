@@ -39,10 +39,14 @@
                     </small>
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-primary">
-                        <i class="fas fa-user me-1"></i>
-                        {{ solicitud.usuario_asignado.username|default:"-" }}
-                    </span>
+                    {% if solicitud.usuario_asignado %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-user me-1"></i>
+                            {{ solicitud.usuario_asignado.username }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
                 </td>
                 <td class="text-center">
                     {% if solicitud.fecha_modificacion %}
@@ -72,13 +76,15 @@
                         <i class="fas fa-eye"></i>
                     </a>
                     
-                    <!-- Botón para reasignar (solo líder) -->
+                    <!-- Botón para devolver (solo líder) - ABRE EL MODAL -->
                     {% if es_lider %}
-                        <button class="btn btn-sm btn-warning btn-reasignar me-1"
+                        <button class="btn btn-sm btn-warning"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#devolverCorreccionModal"
                                 data-solicitud-id="{{ solicitud.id }}"
                                 data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                title="Reasignar digitalizador">
-                            <i class="fas fa-user-plus"></i>
+                                title="Devolver para revisión">
+                            <i class="fas fa-redo"></i>
                         </button>
                     {% endif %}
                 </td>

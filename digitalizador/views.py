@@ -45,6 +45,20 @@ def digitalizador_dashboard(request):
         'precat_archivos'
     ).order_by('-fecha_modificacion')
 
+    # OBTENER TAREAS ASIGNADAS A COORDINACIÓN QUE FUERON DIGITALIZADAS POR EL USUARIO
+    # Esto muestra las tareas que el usuario digitalizó y que ahora están en coordinación
+    tareas_coordinacion = SolicitudRelevamiento.objects.filter(
+        Q(usuario_digitalizador=request.user) | Q(
+            usuario_asignado=request.user)
+    ).filter(
+        estado='asignado_coordinacion',
+        fecha_aprobacion_campo__isnull=False
+    ).select_related(
+        'colonia', 'grupo_asignado', 'creado_por', 'grupo_asignado__lider'
+    ).prefetch_related(
+        'precat_archivos'
+    ).order_by('-fecha_modificacion')
+
     # Estadísticas por estado
     estadisticas = {
         'pendientes': tareas.filter(estado='asignado_a_digitalizador').count(),
@@ -52,7 +66,8 @@ def digitalizador_dashboard(request):
         'pendientes_revision': tareas.filter(estado='pendiente_revision_sig').count(),
         'pendientes_aprobacion': tareas.filter(estado='pendiente_aprobacion_campo').count(),
         'aprobadas_campo': tareas.filter(estado='aprobado_para_campo').count(),
-        'total': tareas.count(),
+        'en_coordinacion': tareas_coordinacion.count(),  # Nueva estadística
+        'total': tareas.count() + tareas_coordinacion.count(),
     }
 
     tareas_pendientes = tareas.filter(estado='asignado_a_digitalizador')
@@ -62,6 +77,7 @@ def digitalizador_dashboard(request):
         estado='pendiente_aprobacion_campo')
     tareas_aprobadas_campo = tareas.filter(estado='aprobado_para_campo')
 
+    # Contexto actualizado
     context = {
         'estadisticas': estadisticas,
         'tareas_pendientes': tareas_pendientes,
@@ -69,6 +85,7 @@ def digitalizador_dashboard(request):
         'tareas_pendientes_revision': tareas_pendientes_revision,
         'tareas_pendientes_aprobacion': tareas_pendientes_aprobacion,
         'tareas_aprobadas_campo': tareas_aprobadas_campo,
+        'tareas_coordinacion': tareas_coordinacion,  # Nuevo: tareas en coordinación
         'usuario': request.user,
     }
 

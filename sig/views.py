@@ -52,15 +52,14 @@ def sig_dashboard(request):
     )
 
     # Estadísticas básicas
+
     estadisticas = {
+        'total': query.count(),
         'pendientes': query.filter(estado='pendiente_asignacion_sig').count(),
-        'asignadas': query.filter(estado='asignado_a_digitalizador').count(),
         'en_proceso': query.filter(estado='en_proceso_digitalizacion').count(),
         'pendiente_revision': query.filter(estado='pendiente_revision_sig').count(),
         'rechazadas': query.filter(estado='rechazado').count(),
         'finalizadas': query.filter(estado='finalizado').count(),
-        'total': query.count(),
-
     }
 
     # Si es líder, mostrar usuarios del grupo
@@ -75,8 +74,7 @@ def sig_dashboard(request):
     # Últimas 5 solicitudes para vista rápida
     ultimas_solicitudes = query.select_related(
         'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
-    ).order_by('-fecha_creacion')[:5]
-
+    ).order_by('-fecha_creacion')
     context = {
         'es_lider': es_lider,
         'grupos_usuario': grupos_usuario,
@@ -688,7 +686,7 @@ def aprobar_digitalizacion(request, solicitud_id):
             # Agregar observación si existe
             if observacion:
                 timestamp = timezone.now().strftime('%d/%m/%Y %H:%M')
-                obs_text = f"APROBACIÓN SIG ({timestamp}) por {request.user.get_full_name()}:\n{observacion}"
+                obs_text = f"APROBACIÓN SIG ({timestamp}) por {request.user.username}:\n{observacion}"
 
                 if solicitud.observaciones:
                     solicitud.observaciones += f"\n\n--- {obs_text}"
@@ -703,9 +701,9 @@ def aprobar_digitalizacion(request, solicitud_id):
                 solicitud=solicitud,
                 campo='estado',
                 valor_anterior=estado_anterior,
-                valor_nuevo=solicitud.estado,  # Usar el estado final después del save
+                valor_nuevo=solicitud.estado,
                 cambiado_por=request.user,
-                comentario=f'Aprobación SIG realizada por {request.user.get_full_name()}. {observacion if observacion else "Sin observaciones"}'
+                comentario=f'Aprobación SIG realizada por {request.user.username}. {observacion if observacion else "Sin observaciones"}'
             )
 
             return JsonResponse({
@@ -731,9 +729,14 @@ def rechazar_digitalizacion(request, solicitud_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-    data = json.loads(request.body)
-    motivo_rechazo = data.get('motivo_rechazo', '').strip()
-    observacion = data.get('observacion', '').strip()
+    try:
+        data = json.loads(request.body)
+        motivo_rechazo = data.get('motivo_rechazo', '').strip()
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos JSON inválidos'
+        }, status=400)
 
     solicitud = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
@@ -754,7 +757,7 @@ def rechazar_digitalizacion(request, solicitud_id):
     if solicitud.estado not in estados_validos:
         return JsonResponse({
             'success': False,
-            'message': f'La solicitud no está en un estado válido para rechazo'
+            'message': f'La solicitud no está en un estado válido para rechazo. Estado actual: {solicitud.get_estado_display()}'
         }, status=400)
 
     # Validar motivo de rechazo (obligatorio)
@@ -774,14 +777,14 @@ def rechazar_digitalizacion(request, solicitud_id):
             solicitud.cambiado_por = request.user
 
             # Agregar observaciones
+            timestamp = timezone.now().strftime('%d/%m/%Y %H:%M')
             comentario_completo = f"Motivo rechazo: {motivo_rechazo}"
-            if observacion:
-                comentario_completo += f"\nObservaciones adicionales: {observacion}"
+            obs_text = f"RECHAZO SIG ({timestamp}) por {request.user.username}:\n{comentario_completo}"
 
             if solicitud.observaciones:
-                solicitud.observaciones += f"\n\n--- RECHAZO SIG ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{comentario_completo}"
+                solicitud.observaciones += f"\n\n--- {obs_text}"
             else:
-                solicitud.observaciones = f"--- RECHAZO SIG ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{comentario_completo}"
+                solicitud.observaciones = f"--- {obs_text}"
 
             solicitud.save()
 
@@ -792,7 +795,7 @@ def rechazar_digitalizacion(request, solicitud_id):
                 valor_anterior=estado_anterior,
                 valor_nuevo='rechazado',
                 cambiado_por=request.user,
-                comentario=f'Rechazo SIG realizado por {request.user.get_full_name()}. {comentario_completo}'
+                comentario=f'Rechazo SIG realizado por {request.user.username}. {comentario_completo}'
             )
 
             # También crear una auditoría específica para el motivo del rechazo
@@ -839,25 +842,10 @@ def devolver_para_correccion(request, solicitud_id):
 
     solicitud = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
-            'colonia', 'grupo_asignado', 'usuario_asignado'
+            'colonia', 'grupo_asignado', 'usuario_asignado', 'usuario_digitalizador'
         ),
         pk=solicitud_id
     )
-
-    # Verificar que el usuario sea líder del grupo SIG
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
-        return JsonResponse({
-            'success': False,
-            'message': 'No tiene permisos para devolver esta solicitud'
-        }, status=403)
-
-    # CAMBIO: Aceptar AMBOS estados
-    estados_validos = ['en_proceso_digitalizacion', 'pendiente_revision_sig']
-    if solicitud.estado not in estados_validos:
-        return JsonResponse({
-            'success': False,
-            'message': f'Solo se pueden devolver solicitudes en proceso de digitalización o pendiente de revisión SIG. Estado actual: {solicitud.get_estado_display()}'
-        }, status=400)
 
     # Validar que hay observación
     if not observacion:
@@ -866,18 +854,57 @@ def devolver_para_correccion(request, solicitud_id):
             'message': 'Las observaciones son obligatorias para devolver una solicitud'
         }, status=400)
 
+    # Definir transiciones válidas según estado origen
+    transiciones = {
+        'pendiente_revision_sig': 'en_proceso_digitalizacion',
+        'asignado_coordinacion': 'asignado_a_digitalizador',
+        'rechazado': 'pendiente_revision_sig'
+    }
+
+    if solicitud.estado not in transiciones:
+        return JsonResponse({
+            'success': False,
+            'message': f'No se puede devolver desde el estado actual: {solicitud.get_estado_display()}'
+        }, status=400)
+
     try:
         with transaction.atomic():
             estado_anterior = solicitud.estado
+            nuevo_estado = transiciones[estado_anterior]
 
-            # CAMBIO: Volver al estado "en_proceso_digitalizacion"
-            solicitud.estado = 'en_proceso_digitalizacion'
+            # Verificar que tiene usuario asignado
+            if not solicitud.usuario_asignado:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'La solicitud no tiene un usuario asignado. No se puede devolver.'
+                }, status=400)
+
+            # Actualizar estado (SIN cambiar usuario_asignado)
+            solicitud.estado = nuevo_estado
+
+            # Solo si viene desde coordinación, reasignar grupo a SIG
+            if estado_anterior == 'asignado_coordinacion':
+                solicitud.fecha_aprobacion_campo = None
+                from administrador.models import Grupo
+                grupo_sig = Grupo.objects.filter(
+                    nombre__icontains='SIG',
+                    activo=True
+                ).first()
+                if grupo_sig:
+                    solicitud.grupo_asignado = grupo_sig
+
+            # Si viene desde rechazado, limpiar motivo de rechazo
+            if estado_anterior == 'rechazado':
+                solicitud.motivo_rechazo = ''
 
             # Agregar observaciones
+            timestamp = timezone.now().strftime('%d/%m/%Y %H:%M')
+            obs_text = f"CORRECCIÓN REQUERIDA ({timestamp}) por {request.user.get_full_name()}:\n{observacion}"
+
             if solicitud.observaciones:
-                solicitud.observaciones += f"\n\n--- CORRECCIÓN REQUERIDA ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
+                solicitud.observaciones += f"\n\n--- {obs_text}"
             else:
-                solicitud.observaciones = f"--- CORRECCIÓN REQUERIDA ({timezone.now().strftime('%d/%m/%Y %H:%M')}) ---\n{observacion}"
+                solicitud.observaciones = f"--- {obs_text}"
 
             solicitud.save()
 
@@ -886,15 +913,24 @@ def devolver_para_correccion(request, solicitud_id):
                 solicitud=solicitud,
                 campo='estado',
                 valor_anterior=estado_anterior,
-                valor_nuevo='en_proceso_digitalizacion',
+                valor_nuevo=nuevo_estado,
                 cambiado_por=request.user,
-                comentario=f'Solicitud devuelta para corrección por {request.user.get_full_name()}. {observacion}'
+                comentario=f'Solicitud devuelta para corrección por {request.user.get_full_name()}. Permanece asignada a {solicitud.usuario_asignado.get_full_name()}. {observacion}'
             )
+
+            # Mensaje personalizado según origen
+            mensajes = {
+                'pendiente_revision_sig': f'Solicitud devuelta a en proceso de digitalización. Asignada a {solicitud.usuario_asignado.get_full_name()}.',
+                'asignado_coordinacion': f'Solicitud devuelta desde Coordinación. Asignada a {solicitud.usuario_asignado.get_full_name()}.',
+                'rechazado': f'Solicitud devuelta a pendiente de revisión SIG. Asignada a {solicitud.usuario_asignado.get_full_name()}.'
+            }
 
             return JsonResponse({
                 'success': True,
-                'message': 'Solicitud devuelta para corrección. El digitalizador ha sido notificado.',
-                'estado': solicitud.get_estado_display()
+                'message': mensajes.get(estado_anterior, 'Solicitud devuelta correctamente.'),
+                'estado': solicitud.get_estado_display(),
+                'nuevo_estado': nuevo_estado,
+                'usuario_asignado': solicitud.usuario_asignado.get_full_name()
             })
 
     except Exception as e:

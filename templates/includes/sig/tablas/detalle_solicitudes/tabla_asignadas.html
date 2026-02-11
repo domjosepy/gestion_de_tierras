@@ -10,7 +10,6 @@
                 <th class="text-center">Digitalizador</th>
                 <th class="text-center">Asignación</th>
                 <th class="text-center">Prioridad</th>
-                <th class="text-center">Estado</th>
                 <th class="text-center">Acciones</th>
             </tr>
         </thead>
@@ -56,14 +55,6 @@
                         {% elif solicitud.prioridad == 'media' %}bg-warning
                         {% else %}bg-secondary{% endif %}">
                         {{ solicitud.get_prioridad_display }}
-                    </span>
-                </td>
-                <td class="text-center">
-                    <span class="badge 
-                        {% if solicitud.estado == 'asignado_a_digitalizador' %}bg-primary
-                        {% elif solicitud.estado == 'en_proceso_digitalizacion' %}bg-warning
-                        {% else %}bg-secondary{% endif %}">
-                        {{ solicitud.get_estado_display }}
                     </span>
                 </td>
                 <td class="text-center">

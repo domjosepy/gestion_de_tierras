@@ -34,8 +34,7 @@ urlpatterns = [
     path("sig/", include("sig.urls", namespace="sig")),
     path("digitalizador/", include("digitalizador.urls",
          namespace="digitalizador")),
-
-    # path("coordinacion/", include("coordinacion.urls", namespace="coordinacion")),
+    path("coordinacion/", include("coordinacion.urls", namespace="coordinacion")),
     # path("relevamiento/", include("relevamiento.urls", namespace="relevamiento")),
 
 ]

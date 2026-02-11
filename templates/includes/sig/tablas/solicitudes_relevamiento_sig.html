@@ -27,82 +27,6 @@
         </div>
     </div>
     
-    <!-- Tarjetas de estadísticas -->
-    <div class="row mb-4 justify-content-between">
-        <!-- Tarjeta Total -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total</div>
-                            <div class="h5 mb-0 fw-bold text-primary">{{ estadisticas.total|default:0 }}</div>
-                        </div>
-                        <div class="text-primary">
-                            <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tarjeta Pendientes -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes</div>
-                            <div class="h5 mb-0 fw-bold text-warning">
-                                {{ estadisticas.pendientes|default:0 }}
-                            </div>
-                        </div>
-                        <div class="text-warning">
-                            <i class="fas fa-clock fa-2x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tarjeta Rechazadas -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-xs fw-bold text-danger text-uppercase mb-1">Rechazadas</div>
-                            <div class="h5 mb-0 fw-bold text-danger">
-                                {{ estadisticas.rechazadas|default:0 }}
-                            </div>
-                        </div>
-                        <div class="text-danger">
-                            <i class="fas fa-times-circle fa-2x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tarjeta Finalizadas -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Finalizadas</div>
-                            <div class="h5 mb-0 fw-bold text-success">
-                                {{ estadisticas.finalizadas|default:0 }}
-                            </div>
-                        </div>
-                        <div class="text-success">
-                            <i class="fas fa-flag-checkered fa-2x opacity-50"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     
     <!-- Pestañas de solicitudes -->
     <div class="card shadow mb-4">
@@ -118,6 +42,7 @@
                         <i class="fas fa-user-check me-1"></i> Asignadas
                     </button>
                 </li>
+
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button" role="tab">
                         <i class="fas fa-check-double me-1"></i> Por Revisar
@@ -133,11 +58,7 @@
                         <i class="fas fa-times-circle me-1"></i> Rechazadas
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="finalizadas-tab" data-bs-toggle="tab" data-bs-target="#finalizadas" type="button" role="tab">
-                        <i class="fas fa-flag-checkered me-1"></i> Finalizadas
-                    </button>
-                </li>
+
             </ul>
             <div class="btn-group" role="group">
                 <button class="btn btn-outline-secondary btn-sm" onclick="exportarTabla('asignadas')">
@@ -163,7 +84,7 @@
                 <div class="tab-pane fade" id="asignadas" role="tabpanel">
                     {% include 'includes/sig/tablas/detalle_solicitudes/tabla_asignadas.html' %}
                 </div>
-                                               
+                                      
                 <!-- Pestaña Por Revisar -->
                 <div class="tab-pane fade" id="revision" role="tabpanel">
                     {% include 'includes/sig/tablas/detalle_solicitudes/tabla_revision.html' %}
@@ -178,11 +99,7 @@
                 <div class="tab-pane fade" id="rechazadas" role="tabpanel">
                     {% include 'includes/sig/tablas/detalle_solicitudes/tabla_rechazadas.html' %}
                 </div>
-                
-                <!-- Pestaña Finalizadas -->
-                <div class="tab-pane fade" id="finalizadas" role="tabpanel">
-                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_finalizadas.html' %}
-                </div>
+
             </div>
         </div>
     </div>
@@ -199,10 +116,12 @@
         {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/aprobar_digitalizacion_modal.html' %}
         {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/rechazar_digitalizacion_modal.html' %}
         {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/devolver_correccion_modal.html' %}
+        <!-- Modal para ver detalles -->
+        {% include 'includes/sig/modal/archivos_precat_modal.html' %}
     {% endif %}
     
 {% endblock %}
-
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // 1. Inicializar DataTables
@@ -293,7 +212,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.comentario = formData.get('comentario');
                 } else if (formId === 'formRechazarDigitalizacion') {
                     data.motivo_rechazo = formData.get('motivo_rechazo');
-                    data.observacion = formData.get('observacion');
                 } else if (formId === 'formAprobarDigitalizacion') {
                     data.observacion = formData.get('observacion');
                 } else if (formId === 'formEliminarAsignacion') {
@@ -320,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (window.ToastManager) {
                             window.ToastManager.mostrarToast(result.message, 'success');
                         }
-                        setTimeout(() => location.reload(), 1000);
+                        setTimeout(() => location.reload(), 500);
                     } else {
                         alert(result.message || 'Error en la operación');
                     }
@@ -336,3 +254,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+{% endblock %}

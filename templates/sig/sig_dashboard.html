@@ -46,7 +46,7 @@
                     </div>
                     <div class="mt-2">
                         <a href="{% url 'sig:solicitudes_relevamiento_sig' %}" class="btn btn-sm btn-outline-primary">
-                            Ver todas
+                            Gestionar
                         </a>
                     </div>
                 </div>
@@ -61,17 +61,12 @@
                         <div>
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes</div>
                             <div class="h5 mb-0 fw-bold text-gray-800">
-                                {{ estadisticas.pendiente_asignacion_sig|default:0 }}
+                                {{ estadisticas.pendientes|default:0 }}
                             </div>
                         </div>
                         <div class="text-warning">
                             <i class="fas fa-clock fa-2x opacity-50"></i>
                         </div>
-                    </div>
-                    <div class="mt-2">
-                        <a href="{% url 'sig:solicitudes_relevamiento_sig' %}#pendientes" class="btn btn-sm btn-outline-warning">
-                            Gestionar
-                        </a>
                     </div>
                 </div>
             </div>
@@ -85,18 +80,14 @@
                         <div>
                             <div class="text-xs fw-bold text-info text-uppercase mb-1">En Proceso</div>
                             <div class="h5 mb-0 fw-bold text-gray-800">
-                                {{ estadisticas.en_proceso_digitalizacion|default:0 }}
+                                {{ estadisticas.en_proceso|default:0 }}
                             </div>
                         </div>
                         <div class="text-info">
                             <i class="fas fa-spinner fa-2x opacity-50"></i>
                         </div>
                     </div>
-                    <div class="mt-2">
-                        <a href="{% url 'sig:solicitudes_relevamiento_sig' %}#proceso" class="btn btn-sm btn-outline-info">
-                            Ver detalles
-                        </a>
-                    </div>
+
                 </div>
             </div>
         </div>
@@ -109,17 +100,12 @@
                         <div>
                             <div class="text-xs fw-bold text-success text-uppercase mb-1">Finalizadas</div>
                             <div class="h5 mb-0 fw-bold text-gray-800">
-                                {{ estadisticas.finalizado|default:0 }}
+                                {{ estadisticas.finalizadas|default:0 }}
                             </div>
                         </div>
                         <div class="text-success">
                             <i class="fas fa-flag-checkered fa-2x opacity-50"></i>
                         </div>
-                    </div>
-                    <div class="mt-2">
-                        <a href="{% url 'sig:solicitudes_relevamiento_sig' %}#finalizadas" class="btn btn-sm btn-outline-success">
-                            Ver resultados
-                        </a>
                     </div>
                 </div>
             </div>
@@ -132,11 +118,8 @@
             <div class="card shadow mb-4">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-white">
-                        <i class="fas fa-history me-2"></i>Últimas Solicitudes
+                        <i class="fas fa-history me-2"></i>Solicitudes en Grupo SIG
                     </h6>
-                    <a href="{% url 'sig:solicitudes_relevamiento_sig' %}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-external-link-alt me-1"></i>Ver todas
-                    </a>
                 </div>
                 <div class="card-body">
                     {% if ultimas_solicitudes %}
@@ -144,8 +127,8 @@
                         <table class="beautiful-table table-bordered" width="100%" cellspacing="0">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Colonia</th>
+                                    <th class="text-center">#</th>
+                                    <th>Datos Geográficos</th>
                                     <th>Estado</th>
                                     <th>Fecha</th>
                                     <th>Acciones</th>
@@ -154,8 +137,17 @@
                             <tbody>
                                 {% for solicitud in ultimas_solicitudes %}
                                 <tr>
-                                    <td>#{{ solicitud.id }}</td>
-                                    <td>{{ solicitud.colonia.nombre|default:"Sin colonia" }}</td>
+                                    <td class="text-center">{{ forloop.counter }}</td>
+                                    <td>
+                                        {% with distrito=solicitud.colonia.distritos.first %}
+                                            {% if distrito %}
+                                                <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                                                <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                            {% else %}
+                                                <span class="text-muted">Sin ubicación</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
                                     <td>
                                         <span class="badge {% if solicitud.estado == 'pendiente_asignacion_sig' %}bg-warning
                                                          {% elif solicitud.estado == 'en_proceso_digitalizacion' %}bg-info
@@ -187,42 +179,31 @@
             </div>
         </div>
     </div>
+{% endblock %} 
 
-    <!-- Acciones rápidas -->
-    <div class="row">
-        <div class="col-lg-12">
-            <div class="card shadow">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 font-weight-bold text-white">
-                        <i class="fas fa-bolt me-2"></i>Acciones Rápidas
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <a href="{% url 'sig:solicitudes_relevamiento_sig' %}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-file-upload me-2"></i>Ver Solicitudes
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="#" class="btn btn-outline-success w-100">
-                                <i class="fas fa-map-marked-alt me-2"></i>Ver Mapa
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="#" class="btn btn-outline-info w-100">
-                                <i class="fas fa-chart-bar me-2"></i>Reportes
-                            </a>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <a href="#" class="btn btn-outline-warning w-100">
-                                <i class="fas fa-cog me-2"></i>Configuración
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Verificar que la librería esté disponible
+        if (typeof simpleDatatables !== 'undefined' && simpleDatatables.DataTable) {
+            const tablas = document.querySelectorAll('.beautiful-table');
+            tablas.forEach(tabla => {
+                if (tabla.rows.length > 1) {
+                    new simpleDatatables.DataTable(tabla, {
+                        perPage: 10,
+                        perPageSelect: [5, 10, 20, 50],
+                        labels: {
+                            placeholder: "Buscar...",
+                            perPage: "registros por página",
+                            noRows: "No se encontraron solicitudes",
+                            info: "Mostrando {start} a {end} de {rows} Solicitudes"
+                        }
+                    });
+                }
+            });
+        } else {
+            console.error('simpleDatatables no está cargado. Verifica la inclusión de la librería.');
+        }
+    });
+</script>
 {% endblock %}

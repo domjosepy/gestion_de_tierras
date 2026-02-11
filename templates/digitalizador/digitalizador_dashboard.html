@@ -5,11 +5,14 @@
 
 {% block content %}
 <div class="container-fluid fade-in">
-    <!-- Header -->
+     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h2 class="h3 mb-2 text-success fw-bold">
-            <i class="fas fa-digital-tachograph me-2"></i>DIGITALIZADOR
-        </h2>
+        <!-- Header -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h2 class="h3 mb-2 text-success fw-bold">
+                <i class="fas fa-digital-tachograph me-2"></i>DIGITALIZADOR
+            </h2>
+        </div>
     </div>
 
     
@@ -114,12 +117,7 @@
                         Por Revisar
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="aprobacion-tab" data-bs-toggle="tab" data-bs-target="#aprobacion" type="button">
-                        <i class="fas fa-hourglass-half me-1"></i>
-                        En Aprobación
-                    </button>
-                </li>
+
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="aprobadas-tab" data-bs-toggle="tab" data-bs-target="#aprobadas" type="button">
                         <i class="fas fa-check-double me-1"></i>
@@ -144,15 +142,9 @@
             <div class="tab-pane fade" id="revision" role="tabpanel">
                 {% include 'includes/digitalizador/tablas/tabla_revision.html' %}
             </div>
-
-            <!-- Pestaña En Aprobación -->
-            <div class="tab-pane fade" id="aprobacion" role="tabpanel">
-                {% include 'includes/digitalizador/tablas/tabla_aprobacion.html' %}
-            </div>
-
             <!-- Pestaña Aprobadas -->
             <div class="tab-pane fade" id="aprobadas" role="tabpanel">
-                {% include 'includes/digitalizador/tablas/tabla_aprobadas.html' %}
+                {% include 'includes/digitalizador/tablas/tabla_finalizadas.html' %}
             </div>
         </div>
     </div>

@@ -77,6 +77,14 @@
                                         </span>
                                     </td>
                                 </tr>
+                                <tr>
+                                     <td class="text-muted">Estado:</td>
+                                    <td>
+                                        <span class=" badge bg-warning">
+                                            {{ tarea.get_estado_display }}
+                                        </span>
+                                    </td>
+                                </tr>
                             </table>
                         </div>
                         <div class="col-md-6">
@@ -114,7 +122,7 @@
                         <h6 class="text-muted mb-2">
                             <i class="fas fa-sticky-note me-2"></i>Observaciones Generales
                         </h6>
-                        <div class="alert alert-light border">
+                        <div class="border">
                             {{ tarea.observaciones|linebreaks }}
                         </div>
                     </div>
@@ -182,21 +190,25 @@
                             <i class="fas fa-file-archive me-2"></i>Archivos Subidos
                         </h6>
                         {% if archivos_precat %}
-                            <div class="alert alert-success">
+                            <hr>
+                            <div class="text-success">
                                 <i class="fas fa-check-circle me-2"></i>
                                 <strong>Precat subido:</strong><br>
                                 <small>{{ archivos_precat.get_nombre_archivo }} ({{ archivos_precat.get_tamanio_mb }} MB)</small>
                             </div>
+                            <hr>
                         {% endif %}
+                        
                         {% if archivos_planos %}
-                            <div class="alert alert-success">
+                            <div class="text-success">
                                 <i class="fas fa-file-pdf me-2"></i>
                                 <strong>Planos subidos:</strong><br>
                                 <small>{{ archivos_planos.get_nombre_archivo }} ({{ archivos_planos.get_tamanio_mb }} MB)</small>
                             </div>
+                            <hr>
                         {% endif %}
                         {% if not archivos_precat and not archivos_planos %}
-                            <div class="alert alert-light">
+                            <div class="text-danger">
                                 <i class="fas fa-file-import me-2"></i>
                                 No hay archivos subidos aún.
                             </div>

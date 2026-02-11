@@ -7,7 +7,7 @@
                 <th class="text-center">Datos Geográficos</th>
                 <th class="text-center">Digitalizador</th>
                 <th class="text-center">Fecha Creación</th>
-                <th class="text-center">Estado</th>
+                <th class="text-center">Archivos</th>
                 <th class="text-center">Acciones</th>
             </tr>
         </thead>
@@ -40,56 +40,52 @@
                     <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
                 </td>
                 <td class="text-center">
-                    <span class="badge 
-                        {% if solicitud.estado == 'en_proceso_digitalizacion' %}bg-warning
-                        {% elif solicitud.estado == 'pendiente_revision_sig' %}bg-info
-                        {% else %}bg-secondary{% endif %}">
-                        {{ solicitud.get_estado_display }}
-                    </span>
+                    <button class="btn btn-sm btn-outline-info me-1"
+                        onclick="verDetallesArchivo({{ solicitud.id }})"
+                        title="Ver archivos Precat">
+                        <i class="fas fa-file-archive"></i>
+                    </button>
                 </td>
-                <td class="text-center">
-                    <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                       class="btn btn-sm btn-info me-1" 
-                       title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    
-                    {% if es_lider %}
-                        <!-- Botones para EN PROCESO DE DIGITALIZACIÓN -->
-                        {% if solicitud.estado == 'pendiente_revision_sig' %}
-                             <button class="btn btn-sm btn-warning me-1"
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#devolverCorreccionModal"
-                                    data-solicitud-id="{{ solicitud.id }}"
-                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                    data-estado-actual="{{ solicitud.estado }}"
-                                    title="Devolver para corrección">
-                                <i class="fas fa-redo"></i>
-                            </button>
+                 <td class="text-center">
 
-                            <button class="btn btn-sm btn-success me-1"
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#aprobarDigitalizacionModal"
-                                    data-solicitud-id="{{ solicitud.id }}"
-                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                    data-estado-actual="{{ solicitud.estado }}"
-                                    title="Aprobar revisión SIG">
-                                <i class="fas fa-check-circle"></i>
-                            </button>
-                            
-                            <button class="btn btn-sm btn-danger"
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#rechazarDigitalizacionModal"
-                                    data-solicitud-id="{{ solicitud.id }}"
-                                    data-colonia-nombre="{{ solicitud.colonia.nombre }}"
-                                    data-estado-actual="{{ solicitud.estado }}"
-                                    title="Rechazar revisión SIG">
-                                <i class="fas fa-times-circle"></i>
-                            </button>
-                            
-                        {% endif %}
-                    {% endif %}
-                </td>
+                                <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
+                                   class="btn btn-sm btn-info me-1" 
+                                   title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                {% if es_lider and solicitud.estado == 'pendiente_revision_sig' %}
+                                    <button class="btn btn-sm btn-success me-1"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#aprobarDigitalizacionModal"
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            title="Aprobar revisión SIG">
+                                        <i class="fas fa-check-circle"></i>
+                                    </button>
+                                    
+                                    <button class="btn btn-sm btn-warning me-1"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#devolverCorreccionModal"
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            title="Devolver para corrección">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#rechazarDigitalizacionModal"
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            title="Rechazar revisión SIG">
+                                        <i class="fas fa-times-circle"></i>
+                                    </button>
+                            {% endif %}
+                        </div>
+                    </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -103,3 +99,52 @@
     <p class="text-muted">No hay solicitudes pendientes de revisión en tu grupo</p>
 </div>
 {% endif %}
+
+<!-- Modal para ver detalles - AÑADIR ESTO -->
+
+
+{% block scripts %}
+<script>
+function verDetallesArchivo(solicitudId) {
+    // Mostrar loading
+    const modalBody = document.getElementById('archivosModalBody');
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando archivos...</p>
+        </div>
+    `;
+    
+    // Cargar archivos via AJAX
+    fetch(`/sig/solicitud/${solicitudId}/archivos/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.html) {
+                modalBody.innerHTML = data.html;
+            } else if (data.error) {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${data.error}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar los archivos
+                </div>
+            `;
+        });
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('archivosPrecatModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

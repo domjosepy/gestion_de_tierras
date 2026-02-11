@@ -18,4 +18,5 @@ urlpatterns = [
          name='listar_archivos_digitalizador'),
     path('descargar/<int:archivo_id>/', views.descargar_archivo_digitalizador,
          name='descargar_archivo_digitalizador'),
+
 ]

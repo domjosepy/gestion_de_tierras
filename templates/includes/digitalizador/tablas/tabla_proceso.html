@@ -7,7 +7,6 @@
                 <th class="text-center">#</th>
                 <th class="text-center">Inicio</th>
                 <th class="text-center">Datos Geográficos</th>
-                <th class="text-center">Tipo</th>
                 <th class="text-center">Observación</th>
                 <th class="text-center">Tiempo Proceso</th>
                 <th class="text-center">Prioridad</th>
@@ -18,7 +17,7 @@
         <tbody>
             {% for tarea in tareas_en_proceso %}
             <tr {% if tarea.es_urgente %}class="table-warning"{% endif %}>
-                <td class="text-center">{{ tarea.id }}</td>
+                <td class="text-center">{{ forloop.counter }}</td>
                 <td class="text-center">
                     {% if tarea.fecha_inicio_etapa %}
                         <small>{{ tarea.fecha_inicio_etapa|date:"d/m/Y" }}</small>
@@ -36,11 +35,6 @@
                             <span class="text-muted">Sin ubicación</span>
                         {% endif %}
                     {% endwith %}
-                </td>
-                <td class="text-center">
-                    <span class="badge {% if tarea.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
-                        {{ tarea.get_tipo_display }}
-                    </span>
                 </td>
                 <td class="text-center">
                     {{ tarea.observaciones|default:"-"|truncatechars:30 }}

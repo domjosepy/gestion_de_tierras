@@ -113,11 +113,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const modal = bootstrap.Modal.getInstance(aprobarModal);
                     if (modal) modal.hide();
                     
-                    if (window.ToastManager) {
-                        window.ToastManager.mostrarToast(data.message, 'success');
-                    }
+                  
                     
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => location.reload(), 5000);
                 } else {
                     const errorDiv = document.getElementById('aprobarError');
                     if (errorDiv) {

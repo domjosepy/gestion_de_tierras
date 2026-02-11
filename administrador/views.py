@@ -58,7 +58,9 @@ class LoginView(DjangoLoginView):
             "analista": "analista",
             "tecnico": "tecnico",
             "supervisor": "supervisor",
-            "coordinador": "coordinador",
+            # cubrimos variantes: 'coordinador' y 'coordinacion'
+            "coordinador": "coordinacion",
+            "coordinacion": "coordinacion",
 
             # por ejemplo, si tenés un rol llamado "ventas"
             # podés agregar más roles aquí
