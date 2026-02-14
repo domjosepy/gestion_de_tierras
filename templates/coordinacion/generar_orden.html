@@ -1,0 +1,419 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generar Orden de Trabajo{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-2 text-warning fw-bold">
+                <i class="fas fa-file-alt me-2"></i>Generar Orden de Trabajo
+            </h1>
+            <p class="mb-0">Complete los datos y asigne el equipo para generar la orden</p>
+        </div>
+        <div>
+            <a href="{% url 'coordinacion:solicitudes_pendientes' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver a Solicitudes
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- COLUMNA IZQUIERDA: DETALLES DE LA SOLICITUD -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow h-100 border-left-primary">
+                <div class="card-header bg-primary text-white py-3">
+                    <h6 class="m-0 fw-bold">
+                        <i class="fas fa-clipboard-list me-2"></i>Detalles de la Solicitud
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Colonia -->
+                    <div class="mb-4">
+                        <div class="d-flex flex-wrap gap-4">
+                            {% with distrito=solicitud.colonia.distritos.first %}
+                                {% if distrito %}
+                                <!-- Departamento -->
+                                <div>
+                                    <small class="text-muted d-block">Departamento</small>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map-marked-alt text-primary"></i>
+                                        </div>
+                                        <strong>{{ distrito.departamento.nombre }}</strong>
+                                    </div>
+                                </div>
+                                <!-- Distrito -->
+                                <div>
+                                    <small class="text-muted d-block">Distrito</small>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map text-success"></i>
+                                        </div>
+                                        <strong>{{ distrito.nombre }}</strong>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                <!-- Colonia -->
+                                <div>
+                                    <small class="text-muted d-block">Colonia</small>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-tractor text-warning"></i>
+                                        </div>
+                                        <strong>{{ solicitud.colonia.nombre }}</strong>
+                                    </div>
+                                </div>
+                            {% endwith %}
+                        </div>
+                    </div>
+
+                    <div class="justify-content-center row row-cols-1 row-cols-md-2 mb-4">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Prioridad</small>
+                            <span class="badge bg-{% if solicitud.prioridad == 'alta' %}danger
+                                                  {% elif solicitud.prioridad == 'media' %}warning text-dark
+                                                  {% else %}success{% endif %} p-2">
+                                {{ solicitud.get_prioridad_display }}
+                            </span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Tipo de estudio</small>
+                            <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                                {{ solicitud.get_tipo_display }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Solicitante -->
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light rounded-circle p-2 me-2">
+                                <i class="fas fa-user text-primary"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">Solicitud Creada por</small>
+                                <span>{{ solicitud.creado_por.get_full_name|default:"Sistema" }}</span>
+                                <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+                    {% if solicitud.tipo == 'relevamiento' %}
+                        <!-- SOLICITUD APROBADA SIG -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fa-solid fa-user-tie text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1 justify-content-between">
+                                    <small class="text-muted d-block">Aprobado por</small>
+                                    {% if solicitud.asignado_por %}
+                                        <span class="badge bg-primary me-2">{{ solicitud.asignado_por.username }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                    <span class="badge bg-success me-2">
+                                        <i class="fas fa-crown me-1"></i> Líder de Grupo
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Digitalizador SIG -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-draw-polygon text-success"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Digitalizador SIG</small>
+                                    {% if solicitud.usuario_digitalizador %}
+                                        {{ solicitud.usuario_digitalizador.username }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <!-- SOLICITUD APROBADA SIG -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fa-solid fa-user-tie text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1 justify-content-between">
+                                    <small class="text-muted d-block">Aprobado por</small>
+                                    {% if solicitud.asignado_por %}
+                                        <span class="badge bg-primary me-2">{{ solicitud.asignado_por.username }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                    <span class="badge bg-success me-2">
+                                        <i class="fas fa-crown me-1"></i> Líder de Grupo
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Analista -->
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-chart-line text-info"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Analista</small>
+                                    {% if solicitud.usuario_analista %}
+                                        <span>{{ solicitud.usuario_analista.username|default:"—" }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if solicitud.observaciones %}
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Observaciones de la solicitud</small>
+                        <div class="p-2 bg-light rounded mt-1">
+                            <small>{{ solicitud.observaciones|linebreaksbr }}</small>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info mb-0 mt-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        La orden se generará con el número <strong>OT-{% now "Ymd" %}-{{ solicitud.id }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: FORMULARIO DE GENERACIÓN -->
+        <div class="col-lg-8">
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- CARD: CONFIGURACIÓN DE LA ORDEN -->
+                <div class="card shadow mb-4 border-left-success">
+                    <div class="card-header bg-success text-white py-3">
+                        <h6 class="m-0 fw-bold">
+                            <i class="fas fa-tasks me-2"></i>Configuración de la Orden
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Coordinador responsable (oculto o solo lectura) -->
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-user-tie text-success"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block">{{ form.coordinador_responsable.label }}</small>
+                                    <!-- Mostramos el nombre del coordinador y un campo oculto -->
+                                    <input type="hidden" name="coordinador_responsable" value="{{ request.user.id }}">
+                                    <span class="fw-bold">{{ request.user.get_full_name|default:request.user.username }}</span>
+                                    <div class="form-text">Coordinador responsable (asignado automáticamente).</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="fas fa-calendar-plus text-success"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">{{ form.fecha_inicio_planeada.label }}</small>
+                                        {{ form.fecha_inicio_planeada }}
+                                        {% if form.fecha_inicio_planeada.errors %}
+                                            <div class="text-danger small mt-1">{{ form.fecha_inicio_planeada.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="fas fa-calendar-check text-success"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">{{ form.fecha_fin_planeada.label }}</small>
+                                        {{ form.fecha_fin_planeada }}
+                                        {% if form.fecha_fin_planeada.errors %}
+                                            <div class="text-danger small mt-1">{{ form.fecha_fin_planeada.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-light rounded-circle p-2 me-2">
+                                        <i class="fas fa-chart-simple text-success"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <small class="text-muted d-block">{{ form.meta_encuestas.label }}</small>
+                                        {{ form.meta_encuestas }}
+                                        {% if form.meta_encuestas.errors %}
+                                            <div class="text-danger small mt-1">{{ form.meta_encuestas.errors }}</div>
+                                        {% endif %}
+                                        <div class="form-text">Cantidad de encuestas a realizar</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-comment-dots text-success"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <small class="text-muted d-block">{{ form.observaciones.label }}</small>
+                                    {{ form.observaciones }}
+                                    {% if form.observaciones.errors %}
+                                        <div class="text-danger small mt-1">{{ form.observaciones.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-text">Instrucciones especiales, condiciones del terreno, etc.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD: ASIGNACIÓN DE EQUIPO DE CAMPO -->
+                <div class="card shadow mb-4 border-left-warning">
+                    <div class="card-header bg-warning text-white py-3">
+                        <h6 class="m-0 fw-bold">
+                            <i class="fas fa-people-arrows me-2"></i>Asignación de Equipo de Campo
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Coordinador de campo (único) -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-user-tie text-warning me-2"></i> 
+                                    <span class="text-warning me-4">Coordinador de campo</span>
+                                </label>
+                                {{ form.coordinador_campo }}
+                                {% if form.coordinador_campo.errors %}
+                                    <div class="text-danger small mt-1">{{ form.coordinador_campo.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Responsable principal del equipo en terreno.</div>
+                            </div>
+                            <!-- Subcoordinadores (múltiple) -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold justify-content-between "> 
+                                    <i class="fas fa-user-tag text-warning me-2"></i>
+                                    <span class="text-warning me-4">Subcoordinadores</span>
+                                    <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios subcoordinadores."> </i>
+                            </label>
+                                {{ form.subcoordinadores }}
+                                {% if form.subcoordinadores.errors %}
+                                    <div class="text-danger small mt-1">{{ form.subcoordinadores.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row">
+                            <!-- Encuestadores (múltiple) -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-clipboard-user text-warning me-2"></i>
+                                    <span class="text-warning me-4">Encuestadores</span>
+                                    <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios encuestadores."> </i>
+                                </label>
+                                {{ form.encuestadores }}
+                                {% if form.encuestadores.errors %}
+                                    <div class="text-danger small mt-1">{{ form.encuestadores.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Personal que realizará las encuestas.</div>
+                            </div>
+                            <!-- Choferes (múltiple) -->
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-truck text-warning me-2"></i>
+                                    <span class="text-warning me-4">Choferes</span>
+                                    <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios choferes."> </i>
+                                </label>
+                                {{ form.choferes }}
+                                {% if form.choferes.errors %}
+                                    <div class="text-danger small mt-1">{{ form.choferes.errors }}</div>
+                                {% endif %}
+                                <div class="form-text">Conductores asignados.</div>
+                            </div>
+                        </div>
+                        <div class="alert alert-light mt-2 mb-0">
+                            <i class="fas fa-info-circle"></i> 
+                            Si asigna al menos un miembro, se creará automáticamente un equipo y se asignará a esta orden.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div class="d-flex justify-content-end gap-2 mb-4">
+                    <a href="{% url 'coordinacion:solicitudes_pendientes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Generar Orden
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fechaInicio = document.getElementById('{{ form.fecha_inicio_planeada.id_for_label }}');
+    const fechaFin = document.getElementById('{{ form.fecha_fin_planeada.id_for_label }}');
+
+    function esDiaHabil(dateStr) {
+        if (!dateStr) return false;
+        const date = new Date(dateStr + 'T12:00:00');
+        const day = date.getDay();
+        return day !== 0 && day !== 6;
+    }
+
+    function validarFechas() {
+        if (fechaInicio.value && !esDiaHabil(fechaInicio.value)) {
+            toast.message('La fecha de inicio debe ser un día hábil (L-V).');
+            fechaInicio.value = '';
+            return false;
+        }
+        if (fechaFin.value && !esDiaHabil(fechaFin.value)) {
+            toast.message('La fecha de fin debe ser un día hábil (L-V).');
+            fechaFin.value = '';
+            return false;
+        }
+        if (fechaInicio.value && fechaFin.value) {
+            const inicio = new Date(fechaInicio.value + 'T12:00:00');
+            const fin = new Date(fechaFin.value + 'T12:00:00');
+            if (fin < inicio) {
+                alert('La fecha de fin no puede ser anterior a la de inicio.');
+                fechaFin.value = fechaInicio.value;
+            }
+        }
+    }
+
+    fechaInicio.addEventListener('change', validarFechas);
+    fechaFin.addEventListener('change', validarFechas);
+});
+</script>
+{% endblock scripts %}

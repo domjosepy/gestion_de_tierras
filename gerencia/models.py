@@ -250,6 +250,27 @@ class SolicitudRelevamiento(models.Model):
     )
 
     # Campo para relevadores asignados (si son múltiples)
+    coordinador_campo = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='solicitudes_coordinadas_campo',
+        verbose_name="Coordinador de campo"
+    )
+    subcoordinadores = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='solicitudes_subcoordinadas',
+        verbose_name="Subcoordinadores"
+    )
+    choferes = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='solicitudes_chofer',
+        verbose_name="Choferes"
+    )
+
     relevadores_asignados = models.ManyToManyField(
         User,
         blank=True,

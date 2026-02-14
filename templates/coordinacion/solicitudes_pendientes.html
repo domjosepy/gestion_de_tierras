@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Solicitudes Pendientes - Coordinación{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-2 text-warning fw-bold">
+                <i class="fas fa-clock me-2"></i>Solicitudes Pendientes
+            </h1>
+            <p class="mb-0">Solicitudes aprobadas para campo que requieren orden de trabajo</p>
+        </div>
+        <div>
+            <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+
+    <!-- Lista de solicitudes -->
+    <div class="card shadow">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-white">
+                <i class="fas fa-list me-2"></i>Solicitudes para generar orden
+            </h6>
+            
+        </div>
+        <div class="card-body p-0">
+            {% if solicitudes %}
+            <div class="table-responsive">
+                <table class="beautiful-table align-middle mb-0" id="tablaSolicitudes">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="text-center">#</th>
+                            <th class="text-center">Datos Geográficos</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-center">Prioridad</th>
+                            <th class="text-center">Observación</th>
+                            <th class="text-center">Fecha Solicitud</th>
+                            <th class="text-center">Digitalizador</th>
+                            <th class="text-center">Analista</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for solicitud in solicitudes %}
+                        <tr class="fila-solicitud" data-prioridad="{{ solicitud.prioridad }}">
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>
+                                {% with distrito=solicitud.colonia.distritos.first %}
+                                    {% if distrito %}
+                                        <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                                        <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                    {% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-{% if solicitud.tipo == 'relevamiento' %}primary
+                                                      {% elif solicitud.tipo == 'actualizacion' %}success text-dark
+                                                      {% else %}secondary{% endif %}">
+                                    {{ solicitud.get_tipo_display }}
+                                </span>
+                            </td>
+                             <td class="text-center">
+                                <span class="badge bg-{% if solicitud.prioridad == 'alta' %}danger
+                                                      {% elif solicitud.prioridad == 'media' %}warning text-dark
+                                                      {% else %}success{% endif %}">
+                                    {{ solicitud.get_prioridad_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if solicitud.observaciones %}
+                                    <small>{{ solicitud.observaciones }}</small>
+                                {% else %}
+                                    <span class="text-muted">Sin observaciones</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
+                                <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                            </td>
+                            <td class="text-center">
+                                {% if solicitud.usuario_digitalizador %}
+                                    {{ solicitud.usuario_digitalizador.username }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if solicitud.usuario_analista %}
+                                    {{ solicitud.usuario_analista.get_full_name }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-file-alt me-1"></i> Generar Orden
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-info"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalDetalle{{ solicitud.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay solicitudes pendientes</h5>
+                <p class="text-muted">Todas las solicitudes aprobadas ya tienen orden generada</p>
+                <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-primary mt-3">
+                    Volver al Dashboard
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modales de detalle (uno por solicitud) -->
+{% for solicitud in solicitudes %}
+<div class="modal fade" id="modalDetalle{{ solicitud.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                    Detalle de Solicitud
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Colonia:</strong> {{ solicitud.colonia.nombre }}</p>
+                        <p><strong>Tipo:</strong> {{ solicitud.get_tipo_display }}</p>
+                        <p><strong>Prioridad:</strong> 
+                            <span class="badge bg-{% if solicitud.prioridad == 'alta' %}danger
+                                                  {% elif solicitud.prioridad == 'media' %}warning text-dark
+                                                  {% else %}success{% endif %}">
+                                {{ solicitud.get_prioridad_display }}
+                            </span>
+                        </p>
+                        <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                        <p><strong>Solicitante:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Digitalizador:</strong> 
+                            {{ solicitud.usuario_digitalizador.get_full_name|default:"—" }}
+                        </p>
+                        <p><strong>Analista:</strong> 
+                            {{ solicitud.usuario_analista.get_full_name|default:"—" }}
+                        </p>
+                        <p><strong>Fecha aprobación campo:</strong> 
+                            {{ solicitud.fecha_aprobacion_campo|date:"d/m/Y H:i"|default:"—" }}
+                        </p>
+                        <p><strong>Observaciones:</strong><br>
+                            <small>{{ solicitud.observaciones|linebreaksbr|default:"Sin observaciones" }}</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" class="btn btn-primary">
+                    <i class="fas fa-file-alt me-1"></i> Generar Orden
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar DataTables para todas las tablas beautiful-table
+        const tablas = document.querySelectorAll('.beautiful-table');
+        tablas.forEach(tabla => {
+            if (tabla.rows.length > 1) {
+                new simpleDatatables.DataTable(tabla, {
+                    perPage: 10,
+                    perPageSelect: [5, 10, 20, 50],
+                    labels: {
+                        placeholder: "Buscar...",
+                        perPage: "registros por página",
+                        noRows: "No se encontraron Solicitudes",
+                        info: "Mostrando {start} a {end} de {rows} Solicitudes"
+                    }
+                });
+            }
+        });
+
+});
+</script>
+{% endblock %}

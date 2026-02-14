@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Órdenes de Trabajo{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-2 text-primary fw-bold">
+                <i class="fas fa-clipboard-list me-2"></i>Órdenes de Trabajo
+            </h1>
+            <p class="mb-0">Listado y gestión de órdenes generadas</p>
+        </div>
+        <div>
+            <!-- Botón para crear nueva orden (puede apuntar a una vista de selección de solicitud) -->
+            <a href="{% url 'coordinacion:solicitudes_pendientes' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Nueva Orden
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de estadísticas -->
+    <div class="row mb-4">
+        <div class="col-xl-2 col-md-4 mb-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.total }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-3">
+            <div class="card border-left-secondary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Generadas</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.generadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Asignadas</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.asignadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">En Proceso</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.en_proceso }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 mb-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Completadas</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.completadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtro por estado -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter me-2"></i>Filtrar por estado
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="btn-group flex-wrap" role="group" aria-label="Filtro de estado">
+                <a href="?estado=todas" class="btn {% if estado_actual == 'todas' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Todas
+                </a>
+                <a href="?estado=generada" class="btn {% if estado_actual == 'generada' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Generadas
+                </a>
+                <a href="?estado=asignada" class="btn {% if estado_actual == 'asignada' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Asignadas
+                </a>
+                <a href="?estado=en_proceso" class="btn {% if estado_actual == 'en_proceso' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    En Proceso
+                </a>
+                <a href="?estado=completada" class="btn {% if estado_actual == 'completada' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                    Completadas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listado de órdenes de trabajo -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-list me-2"></i>Órdenes encontradas ({{ ordenes|length }})
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if ordenes %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>N° OT</th>
+                                <th>Solicitud</th>
+                                <th>Fechas planeadas</th>
+                                <th>Estado</th>
+                                <th>Coordinador responsable</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for orden in ordenes %}
+                            <tr>
+                                <td>
+                                    <strong>OT-{{ orden.id }}</strong>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <span>
+                                            <i class="fas fa-map-marker-alt text-muted me-1"></i>
+                                            {{ orden.solicitud.colonia.nombre }}
+                                        </span>
+                                        <div class="mt-1">
+                                            <span class="badge {% if orden.solicitud.tipo == 'relevamiento' %}bg-info{% else %}bg-warning{% endif %}">
+                                                {{ orden.solicitud.get_tipo_display }}
+                                            </span>
+                                            <span class="badge bg-{% if orden.solicitud.prioridad == 'alta' %}danger{% elif orden.solicitud.prioridad == 'media' %}warning text-dark{% else %}success{% endif %}">
+                                                {{ orden.solicitud.get_prioridad_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <i class="fas fa-calendar-alt text-muted me-1"></i>
+                                    {{ orden.fecha_inicio_planeada|date:"d/m/Y" }}<br>
+                                    <i class="fas fa-calendar-check text-muted me-1"></i>
+                                    {{ orden.fecha_fin_planeada|date:"d/m/Y" }}
+                                </td>
+                                <td>
+                                    {% if orden.estado == 'generada' %}
+                                        <span class="badge bg-secondary">Generada</span>
+                                    {% elif orden.estado == 'asignada' %}
+                                        <span class="badge bg-primary">Asignada</span>
+                                    {% elif orden.estado == 'en_proceso' %}
+                                        <span class="badge bg-warning text-dark">En Proceso</span>
+                                    {% elif orden.estado == 'completada' %}
+                                        <span class="badge bg-success">Completada</span>
+                                    {% else %}
+                                        <span class="badge bg-dark">{{ orden.get_estado_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if orden.coordinador_responsable %}
+                                        <i class="fas fa-user-tie text-muted me-1"></i>
+                                        {{ orden.coordinador_responsable.get_full_name|default:orden.coordinador_responsable.username }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <!-- Enlace para editar o gestionar, si corresponde -->
+                                    {% if orden.estado == 'generada' or orden.estado == 'asignada' %}
+                                    <a href="#" class="btn btn-sm btn-outline-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-1"></i> No hay órdenes de trabajo para mostrar.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<!-- Opcional: algún script para tooltips o DataTables si se desea mejorar la tabla -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Habilitar tooltips de Bootstrap (si se usan)
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'))
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock scripts %}

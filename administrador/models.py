@@ -165,7 +165,7 @@ class User(AbstractUser):
         return self.rol_efectivo.color if self.rol_efectivo else 'light'
 
     def __str__(self):
-        return f"{self.username} ({self.get_estado_display()})"
+        return f"{self.username}"
 
     fecha_aprobacion = models.DateTimeField(
         null=True, blank=True, verbose_name='Fecha de aprobación')

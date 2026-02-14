@@ -1,17 +1,28 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Count
-from django.contrib import messages
-from django.utils import timezone
+# 1. Librerías estándar de Python
+import json
 from datetime import datetime, timedelta
 
-from gerencia.models import SolicitudRelevamiento
+# 2. Django Core (HTTP, Shortcuts, Auth, etc.)
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Q, Count
+from django.forms import ValidationError
+from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
+
+# 3. Aplicaciones locales (Tus modelos, decoradores y formularios)
+from administrador.models import User, Grupo
+from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from coordinacion.models import EquipoRelevamiento, OrdenTrabajo, RegistroCampo
-from coordinacion.decorators import coordinacion_required
+from coordinacion.decorators import coordinacion_required, lider_coordinacion_required
 from coordinacion.forms import GenerarOrdenForm, CrearEquipoForm
 
-
 # ------------------ DASHBOARD SIMPLIFICADO ------------------ #
+
+
 @login_required
 @coordinacion_required
 def dashboard_coordinacion(request):
@@ -91,60 +102,91 @@ def solicitudes_pendientes(request):
 @login_required
 @coordinacion_required
 def generar_orden_view(request, solicitud_id):
-    """
-    Generar orden de trabajo (simplificado)
-    """
     solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
 
     if solicitud.estado != 'asignado_coordinacion':
         messages.error(
-            request, "Esta solicitud no está en estado válido para generar orden")
+            request, "La solicitud no está en estado válido para generar orden.")
         return redirect('coordinacion:solicitudes_pendientes')
 
     if request.method == 'POST':
-        form = GenerarOrdenForm(request.POST)
+        form = GenerarOrdenForm(request.POST, request=request)
         if form.is_valid():
-            orden = form.save(commit=False)
-            orden.solicitud = solicitud
-            orden.creado_por = request.user
-            orden.coordinador_responsable = request.user
+            with transaction.atomic():
+                # 1. Crear orden
+                orden = form.save(commit=False)
+                orden.solicitud = solicitud
+                orden.creado_por = request.user
+                orden.save()
 
-            # Generar número de orden
-            if not orden.numero_orden:
-                orden.numero_orden = f"OT-{timezone.now().strftime('%Y%m%d')}-{solicitud.id}"
+                # 2. Actualizar solicitud
+                solicitud.estado = 'orden_trabajo_generada'
+                solicitud.numero_orden_trabajo = orden.numero_orden
+                solicitud.fecha_generacion_orden = timezone.now()
+                solicitud.usuario_generador_orden = request.user
+                solicitud.save()
 
-            orden.save()
+                # 3. Asignar equipo de campo a la solicitud
+                coordinador = form.cleaned_data.get('coordinador_campo')
+                subcoordinadores = form.cleaned_data.get('subcoordinadores')
+                encuestadores = form.cleaned_data.get('encuestadores')
+                choferes = form.cleaned_data.get('choferes')
 
-            # Actualizar estado de la solicitud
-            solicitud.estado = 'orden_trabajo_generada'
-            solicitud.numero_orden_trabajo = orden.numero_orden
-            solicitud.fecha_generacion_orden = timezone.now()
-            solicitud.usuario_generador_orden = request.user
-            solicitud.save()
+                # Asignar los campos a la solicitud
+                if coordinador:
+                    solicitud.coordinador_campo = coordinador
+                if subcoordinadores is not None:
+                    solicitud.subcoordinadores.set(subcoordinadores)
+                if choferes is not None:
+                    solicitud.choferes.set(choferes)
+                if encuestadores is not None:
+                    # Usamos el método existente asignar_relevadores que cambia estado a 'asignado_relevadores'
+                    solicitud.asignar_relevadores(
+                        encuestadores, request.user, "Asignado al generar orden")
 
-            messages.success(
-                request, f'Orden {orden.numero_orden} generada exitosamente')
-            return redirect('coordinacion:detalle_orden', orden_id=orden.id)
+                # Guardar cambios en solicitud (el método asignar_relevadores ya hace save, pero por si acaso)
+                solicitud.save()
+
+                # 4. Crear equipo de relevamiento (opcional, pero útil)
+                if coordinador or subcoordinadores or encuestadores or choferes:
+                    equipo = EquipoRelevamiento.objects.create(
+                        nombre=f"Equipo OT-{orden.numero_orden}",
+                        tipo='completo',
+                        estado='planificado',
+                        coordinador_campo=coordinador or request.user,
+                        activo=True,
+                        max_encuestadores=4,
+                    )
+                    if subcoordinadores:
+                        equipo.subcoordinadores.set(subcoordinadores)
+                    if encuestadores:
+                        equipo.encuestadores.set(encuestadores)
+                    if choferes:
+                        equipo.choferes.set(choferes)
+                    # Asociar equipo a la orden
+                    orden.equipos_asignados.add(equipo)
+                    # Opcional: cambiar estado de la orden a 'asignada'
+                    orden.estado = 'asignada'
+                    orden.save()
+
+                # 5. Auditoría adicional (puede ser manejada por signals o manual)
+                # (Opcional: registrar en SolicitudRelevamientoAudit los cambios en los campos de equipo)
+
+                messages.success(
+                    request, f'Orden {orden.numero_orden} generada exitosamente.')
+                return redirect('coordinacion:detalle_orden', orden_id=orden.id)
     else:
-        # Valores por defecto
-        fecha_inicio = timezone.now().date()
-        fecha_fin = fecha_inicio + timedelta(days=7)
-
-        form = GenerarOrdenForm(initial={
-            'fecha_inicio_planeada': fecha_inicio,
-            'fecha_fin_planeada': fecha_fin,
-            'coordinador_responsable': request.user,
-        })
+        form = GenerarOrdenForm(request=request)
 
     context = {
         'solicitud': solicitud,
         'form': form,
     }
-
     return render(request, 'coordinacion/generar_orden.html', context)
 
-
 # ------------------ GESTIÓN DE ÓRDENES ------------------ #
+
+
 @login_required
 @coordinacion_required
 def ordenes_trabajo(request):
@@ -242,7 +284,170 @@ def asignar_equipos_orden(request, orden_id):
     return redirect('coordinacion:detalle_orden', orden_id=orden.id)
 
 
+@login_required
+@lider_coordinacion_required  # Solo líderes de coordinación
+def asignar_equipo_campo(request, solicitud_id):
+    """
+    Asigna equipo de campo completo a una solicitud:
+
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
+
+    # --- 1. Validar estado permitido ---
+    estados_permitidos = ['aprobado_para_campo', 'asignado_coordinacion']
+    if solicitud.estado not in estados_permitidos:
+        return JsonResponse({
+            'error': f'La solicitud debe estar en {", ".join(estados_permitidos)}. Estado actual: {solicitud.get_estado_display()}'
+        }, status=400)
+
+    # --- 2. Verificar que el usuario es líder del grupo asignado (Coordinación) ---
+    # Asumimos que el grupo asignado es de coordinación
+    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+        return JsonResponse({
+            'error': 'No tiene permisos de líder del grupo asignado para realizar esta acción.'
+        }, status=403)
+
+    # --- 3. Leer datos JSON ---
+    try:
+        data = json.loads(request.body)
+        coordinador_id = data.get('coordinador_id')
+        subcoordinador_ids = data.get('subcoordinador_ids', [])
+        encuestador_ids = data.get('encuestador_ids', [])
+        chofer_ids = data.get('chofer_ids', [])
+        comentario = data.get('comentario', '')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+
+    # --- 4. Validar que al menos hay un coordinador (obligatorio) ---
+    if not coordinador_id:
+        return JsonResponse({'error': 'Debe asignar un coordinador de campo.'}, status=400)
+
+    # --- 5. Obtener los usuarios y validar que pertenezcan al grupo "relevamiento" y tengan el rol adecuado ---
+    # Definimos los nombres de grupos/subgrupos según tu esquema. Ajusta según tu implementación.
+    # Aquí asumimos que existen grupos: "Coordinador", "Subcoordinador", "Encuestador", "Chofer" dentro del grupo "Relevamiento".
+    # O bien, puedes usar un campo de perfil (Profile.rol). Adapta esta lógica a tu caso.
+
+    def validar_usuario(user_id, grupo_rol):
+        """Verifica que el usuario existe, está activo y pertenece al grupo de rol indicado."""
+        if not user_id:
+            return None
+        usuario = get_object_or_404(User, id=user_id, is_active=True)
+        # Verificar que pertenece al grupo "relevamiento" (o al grupo padre) y al subgrupo específico
+        # Método 1: grupos de Django
+        if not usuario.groups.filter(name__icontains='relevamiento').exists():
+            raise ValidationError(
+                f'El usuario {usuario.username} no pertenece al grupo Relevamiento.')
+        if not usuario.groups.filter(name__icontains=grupo_rol).exists():
+            raise ValidationError(
+                f'El usuario {usuario.username} no tiene el rol {grupo_rol}.')
+        return usuario
+
+    try:
+        coordinador = validar_usuario(coordinador_id, 'Coordinador')
+        subcoordinadores = [validar_usuario(
+            uid, 'Subcoordinador') for uid in subcoordinador_ids if uid]
+        encuestadores = [validar_usuario(uid, 'Encuestador')
+                         for uid in encuestador_ids if uid]
+        choferes = [validar_usuario(uid, 'Chofer')
+                    for uid in chofer_ids if uid]
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    # --- 6. Asignación atómica ---
+    try:
+        with transaction.atomic():
+            # Guardar estado anterior para auditoría
+            estado_anterior = solicitud.estado
+            coordinador_anterior = solicitud.coordinador_campo
+            subcoordinadores_anteriores = list(
+                solicitud.subcoordinadores.all())
+            encuestadores_anteriores = list(
+                solicitud.relevadores_asignados.all())
+            choferes_anteriores = list(solicitud.choferes.all())
+
+            # Asignar coordinador
+            solicitud.coordinador_campo = coordinador
+
+            # Asignar subcoordinadores (ManyToMany)
+            solicitud.subcoordinadores.set(subcoordinadores)
+
+            # Asignar choferes
+            solicitud.choferes.set(choferes)
+
+            # Asignar encuestadores (usamos relevadores_asignados)
+            # Además, podemos llamar al método asignar_relevadores que cambia el estado y maneja auditoría
+            # Pero ese método espera una lista de usuarios y cambia el estado a 'asignado_relevadores'.
+            # Como queremos cambiar el estado aquí mismo, podemos usar el método o hacerlo manual.
+            # Usamos el método existente:
+            solicitud.asignar_relevadores(
+                encuestadores, request.user, comentario)
+            # Este método actualiza: relevadores_asignados, usuario_asignado (primer relevador), estado = 'asignado_relevadores', y crea auditoría.
+            # Sin embargo, también necesitamos auditar los cambios en coordinador, subcoordinadores, choferes.
+            # Por eso, haremos save() adicional y auditorías manuales.
+
+            # Guardar cambios (el método asignar_relevadores ya hace save, pero igual forzamos)
+            solicitud.save()
+
+            # --- Auditoría para coordinador ---
+            valor_anterior_coord = coordinador_anterior.username if coordinador_anterior else 'Ninguno'
+            valor_nuevo_coord = coordinador.username
+            SolicitudRelevamientoAudit.objects.create(
+                solicitud=solicitud,
+                campo='coordinador_campo',
+                valor_anterior=valor_anterior_coord,
+                valor_nuevo=valor_nuevo_coord,
+                cambiado_por=request.user,
+                comentario=comentario or f"Asignación de coordinador de campo por {request.user.username}"
+            )
+
+            # --- Auditoría para subcoordinadores ---
+            if subcoordinador_ids:
+                ant_sub = ', '.join(
+                    [u.username for u in subcoordinadores_anteriores]) or 'Ninguno'
+                nue_sub = ', '.join(
+                    [u.username for u in subcoordinadores]) or 'Ninguno'
+                SolicitudRelevamientoAudit.objects.create(
+                    solicitud=solicitud,
+                    campo='subcoordinadores',
+                    valor_anterior=ant_sub,
+                    valor_nuevo=nue_sub,
+                    cambiado_por=request.user,
+                    comentario=comentario or f"Asignación de subcoordinadores por {request.user.username}"
+                )
+
+            # --- Auditoría para choferes ---
+            if chofer_ids:
+                ant_cho = ', '.join(
+                    [u.username for u in choferes_anteriores]) or 'Ninguno'
+                nue_cho = ', '.join(
+                    [u.username for u in choferes]) or 'Ninguno'
+                SolicitudRelevamientoAudit.objects.create(
+                    solicitud=solicitud,
+                    campo='choferes',
+                    valor_anterior=ant_cho,
+                    valor_nuevo=nue_cho,
+                    cambiado_por=request.user,
+                    comentario=comentario or f"Asignación de choferes por {request.user.username}"
+                )
+
+            # Nota: La auditoría de encuestadores ya la crea asignar_relevadores.
+
+            # Mensaje de éxito
+            return JsonResponse({
+                'success': True,
+                'message': f'Equipo de campo asignado correctamente. Coordinador: {coordinador.username}, {len(encuestadores)} encuestadores, {len(choferes)} choferes, {len(subcoordinadores)} subcoordinadores.',
+                'nuevo_estado': solicitud.estado,
+            })
+
+    except Exception as e:
+        return JsonResponse({'error': f'Error al asignar equipo: {str(e)}'}, status=500)
+
 # ------------------ GESTIÓN DE EQUIPOS ------------------ #
+
+
 @login_required
 @coordinacion_required
 def equipos_relevamiento(request):
