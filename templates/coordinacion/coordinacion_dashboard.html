@@ -133,14 +133,14 @@
                 <div class="card-body">
                     {% if ordenes_recientes %}
                     <div class="table-responsive">
-                        <table class="table table-hover table-sm">
+                        <table class="table beautiful-table table-sm">
                             <thead>
                                 <tr>
-                                    <th>Orden</th>
-                                    <th>Colonia</th>
-                                    <th>Estado</th>
-                                    <th>Asignado a</th>
-                                    <th>Acciones</th>
+                                    <th class="text-center">Orden</th>
+                                    <th class="text-center">Colonia</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center">Asignado a</th>
+                                    <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -151,7 +151,14 @@
                                         <br>
                                         <small class="text-muted">{{ orden.fecha_creacion|date:"d/m/Y" }}</small>
                                     </td>
-                                    <td>{{ orden.solicitud.colonia.nombre|truncatechars:20 }}</td>
+                                    <td>
+                                        {% with distrito=orden.solicitud.colonia.distritos.first %}
+                                            {% if distrito %}
+                                                <small><strong>{{ orden.solicitud.colonia.nombre }}</strong></small>
+                                                <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
                                     <td>
                                         <span class="badge bg-{% if orden.estado == 'generada' %}warning
                                                               {% elif orden.estado == 'en_proceso' %}primary
@@ -200,7 +207,7 @@
         <div class="col-lg-4">
             <div class="card shadow">
                 <div class="card-header bg-white py-3">
-                    <h6 class="m-0 font-weight-bold text-warning">
+                    <h6 class="m-0 font-weight-bold text-white">
                         <i class="fas fa-clock me-2"></i>Solicitudes Pendientes
                     </h6>
                 </div>
@@ -209,22 +216,39 @@
                     <div class="list-group list-group-flush">
                         {% for solicitud in solicitudes_pendientes %}
                         <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ solicitud.colonia.nombre|truncatechars:20 }}</h6>
-                                <span class="badge bg-{{ solicitud.prioridad }}">
-                                    {{ solicitud.get_prioridad_display }}
-                                </span>
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                <div>
+                                    {% with distrito=solicitud.colonia.distritos.first %}
+                                        {% if distrito %}
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-tractor text-warning me-1"></i>
+                                                <strong>{{ solicitud.colonia.nombre }}</strong></h6>
+                                            <span class="text-muted small">
+                                                <i class="fas fa-map-marker-alt text-muted me-1"></i>
+                                            {{ distrito.departamento.nombre }}, {{ distrito.nombre }}
+                                            </span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                                 <div class="mt-2 d-flex justify-content-end">
+                                    <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" 
+                                    class="btn btn-sm btn-primary w-10">
+                                        <i class="fas fa-file-alt me-1"></i> Generar Orden
+                                    </a>
+                                </div>
                             </div>
-                            <p class="mb-1 small">
-                                <i class="fas fa-user me-1"></i>
-                                {{ solicitud.creado_por.get_full_name|default:"Sistema" }}
-                            </p>
-                            <div class="mt-2">
-                                <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" 
-                                   class="btn btn-sm btn-primary w-100">
-                                    <i class="fas fa-file-alt me-1"></i> Generar Orden
-                                </a>
-                            </div>
+                            <span class="text-muted small">Prioridad:</span>
+                            <span class="badge bg-{% if solicitud.prioridad == 'alta' %}danger
+                                              {% elif solicitud.prioridad == 'media' %}warning
+                                              {% else %}secondary{% endif %} ms-auto">
+                                     {{ solicitud.get_prioridad_display }}
+                            </span>
+                            <span class="text-muted small">Estado:</span>
+                            <span class="badge bg-{% if solicitud.estado == 'pendiente' %}warning
+                                              {% elif solicitud.estado == 'en_proceso' %}info
+                                              {% else %}success{% endif %} ms-auto">
+                                     {{ solicitud.get_estado_display }}
+                            </span>
                         </div>
                         {% endfor %}
                     </div>
@@ -249,7 +273,7 @@
 <!-- Modales para asignar equipos -->
 {% for orden in ordenes_recientes %}
 {% if orden.estado == 'generada' %}
-<div class="modal fade" id="modalAsignarEquipo{{ orden.id }}" tabindex="-1">
+<div class="modal fade modal-info" id="modalAsignarEquipo{{ orden.id }}" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="post" action="{% url 'coordinacion:asignar_equipos' orden.id %}">
@@ -264,24 +288,24 @@
                     <div class="mb-3">
                         <label class="form-label">Seleccionar equipos:</label>
                         {% for equipo in equipos_disponibles %}
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" 
-                                   name="equipos" value="{{ equipo.id }}" 
-                                   id="equipo{{ orden.id }}_{{ equipo.id }}">
-                            <label class="form-check-label" for="equipo{{ orden.id }}_{{ equipo.id }}">
-                                {{ equipo.nombre }} ({{ equipo.total_miembros }} miembros)
-                            </label>
-                        </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                    name="equipos" value="{{ equipo.id }}" 
+                                    id="equipo{{ orden.id }}_{{ equipo.id }}">
+                                <label class="form-check-label" for="equipo{{ orden.id }}_{{ equipo.id }}">
+                                    {{ equipo.nombre }} ({{ equipo.total_miembros }} miembros)
+                                </label>
+                            </div>
                         {% empty %}
-                        <p class="text-muted">No hay equipos disponibles. 
-                            <a href="{% url 'coordinacion:crear_equipo' %}">Crear equipo</a>
-                        </p>
+                            <p class="text-muted">No hay equipos disponibles. 
+                                <a href="{% url 'coordinacion:crear_equipo' %}">Crear equipo</a>
+                            </p>
                         {% endfor %}
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Asignar equipos</button>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-primary">Asignar equipos</button>
                 </div>
             </form>
         </div>

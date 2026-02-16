@@ -96,7 +96,7 @@ def solicitudes_pendientes(request):
         'total': solicitudes.count(),
     }
 
-    return render(request, 'coordinacion/solicitudes_pendientes.html', context)
+    return render(request, 'includes/coordinacion/solicitudes_relevamiento/solicitudes_pendientes.html', context)
 
 
 @login_required
@@ -182,7 +182,7 @@ def generar_orden_view(request, solicitud_id):
         'solicitud': solicitud,
         'form': form,
     }
-    return render(request, 'coordinacion/generar_orden.html', context)
+    return render(request, 'includes/coordinacion/orden_trabajo/generar_orden.html', context)
 
 # ------------------ GESTIÓN DE ÓRDENES ------------------ #
 
@@ -213,7 +213,7 @@ def ordenes_trabajo(request):
         'estado_actual': estado,
     }
 
-    return render(request, 'coordinacion/ordenes_trabajo.html', context)
+    return render(request, 'includes/coordinacion/orden_trabajo/ordenes_trabajo.html', context)
 
 
 @login_required
@@ -241,14 +241,14 @@ def detalle_orden(request, orden_id):
         'registros': registros,
     }
 
-    return render(request, 'coordinacion/detalle_orden.html', context)
+    return render(request, 'includes/coordinacion/orden_trabajo/detalle_orden.html', context)
 
 
 @login_required
 @coordinacion_required
 def asignar_equipos_orden(request, orden_id):
     """
-    Asignar equipos a orden (simplificado)
+    Asignar equipos a orden
     """
     orden = get_object_or_404(OrdenTrabajo, id=orden_id)
 
@@ -445,6 +445,136 @@ def asignar_equipo_campo(request, solicitud_id):
     except Exception as e:
         return JsonResponse({'error': f'Error al asignar equipo: {str(e)}'}, status=500)
 
+
+@login_required
+@lider_coordinacion_required
+def modificar_orden(request, orden_id):
+    """
+    Modifica una orden existente: fechas y equipo de campo.
+    Solo permitido si la orden no está completada ni cancelada.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    orden = get_object_or_404(OrdenTrabajo, id=orden_id)
+    solicitud = orden.solicitud
+
+    # Verificar estados permitidos
+    if orden.estado in ['completada', 'cancelada']:
+        return JsonResponse({'error': 'No se puede modificar una orden completada o cancelada.'}, status=400)
+
+    # Verificar que el usuario es líder del grupo asignado
+    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+        return JsonResponse({'error': 'No tiene permisos de líder para modificar esta orden.'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+
+    # Extraer campos
+    fecha_inicio = data.get('fecha_inicio_planeada')
+    fecha_fin = data.get('fecha_fin_planeada')
+    coordinador_id = data.get('coordinador_campo')
+    subcoordinador_ids = data.get('subcoordinadores', [])
+    encuestador_ids = data.get('encuestadores', [])
+    chofer_ids = data.get('choferes', [])
+    comentario = data.get('comentario', '')
+
+    # Validaciones básicas
+    if not fecha_inicio or not fecha_fin:
+        return JsonResponse({'error': 'Las fechas son obligatorias.'}, status=400)
+
+    from django.utils.dateparse import parse_date
+    fecha_inicio_obj = parse_date(fecha_inicio)
+    fecha_fin_obj = parse_date(fecha_fin)
+
+    if not fecha_inicio_obj or not fecha_fin_obj:
+        return JsonResponse({'error': 'Formato de fecha inválido.'}, status=400)
+
+    # Validar rango de días hábiles
+    hoy = timezone.now().date()
+    if fecha_inicio_obj < hoy:
+        return JsonResponse({'error': 'La fecha de inicio no puede ser pasada.'}, status=400)
+    if fecha_inicio_obj.weekday() >= 5:
+        return JsonResponse({'error': 'La fecha de inicio debe ser día hábil (L-V).'}, status=400)
+    if fecha_fin_obj.weekday() >= 5:
+        return JsonResponse({'error': 'La fecha de fin debe ser día hábil (L-V).'}, status=400)
+
+    temp_form = GenerarOrdenForm()
+    dias_habiles = temp_form._contar_dias_habiles(
+        fecha_inicio_obj, fecha_fin_obj)
+    if dias_habiles < 3 or dias_habiles > 5:
+        return JsonResponse({'error': f'El período debe ser de 3 a 5 días hábiles (actual: {dias_habiles}).'}, status=400)
+
+    # Función para validar usuarios por rol
+    def validar_usuario(user_id, grupo_rol):
+        if not user_id:
+            return None
+        usuario = get_object_or_404(User, id=user_id, is_active=True)
+        # Verificar grupo relevamiento y rol específico
+        if not usuario.groups.filter(name__icontains='relevamiento').exists():
+            raise ValidationError(
+                f'El usuario {usuario.username} no pertenece al grupo Relevamiento.')
+        if not usuario.groups.filter(name__icontains=grupo_rol).exists():
+            raise ValidationError(
+                f'El usuario {usuario.username} no tiene el rol {grupo_rol}.')
+        return usuario
+
+    try:
+        coordinador = validar_usuario(
+            coordinador_id, 'Coordinador') if coordinador_id else None
+        subcoordinadores = [validar_usuario(
+            uid, 'Subcoordinador') for uid in subcoordinador_ids if uid]
+        encuestadores = [validar_usuario(uid, 'Encuestador')
+                         for uid in encuestador_ids if uid]
+        choferes = [validar_usuario(uid, 'Chofer')
+                    for uid in chofer_ids if uid]
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+    # Actualizar en transacción atómica
+    try:
+        with transaction.atomic():
+            # Guardar valores anteriores para auditoría
+            fechas_anteriores = f"{orden.fecha_inicio_planeada} - {orden.fecha_fin_planeada}"
+            coordinador_anterior = solicitud.coordinador_campo
+            subcoordinadores_anteriores = list(
+                solicitud.subcoordinadores.all())
+            encuestadores_anteriores = list(
+                solicitud.relevadores_asignados.all())
+            choferes_anteriores = list(solicitud.choferes.all())
+
+            # Actualizar fechas de la orden
+            orden.fecha_inicio_planeada = fecha_inicio_obj
+            orden.fecha_fin_planeada = fecha_fin_obj
+            orden.save()
+
+            # Actualizar equipo en la solicitud
+            solicitud.coordinador_campo = coordinador
+            solicitud.subcoordinadores.set(subcoordinadores)
+            solicitud.choferes.set(choferes)
+            solicitud.relevadores_asignados.set(encuestadores)  # Encuestadores
+            solicitud.save()
+
+            # Auditoría general (puedes detallar más si quieres)
+            from gerencia.models import SolicitudRelevamientoAudit
+            SolicitudRelevamientoAudit.objects.create(
+                solicitud=solicitud,
+                campo='modificacion_orden',
+                valor_anterior=f"Fechas: {fechas_anteriores}",
+                valor_nuevo=f"Fechas: {fecha_inicio_obj} - {fecha_fin_obj}",
+                cambiado_por=request.user,
+                comentario=comentario or f"Modificación por {request.user.username}"
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Orden modificada exitosamente.'
+            })
+    except Exception as e:
+        return JsonResponse({'error': f'Error al modificar: {str(e)}'}, status=500)
+
 # ------------------ GESTIÓN DE EQUIPOS ------------------ #
 
 
@@ -519,4 +649,4 @@ def reportes_coordinacion(request):
         'periodo': 'Últimos 30 días',
     }
 
-    return render(request, 'coordinacion/reportes.html', context)
+    return render(request, 'inlcudes/coordinacion/coordinacion_reportes.html', context)
