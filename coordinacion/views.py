@@ -18,7 +18,10 @@ from administrador.models import User, Grupo
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from coordinacion.models import EquipoRelevamiento, OrdenTrabajo, RegistroCampo
 from coordinacion.decorators import coordinacion_required, lider_coordinacion_required
-from coordinacion.forms import GenerarOrdenForm, CrearEquipoForm
+from coordinacion.forms import (GenerarOrdenForm, CrearEquipoForm,
+                                UsuarioPorGrupoField, UsuarioPorGrupoSimpleField)
+from coordinacion.utils import contar_dias_habiles
+
 
 # ------------------ DASHBOARD SIMPLIFICADO ------------------ #
 
@@ -29,11 +32,6 @@ def dashboard_coordinacion(request):
     """
     Dashboard simplificado de coordinación
     """
-    # Estadísticas básicas
-    solicitudes_pendientes_count = SolicitudRelevamiento.objects.filter(
-        estado='asignado_coordinacion'
-    ).count()
-
     ordenes_activas_count = OrdenTrabajo.objects.filter(
         estado__in=['generada', 'asignada', 'en_proceso']
     ).count()
@@ -43,23 +41,33 @@ def dashboard_coordinacion(request):
         estado='en_campo'
     ).count()
 
+    solicitudes_canceladas_count = OrdenTrabajo.objects.filter(
+        estado__in=['cancelada']
+    ).count()
+
     # Órdenes finalizadas este mes
     primer_dia_mes = timezone.now().replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0)
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
     ordenes_finalizadas_mes = OrdenTrabajo.objects.filter(
         estado='completada',
         fecha_modificacion__gte=primer_dia_mes
     ).count()
 
-    # Órdenes recientes (últimas 5)
-    ordenes_recientes = OrdenTrabajo.objects.select_related(
-        'solicitud', 'solicitud__colonia'
-    ).prefetch_related('equipos_asignados').order_by('-fecha_creacion')[:5]
+    # Órdenes recientes (últimas 5)[:5]
+    ordenes_recientes = OrdenTrabajo.objects.exclude(estado='cancelada').select_related(
+        'solicitud', 'solicitud__colonia', 'solicitud__coordinador_campo'
+    ).prefetch_related('equipos_asignados').order_by('-fecha_creacion')
 
     # Solicitudes pendientes (para generar orden)
     solicitudes_pendientes = SolicitudRelevamiento.objects.filter(
         estado='asignado_coordinacion'
-    ).select_related('colonia', 'creado_por').order_by('-prioridad', '-fecha_creacion')[:5]
+    ).exclude(
+        orden_trabajo__estado='cancelada'
+    ).select_related('colonia', 'creado_por').order_by('-prioridad', '-fecha_creacion')
+
+    # Estadísticas básicas
+    solicitudes_pendientes_count = solicitudes_pendientes.count()
 
     # Equipos disponibles para modales
     equipos_disponibles = EquipoRelevamiento.objects.filter(
@@ -67,14 +75,34 @@ def dashboard_coordinacion(request):
         estado__in=['planificado', 'en_campo']
     )
 
+    # Usuarios por rol
+    coordinadores = User.objects.filter(
+        groups__name__icontains='Rol_COORDINADOR', is_active=True
+    ).order_by('username')
+    subcoordinadores = User.objects.filter(
+        groups__name__icontains='Rol_SUBCOORDINADOR', is_active=True
+    ).order_by('username')
+    encuestadores = User.objects.filter(
+        groups__name__icontains='Rol_ENCUESTADOR', is_active=True
+    ).order_by('username')
+    choferes = User.objects.filter(
+        groups__name__icontains='Rol_CHOFER', is_active=True
+    ).order_by('username')
+
+    # Context completo
     context = {
         'solicitudes_pendientes_count': solicitudes_pendientes_count,
         'ordenes_activas_count': ordenes_activas_count,
         'equipos_campo_count': equipos_campo_count,
+        'solicitudes_canceladas_count': solicitudes_canceladas_count,
         'ordenes_finalizadas_mes': ordenes_finalizadas_mes,
         'ordenes_recientes': ordenes_recientes,
         'solicitudes_pendientes': solicitudes_pendientes,
         'equipos_disponibles': equipos_disponibles,
+        'coordinadores': coordinadores,
+        'subcoordinadores': subcoordinadores,
+        'encuestadores': encuestadores,
+        'choferes': choferes,
     }
 
     return render(request, 'coordinacion/coordinacion_dashboard.html', context)
@@ -97,6 +125,24 @@ def solicitudes_pendientes(request):
     }
 
     return render(request, 'includes/coordinacion/solicitudes_relevamiento/solicitudes_pendientes.html', context)
+
+
+@login_required
+@coordinacion_required
+def solicitudes_canceladas(request):
+    solicitudes = SolicitudRelevamiento.objects.filter(
+        orden_trabajo__estado='cancelada'
+    ).select_related(
+        'colonia',
+        'creado_por',
+        'orden_trabajo'
+    ).order_by('-orden_trabajo__fecha_modificacion')
+
+    context = {
+        'solicitudes': solicitudes,
+        'total': solicitudes.count(),
+    }
+    return render(request, 'includes/coordinacion/solicitudes_relevamiento/solicitudes_canceladas.html', context)
 
 
 @login_required
@@ -224,9 +270,14 @@ def detalle_orden(request, orden_id):
     """
     orden = get_object_or_404(
         OrdenTrabajo.objects.select_related(
-            'solicitud', 'solicitud__colonia',
+            'solicitud', 'solicitud__colonia', 'solicitud__coordinador_campo',
             'coordinador_responsable'
-        ).prefetch_related('equipos_asignados'),
+        ).prefetch_related(
+            'equipos_asignados',
+            'solicitud__subcoordinadores',
+            'solicitud__relevadores_asignados',
+            'solicitud__choferes'
+        ),
         id=orden_id
     )
 
@@ -235,10 +286,27 @@ def detalle_orden(request, orden_id):
         orden_trabajo=orden
     ).select_related('equipo', 'registrado_por'
                      ).order_by('-fecha_registro', '-hora_inicio')[:10]
+    # Usuarios por rol
+    coordinadores = User.objects.filter(
+        groups__name__icontains='Rol_COORDINADOR', is_active=True
+    ).order_by('username')
+    subcoordinadores = User.objects.filter(
+        groups__name__icontains='Rol_SUBCOORDINADOR', is_active=True
+    ).order_by('username')
+    encuestadores = User.objects.filter(
+        groups__name__icontains='Rol_ENCUESTADOR', is_active=True
+    ).order_by('username')
+    choferes = User.objects.filter(
+        groups__name__icontains='Rol_CHOFER', is_active=True
+    ).order_by('username')
 
     context = {
         'orden': orden,
         'registros': registros,
+        'coordinadores': coordinadores,
+        'subcoordinadores': subcoordinadores,
+        'encuestadores': encuestadores,
+        'choferes': choferes,
     }
 
     return render(request, 'includes/coordinacion/orden_trabajo/detalle_orden.html', context)
@@ -445,6 +513,8 @@ def asignar_equipo_campo(request, solicitud_id):
     except Exception as e:
         return JsonResponse({'error': f'Error al asignar equipo: {str(e)}'}, status=500)
 
+# se usa
+
 
 @login_required
 @lider_coordinacion_required
@@ -502,24 +572,23 @@ def modificar_orden(request, orden_id):
         return JsonResponse({'error': 'La fecha de fin debe ser día hábil (L-V).'}, status=400)
 
     temp_form = GenerarOrdenForm()
-    dias_habiles = temp_form._contar_dias_habiles(
-        fecha_inicio_obj, fecha_fin_obj)
-    if dias_habiles < 3 or dias_habiles > 5:
-        return JsonResponse({'error': f'El período debe ser de 3 a 5 días hábiles (actual: {dias_habiles}).'}, status=400)
+    dias_habiles = contar_dias_habiles(fecha_inicio_obj, fecha_fin_obj)
+    if dias_habiles < 1 or dias_habiles > 5:
+        return JsonResponse({'error': f'El período debe ser de 1 a 5 días hábiles (actual: {dias_habiles}).'}, status=400)
 
     # Función para validar usuarios por rol
-    def validar_usuario(user_id, grupo_rol):
+
+    def validar_usuario(user_id, rol):
         if not user_id:
             return None
-        usuario = get_object_or_404(User, id=user_id, is_active=True)
-        # Verificar grupo relevamiento y rol específico
-        if not usuario.groups.filter(name__icontains='relevamiento').exists():
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
+        except User.DoesNotExist:
+            raise ValidationError(f'Usuario con id {user_id} no encontrado.')
+        if not user.groups.filter(name__icontains=rol).exists():
             raise ValidationError(
-                f'El usuario {usuario.username} no pertenece al grupo Relevamiento.')
-        if not usuario.groups.filter(name__icontains=grupo_rol).exists():
-            raise ValidationError(
-                f'El usuario {usuario.username} no tiene el rol {grupo_rol}.')
-        return usuario
+                f'El usuario {user.username} no tiene el rol {rol}.')
+        return user
 
     try:
         coordinador = validar_usuario(
@@ -558,7 +627,6 @@ def modificar_orden(request, orden_id):
             solicitud.save()
 
             # Auditoría general (puedes detallar más si quieres)
-            from gerencia.models import SolicitudRelevamientoAudit
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=solicitud,
                 campo='modificacion_orden',
@@ -574,6 +642,121 @@ def modificar_orden(request, orden_id):
             })
     except Exception as e:
         return JsonResponse({'error': f'Error al modificar: {str(e)}'}, status=500)
+
+# se usa
+
+
+@login_required
+@lider_coordinacion_required
+def cancelar_orden(request, orden_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    orden = get_object_or_404(OrdenTrabajo, id=orden_id)
+    solicitud = orden.solicitud
+
+    # Verificar estados permitidos
+    if orden.estado not in ['generada', 'asignada']:
+        return JsonResponse({'error': 'Solo se pueden cancelar órdenes en estado Generada o Asignada.'}, status=400)
+
+    # Verificar permisos de líder
+    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+        return JsonResponse({'error': 'No tiene permisos de líder para cancelar esta orden.'}, status=403)
+
+    try:
+        with transaction.atomic():
+            # 1. Cancelar la orden
+            orden.estado = 'cancelada'
+            orden.fecha_inicio_planeada = None
+            orden.fecha_fin_planeada = None
+            orden.save()
+
+            # 2. Marcar la solicitud como cancelada y limpiar asignaciones
+            solicitud.estado = 'cancelado'
+            # solicitud.coordinador_campo = None
+            # solicitud.subcoordinadores.clear()
+            # solicitud.relevadores_asignados.clear()
+            # solicitud.choferes.clear()
+            # Pero si quieres que desaparezcan, descomenta:
+            # solicitud.numero_orden_trabajo = None
+            # solicitud.fecha_generacion_orden = None
+            # solicitud.usuario_generador_orden = None
+            solicitud.save()
+
+            # 3. Desactivar equipo asociado (si existe)
+            equipo = orden.equipos_asignados.first()
+            if equipo:
+                equipo.activo = False
+                equipo.save()
+
+            # 4. Auditoría
+            SolicitudRelevamientoAudit.objects.create(
+                solicitud=solicitud,
+                campo='cancelacion_orden',
+                valor_anterior=f"Orden {orden.numero_orden}",
+                valor_nuevo='Cancelado',
+                cambiado_por=request.user,
+                comentario=f"Orden cancelada por {request.user.username}"
+            )
+
+        return JsonResponse({'success': True, 'message': 'Orden cancelada correctamente.'})
+    except Exception as e:
+        return JsonResponse({'error': f'Error al cancelar: {str(e)}'}, status=500)
+
+
+@login_required
+@lider_coordinacion_required
+def reactivar_orden(request, orden_id):
+    """
+    Reactiva una orden cancelada: la orden pasa a 'asignada' y la solicitud a 'asignado_coordinacion'.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    orden = get_object_or_404(OrdenTrabajo, id=orden_id, estado='cancelada')
+    solicitud = orden.solicitud
+
+    # Verificar permisos de líder
+    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+        return JsonResponse({'error': 'No tiene permisos de líder para reactivar esta orden.'}, status=403)
+
+    try:
+        with transaction.atomic():
+            # 1. Reactivar la orden (volver al estado previo, ej. 'asignada')
+            orden.estado = 'asignada'  # o 'generada' si correspondía
+            orden.save()
+
+            # 2. Reactivar la solicitud (volver al estado previo a la cancelación)
+            #    Depende de cuál era el estado antes de cancelar. Por simplicidad, ponemos 'asignado_coordinacion'
+            solicitud.estado = 'asignado_coordinacion'
+            # Opcional: restaurar campos que se limpiaron al cancelar (si se limpiaron)
+            # Por ejemplo, si se borró el número de orden, lo restauramos:
+            # solicitud.numero_orden_trabajo = orden.numero_orden
+            # solicitud.fecha_generacion_orden = orden.fecha_creacion
+            # solicitud.usuario_generador_orden = orden.creado_por
+            # Pero ten en cuenta que esos campos pueden ser necesarios. Lo dejamos comentado.
+            solicitud.save()
+
+            # 3. Opcional: restaurar equipo si se desactivó
+            equipo = orden.equipos_asignados.first()
+            if equipo:
+                equipo.activo = True
+                equipo.save()
+
+            # 4. Auditoría
+            SolicitudRelevamientoAudit.objects.create(
+                solicitud=solicitud,
+                campo='reactivacion_orden',
+                valor_anterior='rechazado',
+                valor_nuevo='asignado_coordinacion',
+                cambiado_por=request.user,
+                comentario=f"Orden reactivada por {request.user.username}"
+            )
+
+        return JsonResponse({'success': True, 'message': 'Orden reactivada correctamente. La solicitud vuelve a estar disponible.'})
+    except Exception as e:
+        return JsonResponse({'error': f'Error al reactivar: {str(e)}'}, status=500)
+
 
 # ------------------ GESTIÓN DE EQUIPOS ------------------ #
 
@@ -650,3 +833,160 @@ def reportes_coordinacion(request):
     }
 
     return render(request, 'inlcudes/coordinacion/coordinacion_reportes.html', context)
+
+# =========
+
+
+@login_required
+@coordinacion_required
+def asignar_personal_orden(request, orden_id):
+    """
+    Asigna personal (coordinador, subcoordinadores, encuestadores, choferes)
+    a una orden en estado 'generada'. Crea un equipo automáticamente y
+    actualiza la solicitud asociada.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    orden = get_object_or_404(OrdenTrabajo, id=orden_id, estado='generada')
+    solicitud = orden.solicitud
+
+    # Si la petición es AJAX, esperamos JSON; si es POST normal, usamos request.POST
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+    else:
+        data = request.POST
+
+    # Obtener IDs de los campos
+    coordinador_id = data.get('coordinador_campo')
+    sub_ids = data.getlist('subcoordinadores') if hasattr(
+        data, 'getlist') else data.get('subcoordinadores', [])
+    enc_ids = data.getlist('encuestadores') if hasattr(
+        data, 'getlist') else data.get('encuestadores', [])
+    chofer_ids = data.getlist('choferes') if hasattr(
+        data, 'getlist') else data.get('choferes', [])
+    comentario = data.get('comentario', '')
+
+    # Validar que haya al menos coordinador
+    if not coordinador_id:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Debe seleccionar un coordinador de campo'}, status=400)
+        else:
+            messages.error(request, 'Debe seleccionar un coordinador de campo')
+            return redirect('coordinacion:coordinacion_dashboard')
+
+    # Función auxiliar para validar usuario y rol
+    def validar_usuario(user_id, rol):
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
+            if not user.groups.filter(name__icontains=rol).exists():
+                return None, f'El usuario {user.username} no tiene el rol {rol}'
+            return user, None
+        except User.DoesNotExist:
+            return None, 'Usuario no encontrado'
+
+    # Validar coordinador
+    coordinador, error = validar_usuario(coordinador_id, 'Rol_COORDINADOR')
+    if error:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'error': error}, status=400)
+        else:
+            messages.error(request, error)
+            return redirect('coordinacion:coordinacion_dashboard')
+
+    # Validar subcoordinadores
+    subcoordinadores = []
+    for uid in sub_ids:
+        u, e = validar_usuario(uid, 'Rol_SUBCOORDINADOR')
+        if e:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'error': e}, status=400)
+            else:
+                messages.error(request, e)
+                return redirect('coordinacion:coordinacion_dashboard')
+        subcoordinadores.append(u)
+
+    # Validar encuestadores
+    encuestadores = []
+    for uid in enc_ids:
+        u, e = validar_usuario(uid, 'Rol_ENCUESTADOR')
+        if e:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'error': e}, status=400)
+            else:
+                messages.error(request, e)
+                return redirect('coordinacion:coordinacion_dashboard')
+        encuestadores.append(u)
+
+    # Validar choferes
+    choferes = []
+    for uid in chofer_ids:
+        u, e = validar_usuario(uid, 'Rol_CHOFER')
+        if e:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'error': e}, status=400)
+            else:
+                messages.error(request, e)
+                return redirect('coordinacion:coordinacion_dashboard')
+        choferes.append(u)
+
+    # Transacción atómica
+    try:
+        with transaction.atomic():
+            # Actualizar la solicitud
+            solicitud.coordinador_campo = coordinador
+            solicitud.subcoordinadores.set(subcoordinadores)
+            solicitud.choferes.set(choferes)
+
+            # Asignar encuestadores directamente (sin usar asignar_relevadores)
+            solicitud.relevadores_asignados.set(encuestadores)
+
+            # Auditoría para encuestadores (similar a las otras)
+            from gerencia.models import SolicitudRelevamientoAudit  # Asegúrate de importar
+            SolicitudRelevamientoAudit.objects.create(
+                solicitud=solicitud,
+                campo='relevadores_asignados',
+                valor_anterior=', '.join(
+                    [u.username for u in solicitud.relevadores_asignados.all()]) or 'Ninguno',
+                valor_nuevo=', '.join(
+                    [u.username for u in encuestadores]) or 'Ninguno',
+                cambiado_por=request.user,
+                comentario=comentario or f"Asignación de encuestadores por {request.user.username}"
+            )
+
+            solicitud.save()  # Guardar cambios (aunque set ya guarda, por seguridad)
+
+            # Crear el equipo (igual que antes)
+            equipo = EquipoRelevamiento.objects.create(
+                nombre=f"Equipo OT-{orden.numero_orden}",
+                tipo='completo',
+                estado='planificado',
+                coordinador_campo=coordinador,
+                activo=True,
+                max_encuestadores=4,
+            )
+            if subcoordinadores:
+                equipo.subcoordinadores.set(subcoordinadores)
+            if encuestadores:
+                equipo.encuestadores.set(encuestadores)
+            if choferes:
+                equipo.choferes.set(choferes)
+
+            orden.equipos_asignados.add(equipo)
+            orden.estado = 'asignada'
+            orden.save()
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'message': 'Personal asignado correctamente'})
+        else:
+            messages.success(request, 'Personal asignado correctamente')
+            return redirect('coordinacion:coordinacion_dashboard')
+    except Exception as e:
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'error': f'Error al asignar: {str(e)}'}, status=500)
+        else:
+            messages.error(request, f'Error al asignar: {str(e)}')
+            return redirect('coordinacion:coordinacion_dashboard')

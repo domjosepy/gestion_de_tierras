@@ -102,7 +102,7 @@
     <!-- Filtro por estado -->
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">
+            <h6 class="m-0 font-weight-bold text-white">
                 <i class="fas fa-filter me-2"></i>Filtrar por estado
             </h6>
         </div>
@@ -130,21 +130,21 @@
     <!-- Listado de órdenes de trabajo -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-list me-2"></i>Órdenes encontradas ({{ ordenes|length }})
+            <h6 class="m-0 font-weight-bold text-white">
+                <i class="fas fa-list me-2"></i>Órdenes encontradas
             </h6>
         </div>
         <div class="card-body">
             {% if ordenes %}
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <table class="beautiful-table" id="dataTable" width="100%" cellspacing="0">
                         <thead class="table-light">
                             <tr>
                                 <th>N° OT</th>
                                 <th>Solicitud</th>
                                 <th>Fechas planeadas</th>
                                 <th>Estado</th>
-                                <th>Coordinador responsable</th>
+                                <th>Coordinador</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -171,10 +171,10 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <i class="fas fa-calendar-alt text-muted me-1"></i>
-                                    {{ orden.fecha_inicio_planeada|date:"d/m/Y" }}<br>
-                                    <i class="fas fa-calendar-check text-muted me-1"></i>
-                                    {{ orden.fecha_fin_planeada|date:"d/m/Y" }}
+                                    <i class="fas fa-calendar-alt text-muted me-1"></i><span class="text-muted">Inicio: 
+                                    {{ orden.fecha_inicio_planeada|date:"d/m/Y" }}</span><br>
+                                    <i class="fas fa-calendar-check text-muted me-1"></i><span class="text-muted">Fin: 
+                                    {{ orden.fecha_fin_planeada|date:"d/m/Y" }}</span>
                                 </td>
                                 <td>
                                     {% if orden.estado == 'generada' %}
@@ -198,9 +198,11 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                    <a href="{% url 'coordinacion:detalle_orden' orden.id %}" 
+                                        class="btn btn-sm btn-outline-primary" title="Ver detalles">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                       
                                     <!-- Enlace para editar o gestionar, si corresponde -->
                                     {% if orden.estado == 'generada' or orden.estado == 'asignada' %}
                                     <a href="#" class="btn btn-sm btn-outline-warning" title="Editar">

@@ -1,0 +1,88 @@
+<div class="modal fade modal-warning" id="modalAsignarPersonal{{ orden.id }}" tabindex="-1" aria-labelledby="modalAsignarPersonalLabel{{ orden.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form method="post" action="{% url 'coordinacion:asignar_personal_orden' orden.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalAsignarPersonalLabel{{ orden.id }}">
+                            <i class="fas fa-users me-2"></i>Asignar Personal a {{ orden.numero_orden }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">
+                            <strong>Colonia:</strong> {{ orden.solicitud.colonia.nombre }}<br>
+                            <small class="text-muted">Se creará un nuevo equipo y se asignará a esta orden.</small>
+                        </p>
+
+                        <!-- Coordinador de campo -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-user-tie text-warning me-2"></i>Coordinador de campo
+                            </label>
+                            <select name="coordinador_campo" class="form-select" required>
+                                <option value="">---------</option>
+                                {% for user in coordinadores %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Responsable principal del equipo.</div>
+                        </div>
+
+                        <!-- Subcoordinadores -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-user-tag text-warning me-2"></i>Subcoordinador/es
+                                <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios subcoordinadores."> </i>
+                            </label>
+                            <select name="subcoordinadores" class="form-select" multiple size="4" required>
+                                {% for user in subcoordinadores %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Encuestadores -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-clipboard-user text-warning me-2"></i>Encuestador/es
+                                <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios encuestadores."> </i>
+                            </label>
+                            <select name="encuestadores" class="form-select" multiple size="4" required>
+                                {% for user in encuestadores %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Choferes -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-truck text-warning me-2"></i>Chofer/es
+                                <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios choferes."> </i>
+                            </label>
+                            <select name="choferes" class="form-select" multiple size="4" required>
+                                {% for user in choferes %}
+                                    <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Comentario opcional -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-comment text-warning me-2"></i>Comentario (opcional)
+                            </label>
+                            <textarea name="comentario" class="form-control" rows="2" placeholder="Observaciones sobre la asignación"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-between">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-save me-1"></i>Asignar Personal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,21 @@
+<!-- Modal Cancelar Orden -->
+<div class="modal fade modal-danger" id="modalCancelarOrden" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancelar Orden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de cancelar la orden <strong>{{ orden.numero_orden }}</strong>?</p>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
+                <form id="formCancelarOrden" method="post" action="{% url 'coordinacion:cancelar_orden' orden.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">Sí, cancelar orden</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

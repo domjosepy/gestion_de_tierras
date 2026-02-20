@@ -1,0 +1,107 @@
+
+{% if orden.estado != 'completada' and orden.estado != 'cancelada' %}
+<div class="modal fade modal-warning" id="modalModificarOrden" tabindex="-1" aria-labelledby="modalModificarOrdenLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalModificarOrdenLabel">
+                    <i class="fas fa-edit me-2"></i>Modificar Orden {{ orden.numero_orden }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formModificarOrden">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted">Modifique las fechas planeadas y/o el personal asignado.</p>
+                    
+                    <!-- Fechas -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Fecha inicio planeada</label>
+                            <input type="date" name="fecha_inicio_planeada" class="form-control" value="{{ orden.fecha_inicio_planeada|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Fecha fin planeada</label>
+                            <input type="date" name="fecha_fin_planeada" class="form-control" value="{{ orden.fecha_fin_planeada|date:'Y-m-d' }}" required>
+                        </div>
+                    </div>
+
+                    <!-- Coordinador de campo -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-user-tie text-warning me-2"></i>Coordinador de campo
+                        </label>
+                        <select name="coordinador_campo" class="form-select">
+                            <option value="">---------</option>
+                            {% for user in coordinadores %}
+                                <option value="{{ user.id }}" {% if orden.solicitud.coordinador_campo and user.id == orden.solicitud.coordinador_campo.id %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Subcoordinadores -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-user-tag text-warning me-2"></i>Subcoordinadores
+                            <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios subcoordinadores."></i>
+                        </label>
+                        <select name="subcoordinadores" class="form-select" multiple size="4">
+                            {% for user in subcoordinadores %}
+                                <option value="{{ user.id }}" {% if user in orden.solicitud.subcoordinadores.all %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Encuestadores -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-clipboard-user text-warning me-2"></i>Encuestadores
+                                                        <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios encuestadores."></i>
+                        </label>
+                        <select name="encuestadores" class="form-select" multiple size="4">
+                            {% for user in encuestadores %}
+                                <option value="{{ user.id }}" {% if user in orden.solicitud.relevadores_asignados.all %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Choferes -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-truck text-warning me-2"></i>Choferes
+                            <i class="fas fa-info-circle me-1 text-info" title="Mantenga presionado Ctrl para seleccionar varios choferes."></i>
+                        </label>
+                        <select name="choferes" class="form-select" multiple size="4">
+                            {% for user in choferes %}
+                                <option value="{{ user.id }}" {% if user in orden.solicitud.choferes.all %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Comentario -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-comment text-warning me-2"></i>Comentario (opcional)
+                        </label>
+                        <textarea name="comentario" class="form-control" rows="2" placeholder="Motivo de la modificación"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-save me-1"></i>Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}

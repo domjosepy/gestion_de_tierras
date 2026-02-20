@@ -1681,7 +1681,7 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
 .btn-outline-warning:hover,
 .btn-outline-warning:focus {
   background: var(--warning-color);
-  color: #212529;
+  color: #e9eef4;
   border-color: #e0a800;
   box-shadow: 0 2px 6px rgba(255, 193, 7, 0.08);
   outline: none;

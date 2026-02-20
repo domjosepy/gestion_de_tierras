@@ -273,10 +273,6 @@ class RegistroCampo(models.Model):
     hora_fin = models.TimeField(null=True, blank=True)
     fecha_registro = models.DateField(default=timezone.now)
 
-    # Multimedia
-    fotos = models.TextField(
-        blank=True, help_text="URLs de fotos separadas por comas")
-
     # Firmas
     registrado_por = models.ForeignKey(
         User,

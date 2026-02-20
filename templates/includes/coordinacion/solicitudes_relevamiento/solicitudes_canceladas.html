@@ -1,17 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Solicitudes Pendientes - Coordinación{% endblock %}
+{% block title %}Solicitudes Canceladas - Coordinación{% endblock %}
 
 {% block content %}
 <div class="container-fluid fade-in">
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
-            <h1 class="h3 mb-2 text-warning fw-bold">
-                <i class="fas fa-clock me-2"></i>Solicitudes Pendientes
+            <h1 class="h3 mb-2 text-danger fw-bold">
+                <i class="fas fa-times-circle me-2"></i>Solicitudes Canceladas
             </h1>
-            <p class="mb-0">Solicitudes aprobadas para campo que requieren orden de trabajo</p>
+            <p class="mb-0">Solicitudes cuya orden de trabajo fue cancelada</p>
         </div>
         <div>
             <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-outline-primary">
@@ -19,15 +19,13 @@
             </a>
         </div>
     </div>
-    
 
     <!-- Lista de solicitudes -->
     <div class="card shadow">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div class="card-header bg-white py-3">
             <h6 class="m-0 font-weight-bold text-white">
-                <i class="fas fa-list me-2"></i>Solicitudes para generar orden
+                <i class="fas fa-list me-2"></i>Solicitudes con orden cancelada
             </h6>
-            
         </div>
         <div class="card-body p-0">
             {% if solicitudes %}
@@ -39,10 +37,9 @@
                             <th class="text-center">Datos Geográficos</th>
                             <th class="text-center">Tipo</th>
                             <th class="text-center">Prioridad</th>
+                            <th class="text-center">N° Orden Cancelada</th>
+                            <th class="text-center">Fecha Cancelación</th>
                             <th class="text-center">Observación</th>
-                            <th class="text-center">Fecha Solicitud</th>
-                            <th class="text-center">Digitalizador</th>
-                            <th class="text-center">Analista</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -65,50 +62,32 @@
                                     {{ solicitud.get_tipo_display }}
                                 </span>
                             </td>
-                             <td class="text-center">
+                            <td class="text-center">
                                 <span class="badge bg-{% if solicitud.prioridad == 'alta' %}danger
-                                                      {% elif solicitud.prioridad == 'media' %}warning text-dark
-                                                      {% else %}success{% endif %}">
-                                    {{ solicitud.get_prioridad_display }}
+                                                        {% elif solicitud.prioridad == 'media' %}warning
+                                                        {% else %}secondary{% endif %} ms-auto">
+                                                {{ solicitud.get_prioridad_display }}
                                 </span>
+                            </td>
+                            <td class="text-center">
+                                <strong>{{ solicitud.orden_trabajo.numero_orden }}</strong>
+                            </td>
+                            <td class="text-center">
+                                <small>{{ solicitud.orden_trabajo.fecha_modificacion|date:"d/m/Y H:i" }}</small>
                             </td>
                             <td>
                                 {% if solicitud.observaciones %}
-                                    <small>{{ solicitud.observaciones }}</small>
-                                {% else %}
-                                    <span class="text-muted">Sin observaciones</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
-                                <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
-                            </td>
-                            <td class="text-center">
-                                {% if solicitud.usuario_digitalizador %}
-                                    {{ solicitud.usuario_digitalizador.username }}
+                                    <small>{{ solicitud.observaciones|truncatechars:50 }}</small>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                {% if solicitud.usuario_analista %}
-                                    {{ solicitud.usuario_analista.get_full_name }}
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" 
-                                       class="btn btn-sm btn-primary">
-                                        <i class="fas fa-file-alt me-1"></i> Generar Orden
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-info"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#modalDetalle{{ solicitud.id }}">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                </div>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-outline-info"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalDetalle{{ solicitud.id }}">
+                                    <i class="fas fa-eye"></i> Detalles
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -118,8 +97,8 @@
             {% else %}
             <div class="text-center py-5">
                 <i class="fas fa-check-circle fa-4x text-muted mb-3"></i>
-                <h5 class="text-muted">No hay solicitudes pendientes</h5>
-                <p class="text-muted">Todas las solicitudes aprobadas ya tienen orden generada</p>
+                <h5 class="text-muted">No hay solicitudes canceladas</h5>
+                <p class="text-muted">Todas las órdenes están activas o finalizadas</p>
             </div>
             {% endif %}
         </div>
@@ -128,15 +107,15 @@
 
 <!-- Modales de detalle (uno por solicitud) -->
 {% for solicitud in solicitudes %}
-<div class="modal fade modal-info" id="modalDetalle{{ solicitud.id }}" tabindex="-1">
+<div class="modal fade" id="modalDetalle{{ solicitud.id }}" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-white">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Detalle de Solicitud
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-times-circle me-2"></i>
+                    Detalle de Solicitud Cancelada
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="row">
@@ -163,19 +142,39 @@
                         <p><strong>Fecha aprobación campo:</strong> 
                             {{ solicitud.fecha_aprobacion_campo|date:"d/m/Y H:i"|default:"—" }}
                         </p>
-                        <p><strong>Observaciones:</strong><br>
-                            <small>{{ solicitud.observaciones|linebreaksbr|default:"Sin observaciones" }}</small>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="text-danger">Información de cancelación</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Orden cancelada:</strong> {{ solicitud.orden_trabajo.numero_orden }}</p>
+                        <p><strong>Fecha cancelación:</strong> {{ solicitud.orden_trabajo.fecha_modificacion|date:"d/m/Y H:i" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Estado de la orden:</strong> 
+                            <span class="badge bg-secondary">{{ solicitud.orden_trabajo.get_estado_display }}</span>
+                        </p>
+                        <p><strong>Observaciones de la orden:</strong><br>
+                            <small>{{ solicitud.orden_trabajo.observaciones|default:"Sin observaciones" }}</small>
                         </p>
                     </div>
                 </div>
+                {% if solicitud.observaciones %}
+                <div class="mt-2">
+                    <strong>Observaciones de la solicitud:</strong>
+                    <p class="text-muted">{{ solicitud.observaciones|linebreaksbr }}</p>
+                </div>
+                {% endif %}
             </div>
-            <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-
-                <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" class="btn btn-outline-primary">
-                    <i class="fas fa-file-alt me-1"></i> Generar Orden
-                </a>
-               
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <form method="post" action="{% url 'coordinacion:reactivar_orden' solicitud.orden_trabajo.id %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning" onclick="return confirm('¿Está seguro de reactivar esta solicitud? Volverá al estado pendiente y podrá generar una nueva orden.')">
+                        <i class="fas fa-undo me-1"></i> Reactivar solicitud
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -186,7 +185,6 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar DataTables para todas las tablas beautiful-table
         const tablas = document.querySelectorAll('.beautiful-table');
         tablas.forEach(tabla => {
             if (tabla.rows.length > 1) {
@@ -196,13 +194,12 @@
                     labels: {
                         placeholder: "Buscar...",
                         perPage: "registros por página",
-                        noRows: "No se encontraron Solicitudes",
+                        noRows: "No se encontraron Solicitudes Canceladas",
                         info: "Mostrando {start} a {end} de {rows} Solicitudes"
                     }
                 });
             }
         });
-
-});
+    });
 </script>
 {% endblock %}

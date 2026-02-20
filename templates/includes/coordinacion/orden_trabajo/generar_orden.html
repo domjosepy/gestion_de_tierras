@@ -222,7 +222,6 @@
                                     <!-- Mostramos el nombre del coordinador y un campo oculto -->
                                     <input type="hidden" name="coordinador_responsable" value="{{ request.user.id }}">
                                     <span class="fw-bold">{{ request.user.get_full_name|default:request.user.username }}</span>
-                                    <div class="form-text">Coordinador responsable (asignado automáticamente).</div>
                                 </div>
                             </div>
                         </div>
@@ -363,11 +362,11 @@
                 </div>
 
                 <!-- Botones de acción -->
-                <div class="d-flex justify-content-end gap-2 mb-4">
+                <div class="d-flex justify-content-between gap-2 mb-4">
                     <a href="{% url 'coordinacion:solicitudes_pendientes' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-times me-1"></i> Cancelar
                     </a>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-outline-primary">
                         <i class="fas fa-save me-1"></i> Generar Orden
                     </button>
                 </div>

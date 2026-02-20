@@ -58,7 +58,7 @@ class SolicitudRelevamiento(models.Model):
         "asignado_a_digitalizador": ["SIG"],
         "en_proceso_digitalizacion": ["SIG"],
         "pendiente_revision_sig": ["SIG"],
-        "rechazado": ["SIG"],
+        "rechazado": ["SIG", "ANALISIS", "COORDINACION Y MONITOREO", "COORDINACION", "MONITOREO"],
 
         # Estados Análisis
         "pendiente_asignacion_analista": ["ANALISIS"],
@@ -233,6 +233,7 @@ class SolicitudRelevamiento(models.Model):
     numero_orden_trabajo = models.CharField(
         max_length=50,
         blank=True,
+        null=True,
         verbose_name="Número de Orden de Trabajo"
     )
     fecha_generacion_orden = models.DateTimeField(
@@ -763,7 +764,7 @@ class SolicitudRelevamiento(models.Model):
             # Flujo Coordinación
             "aprobado_para_campo": ["asignado_coordinacion"],
             "asignado_coordinacion": ["orden_trabajo_generada"],
-            "orden_trabajo_generada": ["asignado_relevadores"],
+            "orden_trabajo_generada": ["asignado_relevadores", "rechazado"],
 
             # Flujo Campo
             "asignado_relevadores": ["en_ejecucion_campo"],

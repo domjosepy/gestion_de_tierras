@@ -15,6 +15,8 @@
                 <h2 class="h4 mb-0 text-warning fw-bold">
                     <i class="fas fa-tractor me-2"></i> {{ solicitud.colonia.nombre }}
                 </h2>
+
+                
             </div>
             
             <div class="btn-group" role="group">
@@ -155,11 +157,18 @@
                         </h6>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
+                        <div class="mb-3 justify-content-between">
+                            <small class="text-muted d-block">Código de Solicitud</small>
+                            <span class="badge bg-purple">
+                                {{ solicitud.id}}
+                            </span>
+                        </div>
+                        <div class="mb-3 justify-content-between">
                             <small class="text-muted d-block">Estado</small>
                             <span class="badge bg-primary" data-estado="{{ solicitud.estado }}">
                                 {{ solicitud.get_estado_display }}
                             </span>
+
                         </div>
                         
                         <div class="mb-3">

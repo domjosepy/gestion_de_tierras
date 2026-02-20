@@ -4,7 +4,7 @@
     <div class="sidebar-brand-icon">
       <i class="fas fa-map-marked-alt"></i>
     </div>
-    <div class="sidebar-brand-text">GRT - Coordinación</div>
+    <div class="sidebar-brand-text">GRT</div>
   </div>
 
   <ul class="nav flex-column">
@@ -29,7 +29,13 @@
          title="Solicitudes Pendientes">
         <i class="fas fa-inbox"></i>
         <span>Solicitudes Pendientes</span>
-
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'coordinacion:solicitudes_canceladas' %}"
+         title="Solicitudes Pendientes">
+        <i class="fa-solid fa-file-circle-xmark"></i>
+        <span>Solicitudes Canceladas</span>
       </a>
     </li>
 
