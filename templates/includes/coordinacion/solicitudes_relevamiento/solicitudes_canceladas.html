@@ -70,23 +70,37 @@
                                 </span>
                             </td>
                             <td class="text-center">
-                                <strong>{{ solicitud.orden_trabajo.numero_orden }}</strong>
+                                {% with orden=solicitud.ordenes_canceladas.0 %}
+                                    {% if orden %}
+                                        <strong>{{ orden.numero_orden }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                {% endwith %}
                             </td>
-                            <td class="text-center">
-                                <small>{{ solicitud.orden_trabajo.fecha_modificacion|date:"d/m/Y H:i" }}</small>
-                            </td>
-                            <td>
-                                {% if solicitud.observaciones %}
-                                    <small>{{ solicitud.observaciones|truncatechars:50 }}</small>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
+                            {% with orden=solicitud.ordenes_canceladas.0 %}
+                                <td class="text-center">
+                                    
+                                        {% if orden %}
+                                            <small>{{ orden.fecha_modificacion|date:"d/m/Y H:i" }}</small>
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                
+                                </td>
+                                <td>
+                                    {% if orden.estado == 'cancelada' and orden.motivo_cancelacion %}
+                                        <small>{{ orden.motivo_cancelacion }}</small>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                             {% endwith %}
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-outline-info"
                                         data-bs-toggle="modal" 
                                         data-bs-target="#modalDetalle{{ solicitud.id }}">
-                                    <i class="fas fa-eye"></i> Detalles
+                                    <i class="fas fa-eye"></i>
                                 </button>
                             </td>
                         </tr>
@@ -105,81 +119,9 @@
     </div>
 </div>
 
-<!-- Modales de detalle (uno por solicitud) -->
-{% for solicitud in solicitudes %}
-<div class="modal fade" id="modalDetalle{{ solicitud.id }}" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-times-circle me-2"></i>
-                    Detalle de Solicitud Cancelada
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Colonia:</strong> {{ solicitud.colonia.nombre }}</p>
-                        <p><strong>Tipo:</strong> {{ solicitud.get_tipo_display }}</p>
-                        <p><strong>Prioridad:</strong> 
-                            <span class="badge bg-{% if solicitud.prioridad == 'alta' %}danger
-                                                  {% elif solicitud.prioridad == 'media' %}warning text-dark
-                                                  {% else %}success{% endif %}">
-                                {{ solicitud.get_prioridad_display }}
-                            </span>
-                        </p>
-                        <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
-                        <p><strong>Solicitante:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Digitalizador:</strong> 
-                            {{ solicitud.usuario_digitalizador.username|default:"—" }}
-                        </p>
-                        <p><strong>Analista:</strong> 
-                            {{ solicitud.usuario_analista.username|default:"—" }}
-                        </p>
-                        <p><strong>Fecha aprobación campo:</strong> 
-                            {{ solicitud.fecha_aprobacion_campo|date:"d/m/Y H:i"|default:"—" }}
-                        </p>
-                    </div>
-                </div>
-                <hr>
-                <h6 class="text-danger">Información de cancelación</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Orden cancelada:</strong> {{ solicitud.orden_trabajo.numero_orden }}</p>
-                        <p><strong>Fecha cancelación:</strong> {{ solicitud.orden_trabajo.fecha_modificacion|date:"d/m/Y H:i" }}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><strong>Estado de la orden:</strong> 
-                            <span class="badge bg-secondary">{{ solicitud.orden_trabajo.get_estado_display }}</span>
-                        </p>
-                        <p><strong>Observaciones de la orden:</strong><br>
-                            <small>{{ solicitud.orden_trabajo.observaciones|default:"Sin observaciones" }}</small>
-                        </p>
-                    </div>
-                </div>
-                {% if solicitud.observaciones %}
-                <div class="mt-2">
-                    <strong>Observaciones de la solicitud:</strong>
-                    <p class="text-muted">{{ solicitud.observaciones|linebreaksbr }}</p>
-                </div>
-                {% endif %}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <form method="post" action="{% url 'coordinacion:reactivar_orden' solicitud.orden_trabajo.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-warning" onclick="return confirm('¿Está seguro de reactivar esta solicitud? Volverá al estado pendiente y podrá generar una nueva orden.')">
-                        <i class="fas fa-undo me-1"></i> Reactivar solicitud
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
+{% include 'includes/coordinacion/modal/detalle_orden_cancelada.html' %}
+
+
 {% endblock %}
 
 {% block scripts %}
@@ -201,5 +143,7 @@
             }
         });
     });
+
+
 </script>
 {% endblock %}

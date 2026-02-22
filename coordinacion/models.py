@@ -106,6 +106,7 @@ class OrdenTrabajo(models.Model):
         ('pausada', 'Pausada'),
         ('completada', 'Completada'),
         ('cancelada', 'Cancelada'),
+        ('reactivado', 'Reactivado'),
     ]
 
     PRIORIDADES = [
@@ -116,12 +117,14 @@ class OrdenTrabajo(models.Model):
     ]
 
     # Relación con la solicitud
-    solicitud = models.OneToOneField(
+    solicitud = models.ForeignKey(
         'gerencia.SolicitudRelevamiento',
         on_delete=models.CASCADE,
-        related_name='orden_trabajo',
+        related_name='ordenes_trabajo',
         verbose_name="Solicitud de origen"
     )
+    activa = models.BooleanField(
+        default=True, verbose_name="Es la orden vigente")
 
     # Información de la orden
     numero_orden = models.CharField(
@@ -166,6 +169,11 @@ class OrdenTrabajo(models.Model):
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
     instrucciones_especiales = models.TextField(
         blank=True, verbose_name="Instrucciones especiales")
+
+    motivo_cancelacion = models.TextField(
+        blank=True,
+        verbose_name="Motivo de cancelación"
+    )
 
     # Seguimiento
     creado_por = models.ForeignKey(
@@ -219,7 +227,7 @@ class OrdenTrabajo(models.Model):
     @property
     def atrasada(self):
         """Verifica si la orden está atrasada"""
-        if self.estado in ['generada', 'asignada', 'en_proceso']:
+        if self.estado in ['generada', 'asignada', 'en_proceso', 'reactivado']:
             if self.fecha_fin_planeada < timezone.now().date():
                 return True
         return False

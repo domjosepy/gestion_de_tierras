@@ -176,7 +176,7 @@
                                     <i class="fas fa-calendar-check text-muted me-1"></i><span class="text-muted">Fin: 
                                     {{ orden.fecha_fin_planeada|date:"d/m/Y" }}</span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     {% if orden.estado == 'generada' %}
                                         <span class="badge bg-secondary">Generada</span>
                                     {% elif orden.estado == 'asignada' %}
@@ -187,9 +187,11 @@
                                         <span class="badge bg-success">Completada</span>
                                     {% else %}
                                         <span class="badge bg-dark">{{ orden.get_estado_display }}</span>
-                                    {% endif %}
+                                    {% endif %} 
+                                        <span class="status-dot me-4" data-estado="{{ orden.activa }}"></span>
+                                        <span>{{orden.activa}}</span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     {% if orden.coordinador_responsable %}
                                         <i class="fas fa-user-tie text-muted me-1"></i>
                                         {{ orden.coordinador_responsable.get_full_name|default:orden.coordinador_responsable.username }}
@@ -197,7 +199,7 @@
                                         <span class="text-muted">—</span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <a href="{% url 'coordinacion:detalle_orden' orden.id %}" 
                                         class="btn btn-sm btn-outline-primary" title="Ver detalles">
                                         <i class="fas fa-eye"></i>
@@ -235,6 +237,25 @@
         tooltipTriggerList.map(function(tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl)
         });
+   
+        // Inicializar DataTables para todas las tablas beautiful-table
+        const tablas = document.querySelectorAll('.beautiful-table');
+        tablas.forEach(tabla => {
+            if (tabla.rows.length > 1) {
+                new simpleDatatables.DataTable(tabla, {
+                    perPage: 10,
+                    perPageSelect: [5, 10, 20, 50],
+                    labels: {
+                        placeholder: "Buscar...",
+                        perPage: "registros por página",
+                        noRows: "No se encontraron Ordenes de Trabajo",
+                        info: "Mostrando {start} a {end} de {rows} Ordenes de Trabajo"
+                    }
+                });
+            }
+        });
+
     });
 </script>
 {% endblock scripts %}
+

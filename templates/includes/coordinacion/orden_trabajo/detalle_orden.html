@@ -341,15 +341,15 @@
                         </div>
                     {% endwith %}
                     <div class="col-12 d-flex mt-3">
-                        <div class="col-12 d-flex mt-3">
+                        <div class="col-12 d-flex mt-3 justify-content-end">
                             {% if orden.estado == 'generada' %}
                                 <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalAsignarPersonal{{ orden.id }}">
                                     <i class="fa-solid fa-arrows-down-to-people me-1"></i> Asignar equipo de campo
                                 </a>
                             {% endif %}
                             
-                            {% if orden.estado == 'asignada' %}
-                                <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalModificarOrden">
+                            {% if orden.estado == 'generada' or orden.estado == 'asignada' or orden.estado == 'reactivado' %}
+                                <a href="#" class="btn btn-sm btn-outline-warning ms-2" data-bs-toggle="modal" data-bs-target="#modalModificarOrden">
                                     <i class="fa-solid fa-edit me-1"></i> Modificar Orden
                                 </a>
                             {% endif %}
@@ -479,115 +479,96 @@
 {% block scripts %}
 {{ block.super }}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('modalModificarOrden');
-        if (!modal) return;
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalModificarOrden');
+    if (!modal) return;
 
-        const form = document.getElementById('formModificarOrden');
-        form.addEventListener('submit', function(e) {
+    const form = document.getElementById('formModificarOrden');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        // Recopilar datos del formulario
+        const formData = new FormData(form);
+        const data = {
+            fecha_inicio_planeada: formData.get('fecha_inicio_planeada'),
+            fecha_fin_planeada: formData.get('fecha_fin_planeada'),
+            coordinador_campo: formData.get('coordinador_campo') || null,
+            subcoordinadores: [],
+            encuestadores: [],
+            choferes: [],
+            comentario: formData.get('comentario')
+        };
+
+        // Obtener valores seleccionados de los múltiples
+        const subcoordinadoresSelect = form.querySelector('[name="subcoordinadores"]');
+        data.subcoordinadores = Array.from(subcoordinadoresSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+        const encuestadoresSelect = form.querySelector('[name="encuestadores"]');
+        data.encuestadores = Array.from(encuestadoresSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+        const choferesSelect = form.querySelector('[name="choferes"]');
+        data.choferes = Array.from(choferesSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+        // Enviar vía fetch
+        fetch("{% url 'coordinacion:modificar_orden' orden.id %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                bootstrap.Modal.getInstance(modal).hide();
+                // Mostrar toast de éxito
+                mostrarToast(data.message, 'success');
+                // Recargar para ver cambios
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                mostrarToast(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión', 'danger');
+        });
+    });
+
+    const modalCancelar = document.getElementById('modalCancelarOrden');
+    if (modalCancelar) {
+        const btnConfirmar = document.getElementById('btnConfirmarCancelar');
+        btnConfirmar.addEventListener('click', function(e) {
             e.preventDefault();
 
-            // Recopilar datos del formulario
-            const formData = new FormData(form);
-            const data = {
-                fecha_inicio_planeada: formData.get('fecha_inicio_planeada'),
-                fecha_fin_planeada: formData.get('fecha_fin_planeada'),
-                coordinador_campo: formData.get('coordinador_campo') || null,
-                subcoordinadores: [],
-                encuestadores: [],
-                choferes: [],
-                comentario: formData.get('comentario')
-            };
+            const motivo = document.getElementById('motivoCancelacion').value;
 
-            // Obtener valores seleccionados de los múltiples
-            const subcoordinadoresSelect = form.querySelector('[name="subcoordinadores"]');
-            data.subcoordinadores = Array.from(subcoordinadoresSelect.selectedOptions).map(opt => parseInt(opt.value));
-
-            const encuestadoresSelect = form.querySelector('[name="encuestadores"]');
-            data.encuestadores = Array.from(encuestadoresSelect.selectedOptions).map(opt => parseInt(opt.value));
-
-            const choferesSelect = form.querySelector('[name="choferes"]');
-            data.choferes = Array.from(choferesSelect.selectedOptions).map(opt => parseInt(opt.value));
-
-            // Enviar vía fetch
-            fetch("{% url 'coordinacion:modificar_orden' orden.id %}", {
+            fetch("{% url 'coordinacion:cancelar_orden' orden.id %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 },
-                body: JSON.stringify(data)
+                body: JSON.stringify({ motivo_cancelacion: motivo })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Cerrar modal
-                    bootstrap.Modal.getInstance(modal).hide();
-                    // Mostrar toast de éxito (si existe función toast, si no, alert)
-                    if (typeof toast !== 'undefined') {
-                        toast.success(data.message);
-                    } else {
-                        alert('Éxito: ' + data.message);
-                    }
-                    // Recargar para ver cambios
-                    setTimeout(() => location.reload(), 1500);
+                    bootstrap.Modal.getInstance(modalCancelar).hide();
+                    mostrarToast(data.message, 'success');
+                    setTimeout(() => location.reload(), 3000);
                 } else {
-                    if (typeof toast !== 'undefined') {
-                        toast.error(data.error || 'Error al modificar');
-                    } else {
-                        alert('Error: ' + (data.error || 'Error desconocido'));
-                    }
+                    mostrarToast(data.error || data.message, 'danger');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                if (typeof toast !== 'undefined') {
-                    toast.error('Error de conexión');
-                } else {
-                    alert('Error de conexión');
-                }
+                mostrarToast('Error de conexión', 'danger');
             });
         });
-        const modalCancelar = document.getElementById('modalCancelarOrden');
-        if (!modalCancelar) return;
-            const formCancelar = document.getElementById('formCancelarOrden');
-            formCancelar.addEventListener('submit', function(e) {
-                e.preventDefault();
-
-                fetch("{% url 'coordinacion:cancelar_orden' orden.id %}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': formCancelar.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        bootstrap.Modal.getInstance(modalCancelar).hide();
-                        if (typeof toast !== 'undefined') {
-                            toast.success(data.message);
-                        } else {
-                            alert('Éxito: ' + data.message);
-                        }
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        if (typeof toast !== 'undefined') {
-                            toast.error(data.error || 'Error al cancelar');
-                        } else {
-                            alert('Error: ' + (data.error || 'Error desconocido'));
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    if (typeof toast !== 'undefined') {
-                        toast.error('Error de conexión');
-                    } else {
-                        alert('Error de conexión');
-                    }
-                });
-            });
-        
-    });
+    }
+});
 </script>
 {% endblock %}

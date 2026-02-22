@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reportes de Coordinación{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800 fw-bold">
+            <i class="fas fa-chart-pie me-2"></i>Reportes de Coordinación
+        </h1>
+        <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </a>
+    </div>
+
+    <!-- Filtro de fechas -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Desde</label>
+                    <input type="date" name="desde" class="form-control" value="{{ desde|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" name="hasta" class="form-control" value="{{ hasta|date:'Y-m-d' }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tarjetas de resumen -->
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-left-primary shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Órdenes Completadas
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_ordenes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-check fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-left-success shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Total Encuestas
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_encuestas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-left-info shadow h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                Duración Promedio (días)
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-gray-800">{{ promedio_duracion }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hourglass-half fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 fw-bold text-white">Órdenes por Estado</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoEstados" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="m-0 fw-bold text-white">Encuestas por Equipo</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoEquipos" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de órdenes completadas -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-white">
+                <i class="fas fa-table me-2"></i>Órdenes Completadas (últimas 20)
+            </h6>
+            <div>
+                <button class="btn btn-sm btn-success me-1" onclick="exportarExcel()">
+                    <i class="fas fa-file-excel me-1"></i> Excel
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="exportarPDF()">
+                    <i class="fas fa-file-pdf me-1"></i> PDF
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="beautiful-table table-hover" id="tablaReportes">
+                    <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Colonia</th>
+                            <th>Fecha Fin</th>
+                            <th>Encuestas</th>
+                            <th>Equipo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for orden in ordenes_completadas %}
+                        <tr>
+                            <td>{{ orden.numero_orden }}</td>
+                            <td>{{ orden.solicitud.colonia.nombre }}</td>
+                            <td>{{ orden.fecha_fin_real|date:"d/m/Y"|default:orden.fecha_fin_planeada|date:"d/m/Y" }}</td>
+                            <td>{{ orden.encuestas_completadas }}/{{ orden.meta_encuestas }}</td>
+                            <td>
+                                {% for equipo in orden.equipos_asignados.all %}
+                                    {{ equipo.nombre }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfico de estados
+    const ctx1 = document.getElementById('graficoEstados').getContext('2d');
+    const estados = {{ estados|safe }};
+    new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+            labels: estados.map(e => e.estado),
+            datasets: [{
+                data: estados.map(e => e.cantidad),
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b']
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // Gráfico de equipos
+    const ctx2 = document.getElementById('graficoEquipos').getContext('2d');
+    const equipos = {{ datos_equipos|safe }};
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: equipos.map(e => e.nombre),
+            datasets: [{
+                label: 'Encuestas',
+                data: equipos.map(e => e.encuestas),
+                backgroundColor: '#4e73df'
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    // Inicializar DataTable (simple-datatables)
+    const tabla = document.querySelector('.beautiful-table');
+    if (tabla) {
+        new simpleDatatables.DataTable(tabla, {
+            perPage: 10,
+            perPageSelect: [5, 10, 20, 50],
+            labels: {
+                placeholder: "Buscar...",
+                perPage: "registros por página",
+                noRows: "No se encontraron órdenes",
+                info: "Mostrando {start} a {end} de {rows} órdenes"
+            }
+        });
+    }
+});
+
+// Funciones de exportación (requieren SheetJS y jsPDF)
+function exportarExcel() {
+    import('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js').then(() => {
+        const tabla = document.getElementById('tablaReportes');
+        const wb = XLSX.utils.table_to_book(tabla, { sheet: "Reporte" });
+        XLSX.writeFile(wb, "reporte_coordinacion.xlsx");
+    });
+}
+
+function exportarPDF() {
+    import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(() => {
+        import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js').then(() => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.autoTable({ html: '#tablaReportes' });
+            doc.save('reporte_coordinacion.pdf');
+        });
+    });
+}
+</script>
+{% endblock %}

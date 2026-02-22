@@ -1279,6 +1279,46 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
   transform: scale(1.1) rotate(-8deg); 
 }
 
+/* ===================================== */
+/* CARD HEADER - MARRONES SUAVES (LIGHT) */
+/* ===================================== */
+.card-header-brown-light {
+  background: linear-gradient(
+    90deg, 
+    #c4a484 70%,   /* beige/marrón claro */
+    #e0c097 100%   /* tono café con leche */
+  ) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-brown-light h2 {
+  font-weight: 600;
+  color: #3e2f1c; /* marrón oscuro para contraste */
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(62,47,28,0.15); 
+  transition: color 0.2s;
+}
+
+.card-header-brown-light i {
+  font-size: 1.4rem;
+  margin: 0;
+  color: #a67c52; /* marrón medio/dorado */
+  filter: none;
+}
+
+.card-header-brown-light i:hover { 
+  color: #c49b66; 
+  transform: scale(1.1) rotate(-8deg); 
+}
+
+
 /* ================================ */
 /* NAV TABS CARD / PESTAÑAS              */
 /* ================================ */
@@ -1641,7 +1681,7 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
 .btn-outline-warning:hover,
 .btn-outline-warning:focus {
   background: var(--warning-color);
-  color: #212529;
+  color: #e9eef4;
   border-color: #e0a800;
   box-shadow: 0 2px 6px rgba(255, 193, 7, 0.08);
   outline: none;

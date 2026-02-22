@@ -76,32 +76,6 @@
 
     <hr class="sidebar-divider">
 
-    <!-- Sección: Equipos -->
-    <div class="sidebar-heading text-uppercase small px-3">
-      Equipos de Campo
-    </div>
-
-    <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
-         data-bs-target="#collapseEquipos" aria-expanded="false" aria-controls="collapseEquipos"
-         title="Gestión de Equipos">
-        <i class="fas fa-users-gear"></i>
-        <span>Gestión de Equipos</span>
-      </a>
-      <div id="collapseEquipos" class="collapse">
-        <div class="collapse-inner">
-          <a class="collapse-item" href="{% url 'coordinacion:equipos_relevamiento' %}">
-            <i class="fas fa-list me-2"></i>Lista de Equipos
-          </a>
-          <a class="collapse-item" href="{% url 'coordinacion:crear_equipo' %}">
-            <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Equipo
-          </a>
-        </div>
-      </div>
-    </li>
-
-    <hr class="sidebar-divider">
-
     <!-- Sección: Reportes -->
     <div class="sidebar-heading text-uppercase small px-3">
       Reportes y Estadísticas

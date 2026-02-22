@@ -379,40 +379,40 @@
 {% block scripts %}
 {{ block.super }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const fechaInicio = document.getElementById('{{ form.fecha_inicio_planeada.id_for_label }}');
-    const fechaFin = document.getElementById('{{ form.fecha_fin_planeada.id_for_label }}');
+    document.addEventListener('DOMContentLoaded', function() {
+        const fechaInicio = document.getElementById('{{ form.fecha_inicio_planeada.id_for_label }}');
+        const fechaFin = document.getElementById('{{ form.fecha_fin_planeada.id_for_label }}');
 
-    function esDiaHabil(dateStr) {
-        if (!dateStr) return false;
-        const date = new Date(dateStr + 'T12:00:00');
-        const day = date.getDay();
-        return day !== 0 && day !== 6;
-    }
+        function esDiaHabil(dateStr) {
+            if (!dateStr) return false;
+            const date = new Date(dateStr + 'T12:00:00');
+            const day = date.getDay();
+            return day !== 0 && day !== 6;
+        }
 
-    function validarFechas() {
-        if (fechaInicio.value && !esDiaHabil(fechaInicio.value)) {
-            toast.message('La fecha de inicio debe ser un día hábil (L-V).');
-            fechaInicio.value = '';
-            return false;
-        }
-        if (fechaFin.value && !esDiaHabil(fechaFin.value)) {
-            toast.message('La fecha de fin debe ser un día hábil (L-V).');
-            fechaFin.value = '';
-            return false;
-        }
-        if (fechaInicio.value && fechaFin.value) {
-            const inicio = new Date(fechaInicio.value + 'T12:00:00');
-            const fin = new Date(fechaFin.value + 'T12:00:00');
-            if (fin < inicio) {
-                alert('La fecha de fin no puede ser anterior a la de inicio.');
-                fechaFin.value = fechaInicio.value;
+        function validarFechas() {
+            if (fechaInicio.value && !esDiaHabil(fechaInicio.value)) {
+                mostrarToast('La fecha de inicio debe ser un día hábil (Lunes a Viernes).', 'warning');
+                fechaInicio.value = '';
+                return false;
+            }
+            if (fechaFin.value && !esDiaHabil(fechaFin.value)) {
+                mostrarToast('La fecha de fin debe ser un día hábil (Lunes a Viernes).', 'warning');
+                fechaFin.value = '';
+                return false;
+            }
+            if (fechaInicio.value && fechaFin.value) {
+                const inicio = new Date(fechaInicio.value + 'T12:00:00');
+                const fin = new Date(fechaFin.value + 'T12:00:00');
+                if (fin < inicio) {
+                    mostrarToast('La fecha de fin no puede ser anterior a la de inicio.', 'warning');
+                    fechaFin.value = fechaInicio.value;
+                }
             }
         }
-    }
 
-    fechaInicio.addEventListener('change', validarFechas);
-    fechaFin.addEventListener('change', validarFechas);
-});
+        fechaInicio.addEventListener('change', validarFechas);
+        fechaFin.addEventListener('change', validarFechas);
+    });
 </script>
 {% endblock scripts %}

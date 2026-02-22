@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (dashboard_coordinacion, solicitudes_pendientes, solicitudes_canceladas, reactivar_orden,
-                    generar_orden_view, ordenes_trabajo, detalle_orden, asignar_equipos_orden, asignar_equipo_campo,
-                    modificar_orden, cancelar_orden, equipos_relevamiento, crear_equipo, reportes_coordinacion,
+                    generar_orden_view, ordenes_trabajo, detalle_orden, asignar_equipos_orden,
+                    modificar_orden, cancelar_orden, reportes_coordinacion,
                     asignar_personal_orden)
 
 app_name = 'coordinacion'
@@ -25,22 +25,17 @@ urlpatterns = [
     path('orden/<int:orden_id>/', detalle_orden, name='detalle_orden'),
     path('orden/<int:orden_id>/asignar-equipos/',
          asignar_equipos_orden, name='asignar_equipos'),
-    path('api/asignar-equipo-campo/<int:solicitud_id>/',
-         asignar_equipo_campo,
-         name='api_asignar_equipo_campo'),
+
 
     path('orden/<int:orden_id>/modificar/',
          modificar_orden, name='modificar_orden'),
     path('orden/<int:orden_id>/cancelar/',
          cancelar_orden, name='cancelar_orden'),
 
-    # Equipos
-    path('equipos/', equipos_relevamiento, name='equipos_relevamiento'),
-    path('equipos/crear/', crear_equipo, name='crear_equipo'),
-
     # Reportes
     path('reportes/', reportes_coordinacion, name='reportes'),
 
     path('orden/<int:orden_id>/asignar-personal/',
          asignar_personal_orden, name='asignar_personal_orden'),
+
 ]

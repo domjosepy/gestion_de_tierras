@@ -12,23 +12,8 @@
  * - DataTableManager: Gestión de tablas (Tabulator)
  * - EventManager: Centralización de eventos
  */
-document.addEventListener('DOMContentLoaded', function () {
-  const toggleButton = document.querySelector('#sidebarToggle');
-  const body = document.body;
-
-  if (toggleButton) {
-    toggleButton.addEventListener('click', () => {
-      body.classList.toggle('sb-sidenav-toggled');
-
-      // Cambiar el ícono si lo deseas
-      const icon = toggleButton.querySelector('i');
-      if (icon) {
-        icon.classList.toggle('fa-angle-double-right');
-        icon.classList.toggle('fa-angle-double-left');
-      }
-    });
-  }
-});
+// Sidebar icon and toggle handling is managed by `SidebarManager`
+// to keep behavior consistent (state-based icon rendering).
 
 class SidebarManager {
   static init() {
@@ -54,7 +39,7 @@ class SidebarManager {
         e.preventDefault();
         this.toggleSidebar();
         this.saveState();
-        this.toggleIcon(toggleBtn);
+        this.updateIcon(toggleBtn);
       });
     }
 
@@ -64,16 +49,27 @@ class SidebarManager {
         e.preventDefault();
         this.toggleSidebar();
         this.saveState();
-        this.toggleIcon(toggleBars);
+        this.updateIcon(toggleBars);
       });
     }
   }
   
-  static toggleIcon(button) {
-    const icon = button.querySelector('i');
-    if (icon) {
-      icon.classList.toggle('fa-angle-double-left');
-      icon.classList.toggle('fa-angle-double-right');
+  /**
+   * Update the toggle button icon to reflect the current sidebar state.
+   * - When sidebar is collapsed (`sb-sidenav-toggled` present) show expand icon `fa-angle-double-right` (click to expand)
+   * - When sidebar is expanded show collapse icon `fa-angle-double-left` (click to collapse)
+   */
+  static updateIcon(button) {
+    const icon = button?.querySelector('i');
+    if (!icon) return;
+
+    const isCollapsed = document.body.classList.contains('sb-sidenav-toggled');
+    if (isCollapsed) {
+      icon.classList.remove('fa-angle-double-left');
+      icon.classList.add('fa-angle-double-right');
+    } else {
+      icon.classList.remove('fa-angle-double-right');
+      icon.classList.add('fa-angle-double-left');
     }
   }
 
@@ -134,7 +130,7 @@ class SidebarManager {
     }
      // Actualizar el icono del botón
     const toggleBtn = document.getElementById('sidebarToggle');
-    if (toggleBtn) this.toggleIcon(toggleBtn);
+    if (toggleBtn) this.updateIcon(toggleBtn);
   }
 
 
@@ -183,13 +179,13 @@ class SidebarManager {
 
     if (savedState === 'true') {
       document.body.classList.add('sb-sidenav-toggled');
-      if (toggleBtn) this.toggleIcon(toggleBtn);
-      if (toggleBars) this.toggleIcon(toggleBars);
     } else {
       document.body.classList.remove('sb-sidenav-toggled');
-      if (toggleBtn) this.toggleIcon(toggleBtn);
-      if (toggleBars) this.toggleIcon(toggleBars);
     }
+
+    // Ensure icons reflect current restored state
+    if (toggleBtn) this.updateIcon(toggleBtn);
+    if (toggleBars) this.updateIcon(toggleBars);
   }
 }
 

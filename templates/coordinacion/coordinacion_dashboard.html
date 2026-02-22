@@ -212,49 +212,49 @@
                             </thead>
                             <tbody>
                                 {% for orden in ordenes_recientes %}
-                                <tr>
-                                    <td class="text-center">
-                                        <strong>{{ orden.numero_orden|truncatechars:12 }}</strong>
-                                        <br>
-                                        <small class="text-muted">{{ orden.fecha_creacion|date:"d/m/Y" }}</small>
-                                    </td>
-                                    <td>
-                                        {% with distrito=orden.solicitud.colonia.distritos.first %}
-                                            {% if distrito %}
-                                                <small><strong>{{ orden.solicitud.colonia.nombre }}</strong></small>
-                                                <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                    <tr>
+                                        <td class="text-center">
+                                            <strong>{{ orden.numero_orden|truncatechars:12 }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ orden.fecha_creacion|date:"d/m/Y" }}</small>
+                                        </td>
+                                        <td>
+                                            {% with distrito=orden.solicitud.colonia.distritos.first %}
+                                                {% if distrito %}
+                                                    <small><strong>{{ orden.solicitud.colonia.nombre }}</strong></small>
+                                                    <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                                                {% endif %}
+                                            {% endwith %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-{% if orden.estado == 'generada' %}warning
+                                                                {% elif orden.estado == 'en_proceso' %}primary
+                                                                {% elif orden.estado == 'completada' %}success
+                                                                {% else %}secondary{% endif %}">
+                                                {{ orden.get_estado_display }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if orden.solicitud.coordinador_campo %}
+                                                {{ orden.solicitud.coordinador_campo.get_full_name|default:orden.solicitud.coordinador_campo.username }}
+                                                <br><small class="text-muted">
+                                                    <i class="fas fa-phone me-1"></i>{{ orden.solicitud.coordinador_campo.telefono|default:"sin teléfono" }}</small>
+                                            {% else %}
+                                                <span class="text-muted">Sin asignar</span>
                                             {% endif %}
-                                        {% endwith %}
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-{% if orden.estado == 'generada' %}warning
-                                                              {% elif orden.estado == 'en_proceso' %}primary
-                                                              {% elif orden.estado == 'completada' %}success
-                                                              {% else %}secondary{% endif %}">
-                                            {{ orden.get_estado_display }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        {% if orden.solicitud.coordinador_campo %}
-                                            {{ orden.solicitud.coordinador_campo.get_full_name|default:orden.solicitud.coordinador_campo.username }}
-                                            <br><small class="text-muted">
-                                                <i class="fas fa-phone me-1"></i>{{ orden.solicitud.coordinador_campo.telefono|default:"sin teléfono" }}</small>
-                                        {% else %}
-                                            <span class="text-muted">Sin asignar</span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="text-center">
-                                        <a href="{% url 'coordinacion:detalle_orden' orden.id %}" 
-                                           class="btn btn-sm btn-outline-primary" title="Ver detalles">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        {% if orden.estado == 'generada' %}
-                                        <a href="#" class="btn btn-sm btn-outline-warning" title="Asignar personal" data-bs-toggle="modal" data-bs-target="#modalAsignarPersonal{{ orden.id }}">
-                                            <i class="fas fa-user-plus"></i>
-                                        </a>
-                                        {% endif %}
-                                    </td>
-                                </tr>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="{% url 'coordinacion:detalle_orden' orden.id %}" 
+                                            class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if orden.estado == 'generada' %}
+                                            <a href="#" class="btn btn-sm btn-outline-warning" title="Asignar personal" data-bs-toggle="modal" data-bs-target="#modalAsignarPersonal{{ orden.id }}">
+                                                <i class="fas fa-user-plus"></i>
+                                            </a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
                                 {% endfor %}
                             </tbody>
                         </table>

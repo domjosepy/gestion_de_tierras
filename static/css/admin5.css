@@ -1848,14 +1848,16 @@ table.dataTable td .dropdown-item:hover {
 /* 3. GRUPO ÉXITO / FINALIZADOS (Verde)
    Hitos positivos o fin del proceso */
 .status-dot[data-estado="aprobado_para_campo"],
-.status-dot[data-estado="finalizado"] {
+.status-dot[data-estado="finalizado"]
+.status-dot[data-estado="True"] {
     background-color: #198754;
     box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
 }
 
 /* 4. GRUPO CRÍTICO (Rojo)
    Acciones que detienen el flujo */
-.status-dot[data-estado="rechazado"] {
+.status-dot[data-estado="rechazado"]
+.status-dot[data-estado="False"] {
     background-color: #dc3545;
     box-shadow: 0 0 5px rgba(220, 53, 69, 0.5);
 }

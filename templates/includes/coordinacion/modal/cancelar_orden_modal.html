@@ -3,18 +3,19 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Cancelar Orden</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="text-white">Cancelar Orden</h5>
             </div>
             <div class="modal-body">
                 <p>¿Está seguro de cancelar la orden <strong>{{ orden.numero_orden }}</strong>?</p>
+                <!-- Campo para el motivo -->
+                <div class="mb-3">
+                    <label for="motivoCancelacion" class="form-label">Motivo de la cancelación</label>
+                    <textarea class="form-control" id="motivoCancelacion" name="motivo_cancelacion" rows="3" placeholder="Indique el motivo..."></textarea>
+                </div>
             </div>
             <div class="modal-footer justify-content-between">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Volver</button>
-                <form id="formCancelarOrden" method="post" action="{% url 'coordinacion:cancelar_orden' orden.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger">Sí, cancelar orden</button>
-                </form>
+                <button type="button" id="btnConfirmarCancelar" class="btn btn-outline-danger">Sí, cancelar orden</button>
             </div>
         </div>
     </div>

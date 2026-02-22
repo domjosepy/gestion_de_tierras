@@ -7,11 +7,13 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum, Avg
 from django.forms import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
+from django.db.models import Max
+from django.db.models import Prefetch
 
 # 3. Aplicaciones locales (Tus modelos, decoradores y formularios)
 from administrador.models import User, Grupo
@@ -41,9 +43,9 @@ def dashboard_coordinacion(request):
         estado='en_campo'
     ).count()
 
-    solicitudes_canceladas_count = OrdenTrabajo.objects.filter(
-        estado__in=['cancelada']
-    ).count()
+    solicitudes_canceladas_count = SolicitudRelevamiento.objects.filter(
+        ordenes_trabajo__estado='cancelada'
+    ).distinct().count()
 
     # Órdenes finalizadas este mes
     primer_dia_mes = timezone.now().replace(
@@ -55,7 +57,9 @@ def dashboard_coordinacion(request):
     ).count()
 
     # Órdenes recientes (últimas 5)[:5]
-    ordenes_recientes = OrdenTrabajo.objects.exclude(estado='cancelada').select_related(
+    ordenes_recientes = OrdenTrabajo.objects.exclude(
+        estado__in=['reactivado', 'cancelada']
+    ).select_related(
         'solicitud', 'solicitud__colonia', 'solicitud__coordinador_campo'
     ).prefetch_related('equipos_asignados').order_by('-fecha_creacion')
 
@@ -63,7 +67,7 @@ def dashboard_coordinacion(request):
     solicitudes_pendientes = SolicitudRelevamiento.objects.filter(
         estado='asignado_coordinacion'
     ).exclude(
-        orden_trabajo__estado='cancelada'
+        ordenes_trabajo__activa=False
     ).select_related('colonia', 'creado_por').order_by('-prioridad', '-fecha_creacion')
 
     # Estadísticas básicas
@@ -117,6 +121,8 @@ def solicitudes_pendientes(request):
     """
     solicitudes = SolicitudRelevamiento.objects.filter(
         estado='asignado_coordinacion'
+    ).exclude(
+        ordenes_trabajo__activa=True
     ).select_related('colonia', 'creado_por').order_by('-prioridad', '-fecha_creacion')
 
     context = {
@@ -131,12 +137,15 @@ def solicitudes_pendientes(request):
 @coordinacion_required
 def solicitudes_canceladas(request):
     solicitudes = SolicitudRelevamiento.objects.filter(
-        orden_trabajo__estado='cancelada'
-    ).select_related(
-        'colonia',
-        'creado_por',
-        'orden_trabajo'
-    ).order_by('-orden_trabajo__fecha_modificacion')
+        ordenes_trabajo__estado='cancelada'
+    ).distinct().prefetch_related(
+        Prefetch(
+            'ordenes_trabajo',
+            queryset=OrdenTrabajo.objects.filter(
+                estado='cancelada').order_by('-fecha_modificacion'),
+            to_attr='ordenes_canceladas'
+        )
+    ).select_related('colonia', 'creado_por').order_by('-ordenes_trabajo__fecha_modificacion')
 
     context = {
         'solicitudes': solicitudes,
@@ -155,14 +164,22 @@ def generar_orden_view(request, solicitud_id):
             request, "La solicitud no está en estado válido para generar orden.")
         return redirect('coordinacion:solicitudes_pendientes')
 
+    if solicitud.ordenes_trabajo.filter(activa=True).exists():
+        messages.info(request, "Esta solicitud ya tiene una orden activa.")
+        return redirect('coordinacion:detalle_orden', orden_id=solicitud.ordenes_trabajo.get(activa=True).id)
+
     if request.method == 'POST':
         form = GenerarOrdenForm(request.POST, request=request)
         if form.is_valid():
             with transaction.atomic():
-                # 1. Crear orden
+                OrdenTrabajo.objects.filter(
+                    solicitud=solicitud, activa=True).update(activa=False)
+
+                # Crear orden
                 orden = form.save(commit=False)
                 orden.solicitud = solicitud
                 orden.creado_por = request.user
+                orden.activa = True
                 orden.save()
 
                 # 2. Actualizar solicitud
@@ -211,8 +228,10 @@ def generar_orden_view(request, solicitud_id):
                         equipo.choferes.set(choferes)
                     # Asociar equipo a la orden
                     orden.equipos_asignados.add(equipo)
-                    # Opcional: cambiar estado de la orden a 'asignada'
                     orden.estado = 'asignada'
+                    # Antes de crear la nueva orden
+                    OrdenTrabajo.objects.filter(
+                        solicitud=solicitud, activa=True).update(activa=False)
                     orden.save()
 
                 # 5. Auditoría adicional (puede ser manejada por signals o manual)
@@ -353,170 +372,6 @@ def asignar_equipos_orden(request, orden_id):
 
 
 @login_required
-@lider_coordinacion_required  # Solo líderes de coordinación
-def asignar_equipo_campo(request, solicitud_id):
-    """
-    Asigna equipo de campo completo a una solicitud:
-
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
-
-    solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
-
-    # --- 1. Validar estado permitido ---
-    estados_permitidos = ['aprobado_para_campo', 'asignado_coordinacion']
-    if solicitud.estado not in estados_permitidos:
-        return JsonResponse({
-            'error': f'La solicitud debe estar en {", ".join(estados_permitidos)}. Estado actual: {solicitud.get_estado_display()}'
-        }, status=400)
-
-    # --- 2. Verificar que el usuario es líder del grupo asignado (Coordinación) ---
-    # Asumimos que el grupo asignado es de coordinación
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
-        return JsonResponse({
-            'error': 'No tiene permisos de líder del grupo asignado para realizar esta acción.'
-        }, status=403)
-
-    # --- 3. Leer datos JSON ---
-    try:
-        data = json.loads(request.body)
-        coordinador_id = data.get('coordinador_id')
-        subcoordinador_ids = data.get('subcoordinador_ids', [])
-        encuestador_ids = data.get('encuestador_ids', [])
-        chofer_ids = data.get('chofer_ids', [])
-        comentario = data.get('comentario', '')
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
-
-    # --- 4. Validar que al menos hay un coordinador (obligatorio) ---
-    if not coordinador_id:
-        return JsonResponse({'error': 'Debe asignar un coordinador de campo.'}, status=400)
-
-    # --- 5. Obtener los usuarios y validar que pertenezcan al grupo "relevamiento" y tengan el rol adecuado ---
-    # Definimos los nombres de grupos/subgrupos según tu esquema. Ajusta según tu implementación.
-    # Aquí asumimos que existen grupos: "Coordinador", "Subcoordinador", "Encuestador", "Chofer" dentro del grupo "Relevamiento".
-    # O bien, puedes usar un campo de perfil (Profile.rol). Adapta esta lógica a tu caso.
-
-    def validar_usuario(user_id, grupo_rol):
-        """Verifica que el usuario existe, está activo y pertenece al grupo de rol indicado."""
-        if not user_id:
-            return None
-        usuario = get_object_or_404(User, id=user_id, is_active=True)
-        # Verificar que pertenece al grupo "relevamiento" (o al grupo padre) y al subgrupo específico
-        # Método 1: grupos de Django
-        if not usuario.groups.filter(name__icontains='relevamiento').exists():
-            raise ValidationError(
-                f'El usuario {usuario.username} no pertenece al grupo Relevamiento.')
-        if not usuario.groups.filter(name__icontains=grupo_rol).exists():
-            raise ValidationError(
-                f'El usuario {usuario.username} no tiene el rol {grupo_rol}.')
-        return usuario
-
-    try:
-        coordinador = validar_usuario(coordinador_id, 'Coordinador')
-        subcoordinadores = [validar_usuario(
-            uid, 'Subcoordinador') for uid in subcoordinador_ids if uid]
-        encuestadores = [validar_usuario(uid, 'Encuestador')
-                         for uid in encuestador_ids if uid]
-        choferes = [validar_usuario(uid, 'Chofer')
-                    for uid in chofer_ids if uid]
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
-
-    # --- 6. Asignación atómica ---
-    try:
-        with transaction.atomic():
-            # Guardar estado anterior para auditoría
-            estado_anterior = solicitud.estado
-            coordinador_anterior = solicitud.coordinador_campo
-            subcoordinadores_anteriores = list(
-                solicitud.subcoordinadores.all())
-            encuestadores_anteriores = list(
-                solicitud.relevadores_asignados.all())
-            choferes_anteriores = list(solicitud.choferes.all())
-
-            # Asignar coordinador
-            solicitud.coordinador_campo = coordinador
-
-            # Asignar subcoordinadores (ManyToMany)
-            solicitud.subcoordinadores.set(subcoordinadores)
-
-            # Asignar choferes
-            solicitud.choferes.set(choferes)
-
-            # Asignar encuestadores (usamos relevadores_asignados)
-            # Además, podemos llamar al método asignar_relevadores que cambia el estado y maneja auditoría
-            # Pero ese método espera una lista de usuarios y cambia el estado a 'asignado_relevadores'.
-            # Como queremos cambiar el estado aquí mismo, podemos usar el método o hacerlo manual.
-            # Usamos el método existente:
-            solicitud.asignar_relevadores(
-                encuestadores, request.user, comentario)
-            # Este método actualiza: relevadores_asignados, usuario_asignado (primer relevador), estado = 'asignado_relevadores', y crea auditoría.
-            # Sin embargo, también necesitamos auditar los cambios en coordinador, subcoordinadores, choferes.
-            # Por eso, haremos save() adicional y auditorías manuales.
-
-            # Guardar cambios (el método asignar_relevadores ya hace save, pero igual forzamos)
-            solicitud.save()
-
-            # --- Auditoría para coordinador ---
-            valor_anterior_coord = coordinador_anterior.username if coordinador_anterior else 'Ninguno'
-            valor_nuevo_coord = coordinador.username
-            SolicitudRelevamientoAudit.objects.create(
-                solicitud=solicitud,
-                campo='coordinador_campo',
-                valor_anterior=valor_anterior_coord,
-                valor_nuevo=valor_nuevo_coord,
-                cambiado_por=request.user,
-                comentario=comentario or f"Asignación de coordinador de campo por {request.user.username}"
-            )
-
-            # --- Auditoría para subcoordinadores ---
-            if subcoordinador_ids:
-                ant_sub = ', '.join(
-                    [u.username for u in subcoordinadores_anteriores]) or 'Ninguno'
-                nue_sub = ', '.join(
-                    [u.username for u in subcoordinadores]) or 'Ninguno'
-                SolicitudRelevamientoAudit.objects.create(
-                    solicitud=solicitud,
-                    campo='subcoordinadores',
-                    valor_anterior=ant_sub,
-                    valor_nuevo=nue_sub,
-                    cambiado_por=request.user,
-                    comentario=comentario or f"Asignación de subcoordinadores por {request.user.username}"
-                )
-
-            # --- Auditoría para choferes ---
-            if chofer_ids:
-                ant_cho = ', '.join(
-                    [u.username for u in choferes_anteriores]) or 'Ninguno'
-                nue_cho = ', '.join(
-                    [u.username for u in choferes]) or 'Ninguno'
-                SolicitudRelevamientoAudit.objects.create(
-                    solicitud=solicitud,
-                    campo='choferes',
-                    valor_anterior=ant_cho,
-                    valor_nuevo=nue_cho,
-                    cambiado_por=request.user,
-                    comentario=comentario or f"Asignación de choferes por {request.user.username}"
-                )
-
-            # Nota: La auditoría de encuestadores ya la crea asignar_relevadores.
-
-            # Mensaje de éxito
-            return JsonResponse({
-                'success': True,
-                'message': f'Equipo de campo asignado correctamente. Coordinador: {coordinador.username}, {len(encuestadores)} encuestadores, {len(choferes)} choferes, {len(subcoordinadores)} subcoordinadores.',
-                'nuevo_estado': solicitud.estado,
-            })
-
-    except Exception as e:
-        return JsonResponse({'error': f'Error al asignar equipo: {str(e)}'}, status=500)
-
-# se usa
-
-
-@login_required
 @lider_coordinacion_required
 def modificar_orden(request, orden_id):
     """
@@ -524,23 +379,23 @@ def modificar_orden(request, orden_id):
     Solo permitido si la orden no está completada ni cancelada.
     """
     if request.method != 'POST':
-        return JsonResponse({'error': 'Método no permitido'}, status=405)
+        return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
 
     orden = get_object_or_404(OrdenTrabajo, id=orden_id)
     solicitud = orden.solicitud
 
     # Verificar estados permitidos
     if orden.estado in ['completada', 'cancelada']:
-        return JsonResponse({'error': 'No se puede modificar una orden completada o cancelada.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'No se puede modificar una orden completada o cancelada.'}, status=400)
 
     # Verificar que el usuario es líder del grupo asignado
     if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
-        return JsonResponse({'error': 'No tiene permisos de líder para modificar esta orden.'}, status=403)
+        return JsonResponse({'success': False, 'message': 'No tiene permisos de líder para modificar esta orden.'}, status=403)
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse({'error': 'Datos JSON inválidos'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Datos JSON inválidos'}, status=400)
 
     # Extraer campos
     fecha_inicio = data.get('fecha_inicio_planeada')
@@ -553,28 +408,28 @@ def modificar_orden(request, orden_id):
 
     # Validaciones básicas
     if not fecha_inicio or not fecha_fin:
-        return JsonResponse({'error': 'Las fechas son obligatorias.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Las fechas son obligatorias.'}, status=400)
 
     from django.utils.dateparse import parse_date
     fecha_inicio_obj = parse_date(fecha_inicio)
     fecha_fin_obj = parse_date(fecha_fin)
 
     if not fecha_inicio_obj or not fecha_fin_obj:
-        return JsonResponse({'error': 'Formato de fecha inválido.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Formato de fecha inválido.'}, status=400)
 
     # Validar rango de días hábiles
     hoy = timezone.now().date()
     if fecha_inicio_obj < hoy:
-        return JsonResponse({'error': 'La fecha de inicio no puede ser pasada.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'La fecha de inicio no puede ser pasada.'}, status=400)
     if fecha_inicio_obj.weekday() >= 5:
-        return JsonResponse({'error': 'La fecha de inicio debe ser día hábil (L-V).'}, status=400)
+        return JsonResponse({'success': False, 'message': 'La fecha de inicio debe ser día hábil (Lunes a Viernes).'}, status=400)
     if fecha_fin_obj.weekday() >= 5:
-        return JsonResponse({'error': 'La fecha de fin debe ser día hábil (L-V).'}, status=400)
+        return JsonResponse({'success': False, 'message': 'La fecha de fin debe ser día hábil (Lunes a Viernes).'}, status=400)
 
     temp_form = GenerarOrdenForm()
     dias_habiles = contar_dias_habiles(fecha_inicio_obj, fecha_fin_obj)
     if dias_habiles < 1 or dias_habiles > 5:
-        return JsonResponse({'error': f'El período debe ser de 1 a 5 días hábiles (actual: {dias_habiles}).'}, status=400)
+        return JsonResponse({'success': False, 'message': f'El período debe ser de 1 a 5 días hábiles (actual: {dias_habiles}).'}, status=400)
 
     # Función para validar usuarios por rol
 
@@ -614,18 +469,19 @@ def modificar_orden(request, orden_id):
                 solicitud.relevadores_asignados.all())
             choferes_anteriores = list(solicitud.choferes.all())
 
+            orden.estado = 'asignada'
             # Actualizar fechas de la orden
             orden.fecha_inicio_planeada = fecha_inicio_obj
             orden.fecha_fin_planeada = fecha_fin_obj
             orden.save()
 
             # Actualizar equipo en la solicitud
+            solicitud.estado = 'asignado_relevadores'
             solicitud.coordinador_campo = coordinador
             solicitud.subcoordinadores.set(subcoordinadores)
             solicitud.choferes.set(choferes)
-            solicitud.relevadores_asignados.set(encuestadores)  # Encuestadores
+            solicitud.relevadores_asignados.set(encuestadores)
             solicitud.save()
-
             # Auditoría general (puedes detallar más si quieres)
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=solicitud,
@@ -641,9 +497,7 @@ def modificar_orden(request, orden_id):
                 'message': 'Orden modificada exitosamente.'
             })
     except Exception as e:
-        return JsonResponse({'error': f'Error al modificar: {str(e)}'}, status=500)
-
-# se usa
+        return JsonResponse({'success': False, 'message': f'Error al modificar: {str(e)}'}, status=500)
 
 
 @login_required
@@ -664,39 +518,43 @@ def cancelar_orden(request, orden_id):
         return JsonResponse({'error': 'No tiene permisos de líder para cancelar esta orden.'}, status=403)
 
     try:
+        # Leer el motivo del cuerpo JSON
+        data = json.loads(request.body) if request.body else {}
+        motivo = data.get('motivo_cancelacion', '')
+
         with transaction.atomic():
-            # 1. Cancelar la orden
+            # Cancelar la orden y desactivar
             orden.estado = 'cancelada'
-            orden.fecha_inicio_planeada = None
-            orden.fecha_fin_planeada = None
+            orden.activa = False
+            orden.motivo_cancelacion = motivo
             orden.save()
 
-            # 2. Marcar la solicitud como cancelada y limpiar asignaciones
-            solicitud.estado = 'cancelado'
-            # solicitud.coordinador_campo = None
-            # solicitud.subcoordinadores.clear()
-            # solicitud.relevadores_asignados.clear()
-            # solicitud.choferes.clear()
-            # Pero si quieres que desaparezcan, descomenta:
-            # solicitud.numero_orden_trabajo = None
-            # solicitud.fecha_generacion_orden = None
-            # solicitud.usuario_generador_orden = None
+            solicitud.estado = 'asignado_coordinacion'
+            solicitud.numero_orden_trabajo = None
+            solicitud.fecha_generacion_orden = None
+            solicitud.usuario_generador_orden = None
+            solicitud.coordinador_campo = None
+            solicitud.subcoordinadores.clear()
+            solicitud.relevadores_asignados.clear()
+            solicitud.choferes.clear()
             solicitud.save()
 
-            # 3. Desactivar equipo asociado (si existe)
             equipo = orden.equipos_asignados.first()
             if equipo:
                 equipo.activo = False
                 equipo.save()
 
-            # 4. Auditoría
+            # 4. Auditoría con motivo incluido
+            comentario = f"Orden cancelada por {request.user.username}"
+            if motivo:
+                comentario += f". Motivo: {motivo}"
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=solicitud,
                 campo='cancelacion_orden',
                 valor_anterior=f"Orden {orden.numero_orden}",
                 valor_nuevo='Cancelado',
                 cambiado_por=request.user,
-                comentario=f"Orden cancelada por {request.user.username}"
+                comentario=comentario
             )
 
         return JsonResponse({'success': True, 'message': 'Orden cancelada correctamente.'})
@@ -707,9 +565,6 @@ def cancelar_orden(request, orden_id):
 @login_required
 @lider_coordinacion_required
 def reactivar_orden(request, orden_id):
-    """
-    Reactiva una orden cancelada: la orden pasa a 'asignada' y la solicitud a 'asignado_coordinacion'.
-    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
@@ -720,119 +575,109 @@ def reactivar_orden(request, orden_id):
     if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
         return JsonResponse({'error': 'No tiene permisos de líder para reactivar esta orden.'}, status=403)
 
+    # Verificar que no haya otra orden activa para la misma solicitud
+    if solicitud.ordenes_trabajo.filter(activa=True).exists():
+        return JsonResponse({'error': 'La solicitud ya tiene una orden activa. No se puede reactivar esta.'}, status=400)
+
     try:
         with transaction.atomic():
-            # 1. Reactivar la orden (volver al estado previo, ej. 'asignada')
-            orden.estado = 'asignada'  # o 'generada' si correspondía
+            # Reactivar la orden
+            orden.activa = True
+            orden.estado = 'reactivado'
             orden.save()
 
-            # 2. Reactivar la solicitud (volver al estado previo a la cancelación)
-            #    Depende de cuál era el estado antes de cancelar. Por simplicidad, ponemos 'asignado_coordinacion'
+            # Restaurar en la solicitud los campos de orden
+            # si había relevadores, o 'orden_trabajo_generada' si no
             solicitud.estado = 'asignado_coordinacion'
-            # Opcional: restaurar campos que se limpiaron al cancelar (si se limpiaron)
-            # Por ejemplo, si se borró el número de orden, lo restauramos:
-            # solicitud.numero_orden_trabajo = orden.numero_orden
-            # solicitud.fecha_generacion_orden = orden.fecha_creacion
-            # solicitud.usuario_generador_orden = orden.creado_por
-            # Pero ten en cuenta que esos campos pueden ser necesarios. Lo dejamos comentado.
-            solicitud.save()
-
-            # 3. Opcional: restaurar equipo si se desactivó
+            solicitud.numero_orden_trabajo = orden.numero_orden
+            solicitud.fecha_generacion_orden = orden.fecha_creacion
+            solicitud.usuario_generador_orden = orden.creado_por
+            # Restaurar equipo si estaba en la orden (asumiendo que la orden tiene equipo asociado)
             equipo = orden.equipos_asignados.first()
             if equipo:
                 equipo.activo = True
                 equipo.save()
+            solicitud.save()
 
-            # 4. Auditoría
+            # Auditoría
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=solicitud,
                 campo='reactivacion_orden',
-                valor_anterior='rechazado',
-                valor_nuevo='asignado_coordinacion',
+                valor_anterior='cancelada',
+                valor_nuevo='activa',
                 cambiado_por=request.user,
-                comentario=f"Orden reactivada por {request.user.username}"
+                comentario=f"Orden reactivada por: {request.user.username}"
             )
 
-        return JsonResponse({'success': True, 'message': 'Orden reactivada correctamente. La solicitud vuelve a estar disponible.'})
+        return JsonResponse({'success': True, 'message': 'Orden reactivada correctamente.'})
     except Exception as e:
         return JsonResponse({'error': f'Error al reactivar: {str(e)}'}, status=500)
 
-
-# ------------------ GESTIÓN DE EQUIPOS ------------------ #
-
-
-@login_required
-@coordinacion_required
-def equipos_relevamiento(request):
-    """
-    Lista simplificada de equipos
-    """
-    equipos = EquipoRelevamiento.objects.filter(
-        activo=True
-    ).select_related('coordinador_campo').order_by('nombre')
-
-    context = {
-        'equipos': equipos,
-    }
-
-    return render(request, 'coordinacion/equipos.html', context)
-
-
-@login_required
-@coordinacion_required
-def crear_equipo(request):
-    """
-    Crear equipo (simplificado)
-    """
-    if request.method == 'POST':
-        form = CrearEquipoForm(request.POST)
-        if form.is_valid():
-            equipo = form.save()
-            messages.success(
-                request, f'Equipo {equipo.nombre} creado exitosamente')
-            return redirect('coordinacion:equipos_relevamiento')
-    else:
-        form = CrearEquipoForm(initial={'coordinador_campo': request.user})
-
-    context = {'form': form}
-    return render(request, 'coordinacion/crear_equipo.html', context)
-
-
 # ------------------ REPORTES SIMPLIFICADOS ------------------ #
+
+
 @login_required
 @coordinacion_required
 def reportes_coordinacion(request):
-    """
-    Reportes básicos
-    """
-    # Datos del último mes
-    fecha_inicio = timezone.now() - timedelta(days=30)
+    # Obtener fechas de filtro (si vienen por GET)
+    fecha_desde = request.GET.get('desde')
+    fecha_hasta = request.GET.get('hasta')
 
-    # Órdenes completadas
+    if fecha_desde and fecha_hasta:
+        desde = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+        hasta = timezone.datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+    else:
+        hasta = timezone.now().date()
+        desde = hasta - timedelta(days=30)
+
+    # Filtrar órdenes completadas en el rango
     ordenes_completadas = OrdenTrabajo.objects.filter(
         estado='completada',
-        fecha_modificacion__gte=fecha_inicio
-    ).select_related('solicitud', 'solicitud__colonia')
+        fecha_modificacion__date__gte=desde,
+        fecha_modificacion__date__lte=hasta
+    ).select_related('solicitud__colonia').prefetch_related('equipos_asignados')
 
-    # Estadísticas por equipo
+    # Estadísticas generales
+    total_ordenes = ordenes_completadas.count()
+    total_encuestas = ordenes_completadas.aggregate(Sum('encuestas_completadas'))[
+        'encuestas_completadas__sum'] or 0
+
+    # Calcular promedio de duración manualmente (duracion_planeada es propiedad)
+    if total_ordenes > 0:
+        suma_dias = 0
+        for orden in ordenes_completadas:
+            suma_dias += (orden.fecha_fin_planeada -
+                          orden.fecha_inicio_planeada).days
+        promedio_duracion = suma_dias / total_ordenes
+    else:
+        promedio_duracion = 0
+
+    # Órdenes por estado (para gráfico de torta)
+    estados = list(OrdenTrabajo.objects.values(
+        'estado').annotate(cantidad=Count('id')))
+
+    # Encuestas por equipo (para gráfico de barras)
     equipos = EquipoRelevamiento.objects.filter(activo=True)
-    equipos_estadisticas = []
-
+    datos_equipos = []
     for equipo in equipos:
         ordenes_equipo = ordenes_completadas.filter(equipos_asignados=equipo)
-        equipos_estadisticas.append({
-            'equipo': equipo,
-            'ordenes_completadas': ordenes_equipo.count(),
+        datos_equipos.append({
+            'nombre': equipo.nombre,
+            'ordenes': ordenes_equipo.count(),
+            'encuestas': ordenes_equipo.aggregate(Sum('encuestas_completadas'))['encuestas_completadas__sum'] or 0
         })
 
     context = {
-        'ordenes_completadas': ordenes_completadas,
-        'equipos_estadisticas': equipos_estadisticas,
-        'total_ordenes': ordenes_completadas.count(),
-        'periodo': 'Últimos 30 días',
+        'ordenes_completadas': ordenes_completadas[:20],
+        'total_ordenes': total_ordenes,
+        'total_encuestas': total_encuestas,
+        'promedio_duracion': round(promedio_duracion, 1),
+        'estados': estados,
+        'datos_equipos': datos_equipos,
+        'desde': desde,
+        'hasta': hasta,
     }
-
-    return render(request, 'inlcudes/coordinacion/coordinacion_reportes.html', context)
+    return render(request, 'includes/coordinacion/coordinacion_reportes.html', context)
 
 # =========
 
@@ -945,7 +790,6 @@ def asignar_personal_orden(request, orden_id):
             solicitud.relevadores_asignados.set(encuestadores)
 
             # Auditoría para encuestadores (similar a las otras)
-            from gerencia.models import SolicitudRelevamientoAudit  # Asegúrate de importar
             SolicitudRelevamientoAudit.objects.create(
                 solicitud=solicitud,
                 campo='relevadores_asignados',
@@ -957,7 +801,7 @@ def asignar_personal_orden(request, orden_id):
                 comentario=comentario or f"Asignación de encuestadores por {request.user.username}"
             )
 
-            solicitud.save()  # Guardar cambios (aunque set ya guarda, por seguridad)
+            solicitud.save()
 
             # Crear el equipo (igual que antes)
             equipo = EquipoRelevamiento.objects.create(
