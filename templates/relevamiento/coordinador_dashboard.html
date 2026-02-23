@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Coordinador de Campo{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+
+  <!-- ============================================================ -->
+  <!-- CABECERA -->
+  <!-- ============================================================ -->
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h2 class="h3 mb-0 text-primary fw-bold">
+      <i class="fas fa-users-cog me-2"></i>Mis Órdenes de Trabajo
+    </h2>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ESTADÍSTICAS RÁPIDAS -->
+  <!-- ============================================================ -->
+  <div class="row mb-4">
+    <!-- Total órdenes -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-primary text-uppercase mb-1">Órdenes Asignadas</div>
+              <div class="h5 mb-0 fw-bold text-primary">{{ total_ordenes }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-tasks fa-2x text-primary opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- LISTADO DE ÓRDENES -->
+  <!-- ============================================================ -->
+  {% if ordenes_context %}
+    <div class="row g-4">
+      {% for item in ordenes_context %}
+        {% with orden=item.orden %}
+        <div class="col-lg-6 col-xl-4">
+          <div class="card h-100">
+
+            <!-- Card Header -->
+            <div class="card-header card-header-brown">
+              <i class="fas fa-file-invoice"></i>
+              <h2 class="mb-0">{{ orden.numero_orden }}</h2>
+
+            </div>
+
+            <div class="card-body">
+
+              <!-- Datos Geográficos -->
+              <div class="inner-subsection mb-3">
+                <h6 class="fw-bold text-muted mb-2">
+                  <i class="fas fa-map-marked-alt me-1"></i>Datos Geográficos
+                </h6>
+                <div class="d-flex align-items-center mb-1">
+                  <i class="fas fa-tractor me-2 text-primary"></i>
+                  <strong>Colonia:</strong>&nbsp;
+                  <span>{{ item.datos_geo.colonia.nombre|default:'—' }}</span>
+                </div>
+                {% if item.datos_geo.distrito %}
+                <div class="d-flex align-items-center mb-1">
+                  <i class="fas fa-map me-2 text-secondary"></i>
+                  <strong>Distrito:</strong>&nbsp;<span>{{ item.datos_geo.distrito.nombre }}</span>
+                </div>
+                {% endif %}
+                {% if item.datos_geo.departamento %}
+                <div class="d-flex align-items-center mb-1">
+                  <i class="fas fa-globe-americas me-2 text-secondary"></i>
+                  <strong>Departamento:</strong>&nbsp;<span>{{ item.datos_geo.departamento.nombre }}</span>
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Fechas -->
+              <div class="row g-2 mb-3 text-center">
+                <div class="col-6">
+                  <div class="inner-subsection brown py-2 px-1">
+                    <div class="text-xs text-muted">Fecha inicio</div>
+                    <div class="fw-semibold small">{{ orden.fecha_inicio_planeada|date:"d/m/Y" }}</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="inner-subsection brown py-2 px-1">
+                    <div class="text-xs text-muted">Fecha fin</div>
+                    <div class="fw-semibold small">{{ orden.fecha_fin_planeada|date:"d/m/Y" }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Personal Asignado -->
+              <div class="inner-subsection mb-3">
+                <h6 class="fw-bold text-muted mb-2">
+                  <i class="fas fa-users me-1"></i>Personal Asignado
+                </h6>
+                <div class="d-flex justify-content-between mb-1">
+                  <span><i class="fas fa-user-tie me-1 text-warning"></i>Subcoordinadores:</span>
+                  <span class="badge bg-warning">{{ item.subcoordinadores_count }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span><i class="fas fa-clipboard-user me-1 text-info"></i>Encuestadores:</span>
+                  <span class="badge bg-info">{{ item.encuestadores_count }}</span>
+                </div>
+              </div>
+
+              <!-- Relevamientos -->
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <i class="fas fa-file-alt text-success"></i>
+                <small class="text-muted">
+                  Relevamientos registrados:
+                  <strong class="text-success">{{ item.relevamientos_count }}</strong>
+                </small>
+              </div>
+
+              <!-- Estado del formulario -->
+              <div class="alert {% if orden.formulario_habilitado %}alert-success{% else %}alert-warning{% endif %} py-2 px-2 mb-3">
+                <small>
+                  <i class="fas {% if orden.formulario_habilitado %}fa-check-circle{% else %}fa-lock{% endif %} me-1"></i>
+                  Formulario: <strong>{% if orden.formulario_habilitado %}Habilitado{% else %}No habilitado{% endif %}</strong>
+                </small>
+              </div>
+
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="card-body pt-0">
+              <div class="d-grid gap-2">
+                
+                <!-- Ver Detalle -->
+                <a href="{% url 'coordinacion:detalle_orden' orden.pk %}" 
+                   class="btn btn-outline-primary btn-sm">
+                  <i class="fas fa-eye me-1"></i>Ver Detalle
+                </a>
+
+                <!-- Habilitar/Deshabilitar Formulario -->
+                {% if orden.estado != 'completada' %}
+                <form method="post" action="{% url 'relevamiento:habilitar_formulario' orden.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-{% if orden.formulario_habilitado %}warning{% else %}success{% endif %} btn-sm w-100">
+                    <i class="fas {% if orden.formulario_habilitado %}fa-lock{% else %}fa-unlock{% endif %} me-1"></i>
+                    {% if orden.formulario_habilitado %}Deshabilitar{% else %}Habilitar{% endif %} Formulario
+                  </button>
+                </form>
+                {% endif %}
+
+                <!-- Finalizar Orden -->
+                {% if orden.estado != 'completada' %}
+                <button type="button" class="btn btn-danger btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalFinalizarOrden{{ orden.pk }}">
+                  <i class="fas fa-flag-checkered me-1"></i>Finalizar Orden
+                </button>
+
+                <!-- Modal de Confirmación Finalizar -->
+                <div class="modal fade" id="modalFinalizarOrden{{ orden.pk }}" tabindex="-1">
+                  <div class="modal-dialog">
+                    <div class="modal-content">
+                      <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                          <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Finalización
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>¿Está seguro que desea finalizar la orden <strong>{{ orden.numero_orden }}</strong>?</p>
+                        <p class="text-muted small mb-0">
+                          Se cambiará el estado de la orden a "Completada" y la solicitud será reasignada al grupo de Análisis.
+                        </p>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <form method="post" action="{% url 'relevamiento:finalizar_orden_campo' orden.pk %}" class="d-inline">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-check me-1"></i>Confirmar Finalización
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <!-- Estado vacío -->
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-inbox fa-4x text-muted mb-3 d-block"></i>
+        <h5 class="text-muted">No tiene órdenes de trabajo asignadas como coordinador de campo</h5>
+        <p class="text-muted small">Las órdenes aparecerán aquí cuando sea asignado como coordinador de campo.</p>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -35,6 +35,9 @@ urlpatterns = [
     path("digitalizador/", include("digitalizador.urls",
          namespace="digitalizador")),
     path("coordinacion/", include("coordinacion.urls", namespace="coordinacion")),
-    # path("relevamiento/", include("relevamiento.urls", namespace="relevamiento")),
+    path("relevamiento/", include("relevamiento.urls", namespace="relevamiento")),
+    path("relevamiento/", include("relevamiento.urls", namespace="coordinador")),
+    #path("relevamiento/", include("relevamiento.urls", namespace="subcoordinador")),
+    path("relevamiento/", include("relevamiento.urls", namespace="encuestador")),
 
 ]

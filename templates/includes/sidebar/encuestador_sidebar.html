@@ -1,0 +1,68 @@
+<!-- encuestador_sidebar.html -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-clipboard-list"></i>
+    </div>
+    <div class="sidebar-brand-text">Encuestador</div>
+  </div>
+
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'relevamiento:encuestador_dashboard' %}" title="Dashboard">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>Dashboard</span>
+      </a>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-heading text-uppercase small px-3">Acciones</div>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'relevamiento:encuestador_dashboard' %}">
+        <i class="fas fa-folder-open"></i>
+        <span>Mis Órdenes</span>
+      </a>
+    </li>
+
+    <hr class="sidebar-divider">
+
+    {% if orden and orden.solicitud.colonia %}
+      <div class="sidebar-heading text-uppercase small px-3">Colonia: {{ orden.solicitud.colonia.nombre }}</div>
+
+      <li class="nav-item px-3 py-2">
+        <div class="small text-muted">Relevamientos registrados</div>
+        <div class="h5 fw-bold">{{ colonia_relevamientos_count }}</div>
+      </li>
+
+      <li class="nav-item px-3 py-2">
+        <div class="small text-muted">Solicitudes en la colonia</div>
+        <div class="h5 fw-bold">{{ colonia_solicitudes_count }}</div>
+      </li>
+
+      <li class="nav-item px-3 py-2 d-flex align-items-center gap-2">
+        <i class="fas fa-home text-success"></i>
+        <div>
+          <div class="small text-muted">Condición vivienda: Presente</div>
+          <div class="fw-bold">{{ colonia_condicion_presente }}</div>
+        </div>
+      </li>
+
+      <li class="nav-item px-3 py-2 d-flex align-items-center gap-2">
+        <i class="fas fa-water text-primary"></i>
+        <div>
+          <div class="small text-muted">Condición vivienda: Servicio</div>
+          <div class="fw-bold">{{ colonia_condicion_servicio }}</div>
+        </div>
+      </li>
+
+      <hr class="sidebar-divider">
+    {% endif %}
+
+  </ul>
+</div>
+
+<!-- content wrapper -->
+<div id="content-wrapper">
+  {% block content %}{% endblock %}
+</div>

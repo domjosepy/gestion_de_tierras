@@ -175,6 +175,13 @@ class OrdenTrabajo(models.Model):
         verbose_name="Motivo de cancelación"
     )
 
+    # Control de habilitación de formularios para encuestadores
+    formulario_habilitado = models.BooleanField(
+        default=False,
+        verbose_name="Formulario habilitado para encuestadores",
+        help_text="El coordinador de campo debe habilitar el formulario para que los encuestadores puedan crear relevamientos"
+    )
+
     # Seguimiento
     creado_por = models.ForeignKey(
         User,

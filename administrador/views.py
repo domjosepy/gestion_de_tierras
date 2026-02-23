@@ -22,7 +22,7 @@ from administrador.models import Grupo
 
 # Local application imports
 from .forms import (CustomUserCreationForm, CustomPasswordChangeForm,
-                    SimpleUserCreationForm, RolForm, AsignacionPermisosForm, GrupoForm)
+                    SimpleUserCreationForm, RolForm, GrupoForm)
 from .models import User, Rol
 
 # VISTA DE INICIO DE SESION PERSONALIZADA
@@ -50,17 +50,22 @@ class LoginView(DjangoLoginView):
 
         # --- MAPEO de roles a namespaces reales ---
         namespace_por_rol = {
+            "administrador": "administrador",
             "gerente": "gerencia",
             "sig": "sig",
             "digitalizador": "digitalizador",
-            "administrador": "administrador",
+            
             "invitado": "invitado",
             "analista": "analista",
             "tecnico": "tecnico",
             "supervisor": "supervisor",
-            # cubrimos variantes: 'coordinador' y 'coordinacion'
-            "coordinador": "coordinacion",
+            
             "coordinacion": "coordinacion",
+            
+            #grupo relevamiento
+            "coordinador": "coordinador",
+            "subcoordinador": "subcoordinador",
+            "encuestador": "encuestador"
 
             # por ejemplo, si tenés un rol llamado "ventas"
             # podés agregar más roles aquí

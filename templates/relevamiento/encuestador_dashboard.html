@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Encuestador{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+
+  <!-- ============================================================ -->
+  <!-- CABECERA -->
+  <!-- ============================================================ -->
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h2 class="h3 mb-0 text-primary fw-bold">
+      <i class="fas fa-clipboard-list me-2"></i>Mis Órdenes de Trabajo
+    </h2>
+  
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ESTADÍSTICAS RÁPIDAS -->
+  <!-- ============================================================ -->
+  <div class="row mb-4">
+    <!-- Total órdenes -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-primary text-uppercase mb-1">Órdenes Asignadas</div>
+              <div class="h5 mb-0 fw-bold text-primary">{{ total_ordenes }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-folder-open fa-2x text-primary opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- En proceso -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-warning text-uppercase mb-1">En Proceso</div>
+              <div class="h5 mb-0 fw-bold text-warning">
+                {{ en_proceso_count }}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-spinner fa-2x text-warning opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Encuestas realizadas -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-success shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-success text-uppercase mb-1">Encuestas Realizadas</div>
+              <div class="h5 mb-0 fw-bold text-success">
+                  {{ total_relevamientos }}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Órdenes completadas -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-info text-uppercase mb-1">Completadas</div>
+              <div class="h5 mb-0 fw-bold text-info">
+                {{ completadas_count }}
+              </div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-flag-checkered fa-2x text-info opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- LISTADO DE ÓRDENES -->
+  <!-- ============================================================ -->
+  {% if ordenes_context %}
+    <div class="row g-4">
+      {% for item in ordenes_context %}
+        {% with orden=item.orden %}
+        <div class="col-lg-6 col-xl-4">
+          <div class="card h-100 {% if orden.atrasada %}border border-danger{% endif %}">
+
+            <!-- Card Header: color según estado; si formulario no habilitado, forzar -brown-light -->
+            <div class="card-header {% if not item.formulario_habilitado %}card-header-brown-light{% elif orden.estado == 'completada' %}card-header-success{% elif orden.estado == 'en_proceso' or orden.estado == 'asignada' %}{% else %}card-header-brown-light{% endif %}">
+              <i class="fas {{ item.estado_icon }}"></i>
+              <h2 class="mb-0">{{ orden.numero_orden }}</h2>
+            </div>
+
+            <div class="card-body">
+
+              <!-- Info de la solicitud -->
+              <div class="inner-subsection mb-3">
+                <div class="d-flex align-items-center mb-1">
+                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                  <strong>Colonia:</strong>&nbsp;
+                  <span>{{ orden.solicitud.colonia.nombre|default:'—' }}</span>
+                </div>
+                {% with solicitud=orden.solicitud %}
+                  {% with colonia=solicitud.colonia %}
+                    {% with distrito=colonia.distritos.first %}
+                      {% if distrito %}
+                        <div class="d-flex align-items-center mb-1">
+                          <i class="fas fa-map me-2 text-secondary"></i>
+                          <strong>Distrito:</strong>&nbsp;<span>{{ distrito.nombre }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-1">
+                          <i class="fas fa-globe-americas me-2 text-secondary"></i>
+                          <strong>Departamento:</strong>&nbsp;<span>{{ distrito.departamento.nombre }}</span>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                  {% endwith %}
+                {% endwith %}
+              </div>
+
+              <!-- Fechas -->
+              <div class="row g-2 mb-3 text-center">
+                <div class="col-6">
+                  <div class="inner-subsection brown py-2 px-1">
+                    <div class="text-xs text-muted">Inicio planeado</div>
+                    <div class="fw-semibold small">{{ orden.fecha_inicio_planeada|date:"d/m/Y" }}</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="inner-subsection brown py-2 px-1">
+                    <div class="text-xs text-muted">Fin planeado</div>
+                    <div class="fw-semibold small {% if orden.atrasada %}text-danger{% endif %}">
+                      {{ orden.fecha_fin_planeada|date:"d/m/Y" }}
+                      {% if orden.atrasada %}<i class="fas fa-exclamation-triangle ms-1"></i>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Progreso de encuestas -->
+              {% if orden.meta_encuestas > 0 %}
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Progreso encuestas</small>
+                    <small class="fw-semibold">{{ item.relevamientos_count }}/{{ item.meta_encuestas }}</small>
+                  </div>
+                  <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-primary" role="progressbar"
+                         style="width: {{ item.progreso_percent }}%;"
+                         aria-valuenow="{{ item.progreso_percent }}"
+                         aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+
+              <!-- Encuestas propias en esta orden -->
+              <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-clipboard-check text-success"></i>
+                <small class="text-muted">
+                  Mis encuestas en esta orden:
+                  <strong class="text-success">{{ item.relevamientos_count }}</strong>
+                </small>
+              </div>
+
+            </div>
+
+            <!-- Botón de acción -->
+            <div class="card-body pt-0 d-flex gap-2">
+              {% if item.allow_new %}
+                <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}"
+                   class="btn btn-primary btn-sm flex-fill">
+                  <i class="fas fa-plus me-1"></i>Nueva Encuesta
+                </a>
+              {% elif not item.formulario_habilitado %}
+                <button class="btn btn-secondary btn-sm flex-fill" disabled title="Formulario no habilitado por el coordinador">
+                  <i class="fas fa-lock me-1"></i>Formulario no disponible
+                </button>
+              {% endif %}
+              {% if item.relevamientos_count > 0 %}
+                <a href="#"
+                   class="btn btn-outline-secondary btn-sm">
+                  <i class="fas fa-eye"></i>
+                </a>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <!-- Estado vacío -->
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-inbox fa-4x text-muted mb-3 d-block"></i>
+        <h5 class="text-muted">No tiene órdenes de trabajo asignadas</h5>
+        <p class="text-muted small">Cuando un coordinador lo asigne a un equipo de relevamiento, sus órdenes aparecerán aquí.</p>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

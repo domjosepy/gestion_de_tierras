@@ -28,6 +28,21 @@ MEJORAS_CHOICES = [
     ("agua_potable", "Agua Potable"),
 ]
 
+EQUIPAMIENTOS_CHOICES = [
+    ("energia_electrica", "Energía Eléctrica"),
+    ("agua_corriente", "Agua Corriente"),
+    ("cocina", "Cocina"),
+    ("bano", "Baño"),
+    ("telefono_fijo", "Teléfono Fijo"),
+    ("internet", "Internet"),
+]
+
+MOD_POST_CHOICES = [
+    ("cambio_recurrente", "Cambio de Recurrente"),
+    ("correccion_superficie", "Corrección de Superficie"),
+    ("ampliacion", "Ampliación"),
+]
+
 
 class Relevamiento(models.Model):
     # 1 - DATOS DEL LOTE
@@ -65,6 +80,7 @@ class Relevamiento(models.Model):
         ("presente", "Presente"),
         ("ausente", "Ausente"),
         ("sin_vivienda", "Sin vivienda"),
+        ("servicio", "Servicio"),
     ]
     condicion_vivienda = models.CharField(
         max_length=20, choices=COND_VIVIENDA_CHOICES, blank=True)
@@ -116,17 +132,31 @@ class Relevamiento(models.Model):
         max_length=20, choices=ESTADO_ENTREVISTA, blank=True)
     firmo_solicitud = models.BooleanField(default=False)
 
-    MOD_POST_CHOICES = [
-        ("cambio_recurrente", "Cambio de Recurrente"),
-        ("correccion_superficie", "Corrección de Superficie"),
-        ("ampliacion", "Ampliación"),
-    ]
     modificaciones_post = ArrayField(
         base_field=models.CharField(max_length=50, choices=MOD_POST_CHOICES),
         blank=True,
         null=True,
         default=list,
         help_text="Lista de claves de modificaciones",
+    )
+
+    # Vinculación con la Orden de Trabajo de coordinación (OBLIGATORIO)
+    orden_trabajo = models.ForeignKey(
+        'coordinacion.OrdenTrabajo',
+        on_delete=models.PROTECT,
+        related_name='relevamientos',
+        verbose_name="Orden de Trabajo",
+        help_text="Todo relevamiento debe estar asociado a una orden de trabajo"
+    )
+
+    # Encuestador que realizó el relevamiento
+    encuestador = models.ForeignKey(
+        'administrador.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='relevamientos_realizados',
+        verbose_name="Encuestador"
     )
 
     creado_en = models.DateTimeField(auto_now_add=True)
@@ -198,14 +228,6 @@ class Vivienda(models.Model):
     piezas = models.IntegerField(null=True, blank=True)
     agua_proviene = models.CharField(max_length=20, choices=AGUA, blank=True)
     tipo_bano = models.CharField(max_length=20, choices=BANO, blank=True)
-    EQUIPAMIENTOS_CHOICES = [
-        ("energia_electrica", "Energía Eléctrica"),
-        ("agua_corriente", "Agua Corriente"),
-        ("cocina", "Cocina"),
-        ("bano", "Baño"),
-        ("telefono_fijo", "Teléfono Fijo"),
-        ("internet", "Internet"),
-    ]
 
     equipamientos = ArrayField(
         base_field=models.CharField(

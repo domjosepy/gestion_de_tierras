@@ -1,3 +1,408 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 
-# Create your views here.
+from coordinacion.models import OrdenTrabajo
+from .decorators import encuestador_required, coordinador_campo_required
+from .models import Relevamiento
+from .forms import RelevamientoForm
+from django.db import transaction
+from gerencia.models import SolicitudRelevamientoAudit
+from administrador.models import Grupo
+    
+
+
+# ─────────────────────────────────────────────
+# UTILIDAD INTERNA: extraer datos geográficos
+# de una OrdenTrabajo
+# ─────────────────────────────────────────────
+
+def _datos_geograficos_desde_orden(orden):
+    """
+    Dado un OrdenTrabajo, devuelve un dict con {colonia, distrito, departamento}
+    extraídos de la solicitud asociada, o None para cada uno si no existen.
+    """
+    solicitud = orden.solicitud
+    colonia = solicitud.colonia if solicitud else None
+
+    distrito = None
+    departamento = None
+    if colonia:
+        # Colonia tiene M2M a distritos; tomamos el primero disponible
+        primer_distrito = colonia.distritos.select_related('departamento').first()
+        if primer_distrito:
+            distrito = primer_distrito
+            departamento = primer_distrito.departamento
+
+    return {
+        'colonia': colonia,
+        'distrito': distrito,
+        'departamento': departamento,
+    }
+
+
+# ─────────────────────────────────────────────
+# DASHBOARD ENCUESTADOR
+# ─────────────────────────────────────────────
+
+@login_required
+@encuestador_required
+def encuestador_dashboard(request):
+    """
+    Dashboard para encuestadores: muestra todas las órdenes de trabajo
+    en las que el usuario está asignado como encuestador.
+    """
+    ordenes = (
+        OrdenTrabajo.objects
+        .exclude(estado__in=['reactivado', 'cancelada'])
+        .filter(equipos_asignados__encuestadores=request.user)
+        .distinct()
+        .select_related(
+            'solicitud',
+            'solicitud__colonia',
+            'coordinador_responsable',
+        )
+        .prefetch_related('equipos_asignados')
+        .order_by('-fecha_creacion')
+    )
+
+    # Contar relevamientos propios por orden y calcular propiedades usadas en la plantilla
+    relevamientos_por_orden = {}
+    for orden in ordenes:
+        relevamientos_por_orden[orden.pk] = Relevamiento.objects.filter(
+            orden_trabajo=orden,
+            encuestador=request.user,
+        ).count()
+
+    # Mapeo simple para badge/icon según estado
+    estado_map = {
+        'generada': {'badge': 'secondary', 'icon': 'fa-file-alt'},
+        'asignada': {'badge': 'warning', 'icon': 'fa-user-check'},
+        'en_proceso': {'badge': 'primary', 'icon': 'fa-spinner'},
+        'completada': {'badge': 'success', 'icon': 'fa-check-circle'},
+        'cancelada': {'badge': 'danger', 'icon': 'fa-times-circle'},
+    }
+
+    ordenes_context = []
+    for orden in ordenes:
+        m = estado_map.get(orden.estado, {'badge': 'secondary', 'icon': 'fa-circle'})
+        cnt = relevamientos_por_orden.get(orden.pk, 0)
+        meta = getattr(orden, 'meta_encuestas', 0) or 0
+        progreso_percent = int(0 if meta == 0 else (cnt / meta) * 100)
+        ordenes_context.append({
+            'orden': orden,
+            'estado_badge': m['badge'],
+            'estado_icon': m['icon'],
+            'relevamientos_count': cnt,
+            'meta_encuestas': meta,
+            'progreso_percent': progreso_percent,
+            'allow_new': orden.estado in ('asignada', 'en_proceso', 'generada') and orden.formulario_habilitado,
+            'formulario_habilitado': orden.formulario_habilitado,
+        })
+
+    # Estadísticas rápidas
+    total_ordenes = ordenes.count()
+    en_proceso_count = sum(1 for o in ordenes if o.estado in ('en_proceso', 'asignada'))
+    completadas_count = sum(1 for o in ordenes if o.estado == 'completada')
+    total_relevamientos = sum(relevamientos_por_orden.values())
+
+    context = {
+        'ordenes': ordenes,  # mantener por compatibilidad si algo más lo usa
+        'ordenes_context': ordenes_context,
+        'relevamientos_por_orden': relevamientos_por_orden,
+        'total_ordenes': total_ordenes,
+        'en_proceso_count': en_proceso_count,
+        'completadas_count': completadas_count,
+        'total_relevamientos': total_relevamientos,
+    }
+    return render(request, 'relevamiento/encuestador_dashboard.html', context)
+
+
+# ─────────────────────────────────────────────
+# FORMULARIO DESDE UNA ORDEN (crear) - OBLIGATORIO
+# ─────────────────────────────────────────────
+
+@login_required
+@encuestador_required
+def formulario_desde_orden(request, orden_id):
+    """
+    Crea un nuevo Relevamiento vinculado a una OrdenTrabajo.
+    Los campos departamento, distrito y colonia se pre-cargan desde
+    la solicitud de la orden y se bloquean en el formulario.
+    
+    IMPORTANTE: Esta es la ÚNICA forma de crear relevamientos.
+    No se permite crear relevamientos sin orden de trabajo asociada.
+    """
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+    
+    # Verificar que el formulario esté habilitado por el coordinador de campo
+    if not orden.formulario_habilitado:
+        messages.warning(
+            request,
+            'El formulario de relevamiento no está habilitado. ' 
+            'Contacte al coordinador de campo para habilitarlo.'
+        )
+        return redirect('relevamiento:encuestador_dashboard')
+    
+    datos_geo = _datos_geograficos_desde_orden(orden)
+
+    initial = {
+        'colonia': datos_geo['colonia'],
+        'distrito': datos_geo['distrito'],
+        'departamento': datos_geo['departamento'],
+    }
+
+    if request.method == 'POST':
+        form = RelevamientoForm(request.POST, request.FILES, initial=initial)
+        if form.is_valid():
+            relevamiento = form.save(commit=False)
+            # Forzar los datos geográficos de la orden (ignorar lo que envíe el form)
+            relevamiento.colonia = datos_geo['colonia']
+            relevamiento.distrito = datos_geo['distrito']
+            relevamiento.departamento = datos_geo['departamento']
+            relevamiento.orden_trabajo = orden
+            relevamiento.encuestador = request.user
+            relevamiento.save()
+            form.save_m2m()
+            messages.success(request, f'Relevamiento #{relevamiento.pk} creado correctamente.')
+            return redirect(
+                reverse('relevamiento:resumen_relevamiento', kwargs={'pk': relevamiento.pk})
+            )
+    else:
+        form = RelevamientoForm(initial=initial)
+
+    context = {
+        'form': form,
+        'title': f'Nueva Encuesta — {orden}',
+        'orden': orden,
+        'datos_geo': datos_geo,
+    }
+    return render(request, 'relevamiento/formulario_relevamiento.html', context)
+
+
+# ─────────────────────────────────────────────
+# EDITAR RELEVAMIENTO (siempre con orden asociada)
+# ─────────────────────────────────────────────
+
+@login_required
+@encuestador_required
+def editar_encuesta_relevamiento(request, pk):
+    """
+    Edita un Relevamiento existente.
+    Los campos geográficos permanecen bloqueados con los datos de su orden asociada.
+    Solo el encuestador asignado a la orden puede editar el relevamiento.
+    """
+    rel = get_object_or_404(Relevamiento, pk=pk)
+    
+    # Validar que el relevamiento tiene orden asociada
+    if not rel.orden_trabajo:
+        messages.error(request, 'Este relevamiento no tiene orden de trabajo asociada.')
+        return redirect('relevamiento:encuestador_dashboard')
+    
+    orden = rel.orden_trabajo
+    datos_geo = _datos_geograficos_desde_orden(orden)
+
+    # Verificar que el usuario es el encuestador asignado o está en el equipo de la orden
+    es_encuestador_asignado = rel.encuestador == request.user
+    esta_en_equipo = orden.equipos_asignados.filter(encuestadores=request.user).exists()
+    
+    if not (es_encuestador_asignado or esta_en_equipo or request.user.is_superuser):
+        messages.error(request, 'No tiene permisos para editar este relevamiento.')
+        return redirect('relevamiento:encuestador_dashboard')
+
+    if request.method == 'POST':
+        form = RelevamientoForm(request.POST, request.FILES, instance=rel)
+        if form.is_valid():
+            relevamiento = form.save(commit=False)
+            # Mantener los datos geográficos de la orden (no permitir cambios)
+            relevamiento.colonia = datos_geo['colonia']
+            relevamiento.distrito = datos_geo['distrito']
+            relevamiento.departamento = datos_geo['departamento']
+            relevamiento.orden_trabajo = orden
+            relevamiento.save()
+            form.save_m2m()
+            messages.success(request, 'Relevamiento actualizado correctamente.')
+            return redirect(
+                reverse('relevamiento:resumen_relevamiento', kwargs={'pk': relevamiento.pk})
+            )
+    else:
+        form = RelevamientoForm(instance=rel)
+
+    context = {
+        'form': form,
+        'title': f'Editar Relevamiento #{rel.pk}',
+        'relevamiento': rel,
+        'orden': orden,
+        'datos_geo': datos_geo,
+    }
+    return render(request, 'relevamiento/formulario_relevamiento.html', context)
+
+
+# ─────────────────────────────────────────────
+# RESUMEN / DETALLE
+# ─────────────────────────────────────────────
+
+@login_required
+def resumen_relevamiento(request, pk):
+    """Muestra el detalle de un Relevamiento."""
+    rel = get_object_or_404(Relevamiento, pk=pk)
+    return render(request, 'relevamiento/resumen_relevamiento.html', {'relevamiento': rel})
+
+
+# ─────────────────────────────────────────────
+# DASHBOARD COORDINADOR DE CAMPO
+# ─────────────────────────────────────────────
+
+@login_required
+@coordinador_campo_required
+def coordinador_campo_dashboard(request):
+    """
+    Dashboard para coordinadores de campo: muestra todas las órdenes donde
+    el usuario está asignado como coordinador de campo.
+    """
+    from gerencia.models import SolicitudRelevamiento
+    from django.db.models import Count
+    
+    # Filtrar órdenes donde el usuario es coordinador_campo en la solicitud
+    ordenes = (
+        OrdenTrabajo.objects
+        .exclude(estado__in=['cancelada'])
+        .filter(solicitud__coordinador_campo=request.user)
+        .select_related(
+            'solicitud',
+            'solicitud__colonia',
+            'solicitud__coordinador_campo',
+        )
+        .prefetch_related(
+            'equipos_asignados',
+            'equipos_asignados__subcoordinadores',
+            'equipos_asignados__encuestadores',
+        )
+        .order_by('-fecha_creacion')
+    )
+
+    # Preparar contexto enriquecido para cada orden
+    ordenes_context = []
+    for orden in ordenes:
+        # Obtener datos geográficos
+        datos_geo = _datos_geograficos_desde_orden(orden)
+        
+        # Contar personal asignado
+        equipos = orden.equipos_asignados.all()
+        subcoordinadores_count = 0
+        encuestadores_count = 0
+        for equipo in equipos:
+            subcoordinadores_count += equipo.subcoordinadores.count()
+            encuestadores_count += equipo.encuestadores.count()
+        
+        # Contar relevamientos de esta orden
+        relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
+        
+        ordenes_context.append({
+            'orden': orden,
+            'datos_geo': datos_geo,
+            'subcoordinadores_count': subcoordinadores_count,
+            'encuestadores_count': encuestadores_count,
+            'relevamientos_count': relevamientos_count,
+        })
+
+    context = {
+        'ordenes_context': ordenes_context,
+        'total_ordenes': ordenes.count(),
+    }
+    return render(request, 'relevamiento/coordinador_dashboard.html', context)
+
+
+@login_required
+@coordinador_campo_required
+def habilitar_formulario_relevamiento(request, orden_id):
+    """
+    Habilita o deshabilita el formulario de relevamiento para una orden.
+    Solo el coordinador de campo asignado puede hacerlo.
+    """
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+    
+    # Verificar que el usuario es el coordinador de campo de esta orden
+    if orden.solicitud.coordinador_campo != request.user and not request.user.is_superuser:
+        messages.error(request, 'No tiene permisos para modificar esta orden.')
+        return redirect('relevamiento:coordinador_dashboard')
+    
+    if request.method == 'POST':
+        # Toggle del estado
+        orden.formulario_habilitado = not orden.formulario_habilitado
+        orden.save()
+        
+        estado = 'habilitado' if orden.formulario_habilitado else 'deshabilitado'
+        messages.success(request, f'Formulario {estado} correctamente.')
+        return redirect('relevamiento:coordinador_dashboard')
+    
+    return redirect('relevamiento:coordinador_dashboard')
+
+
+@login_required
+@coordinador_campo_required
+def finalizar_orden_campo(request, orden_id):
+    """
+    Finaliza una orden de trabajo y reasigna la solicitud al grupo de análisis.
+    Solo el coordinador de campo puede hacerlo.
+    """
+
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+    solicitud = orden.solicitud
+    
+    # Verificar que el usuario es el coordinador de campo
+    if solicitud.coordinador_campo != request.user and not request.user.is_superuser:
+        messages.error(request, 'No tiene permisos para finalizar esta orden.')
+        return redirect('relevamiento:coordinador_dashboard')
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Cambiar estado de la orden a completada
+                orden.estado = 'completada'
+                orden.fecha_fin_real = timezone.now().date()
+                orden.formulario_habilitado = False  # Deshabilitar formulario al finalizar
+                orden.save()
+                
+                # Asignar solicitud al grupo de análisis
+                try:
+                    grupo_analisis = Grupo.objects.filter(
+                        nombre__icontains='ANALISIS',
+                        activo=True
+                    ).first()
+                    
+                    if grupo_analisis:
+                        solicitud.estado = 'pendiente_asignacion_analista'
+                        solicitud.grupo_asignado = grupo_analisis
+                        solicitud.usuario_asignado = None
+                        solicitud.save()
+                        
+                        # Registrar auditoría
+                        SolicitudRelevamientoAudit.objects.create(
+                            solicitud=solicitud,
+                            campo='finalizacion_campo',
+                            valor_anterior='en_ejecucion_campo',
+                            valor_nuevo='pendiente_asignacion_analista',
+                            cambiado_por=request.user,
+                            comentario=f'Orden finalizada por coordinador de campo: {request.user.username}'
+                        )
+                        
+                        messages.success(
+                            request,
+                            f'Orden {orden.numero_orden} finalizada. Solicitud asignada a Análisis.'
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            'Orden finalizada, pero no se encontró el grupo de Análisis para reasignación.'
+                        )
+                except Exception as e:
+                    messages.error(request, f'Error al reasignar a análisis: {str(e)}')
+                    
+        except Exception as e:
+            messages.error(request, f'Error al finalizar la orden: {str(e)}')
+    
+    return redirect('relevamiento:coordinador_dashboard')
+
+

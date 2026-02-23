@@ -19,9 +19,9 @@ from django.db.models import Prefetch
 from administrador.models import User, Grupo
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from coordinacion.models import EquipoRelevamiento, OrdenTrabajo, RegistroCampo
+from relevamiento.models import Relevamiento
 from coordinacion.decorators import coordinacion_required, lider_coordinacion_required
-from coordinacion.forms import (GenerarOrdenForm, CrearEquipoForm,
-                                UsuarioPorGrupoField, UsuarioPorGrupoSimpleField)
+from coordinacion.forms import (GenerarOrdenForm)
 from coordinacion.utils import contar_dias_habiles
 
 
@@ -319,6 +319,18 @@ def detalle_orden(request, orden_id):
         groups__name__icontains='Rol_CHOFER', is_active=True
     ).order_by('username')
 
+    colonia = None
+    colonia_relevamientos_count = 0
+    colonia_solicitudes_count = 0
+    colonia_condicion_presente = 0
+    colonia_condicion_servicio = 0
+    if orden.solicitud and getattr(orden.solicitud, 'colonia', None):
+        colonia = orden.solicitud.colonia
+        colonia_relevamientos_count = Relevamiento.objects.filter(colonia=colonia).count()
+        colonia_solicitudes_count = SolicitudRelevamiento.objects.filter(colonia=colonia).count()
+        colonia_condicion_presente = Relevamiento.objects.filter(colonia=colonia, condicion_vivienda='presente').count()
+        colonia_condicion_servicio = Relevamiento.objects.filter(colonia=colonia, condicion_vivienda='servicio').count()
+
     context = {
         'orden': orden,
         'registros': registros,
@@ -326,6 +338,11 @@ def detalle_orden(request, orden_id):
         'subcoordinadores': subcoordinadores,
         'encuestadores': encuestadores,
         'choferes': choferes,
+        'colonia': colonia,
+        'colonia_relevamientos_count': colonia_relevamientos_count,
+        'colonia_solicitudes_count': colonia_solicitudes_count,
+        'colonia_condicion_presente': colonia_condicion_presente,
+        'colonia_condicion_servicio': colonia_condicion_servicio,
     }
 
     return render(request, 'includes/coordinacion/orden_trabajo/detalle_orden.html', context)

@@ -52,7 +52,7 @@
                             <div class="row no-gutters align-items-center">
                                 <div class="col-auto">
                                     <div class="h5 mb-0 me-3 fw-bold text-gray-800">
-                                        {{ orden.encuestas_completadas }}/{{ orden.meta_encuestas }}
+                                        {{ colonia_relevamientos_count }}/{{ orden.meta_encuestas }}
                                     </div>
                                 </div>
                                 <div class="col">
@@ -394,7 +394,7 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Registros</div>
-                                            <div class="h5 mb-0 fw-bold text-primary">{{ registro_campo.total|default:0 }}</div>
+                                            <div class="h5 mb-0 fw-bold text-primary">{{ colonia_relevamientos_count|default:0 }}</div>
                                         </div>
                                         <div class="text-primary">
                                             <i class="fas fa-clipboard-list fa-2x opacity-50"></i>
@@ -412,7 +412,7 @@
                                         <div>
                                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">Solicitantes</div>
                                             <div class="h5 mb-0 fw-bold text-warning">
-                                                {{ registro_campo.solicitantes|default:0 }}
+                                                {{ colonia_solicitudes_count|default:0 }}
                                             </div>
                                         </div>
                                         <div class="text-warning">
@@ -431,7 +431,7 @@
                                         <div>
                                             <div class="text-xs fw-bold text-info text-uppercase mb-1">Ocupantes con vivienda</div>
                                             <div class="h5 mb-0 fw-bold text-info">
-                                                {{ registro_campo.ocupante_vivienda|default:0 }}
+                                                {{ colonia_condicion_presente|default:0 }}
                                             </div>
                                         </div>
                                         <div class="text-info">
@@ -448,9 +448,9 @@
                                 <div class="card-body py-3">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Ocupantes sin vivienda</div>
+                                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Servicios</div>
                                             <div class="h5 mb-0 fw-bold text-success">
-                                                {{ registro_campo.ocupante_sin_vivienda|default:0 }}
+                                                {{ colonia_condicion_servicio|default:0 }}
                                             </div>
                                         </div>
                                         <div class="text-success">

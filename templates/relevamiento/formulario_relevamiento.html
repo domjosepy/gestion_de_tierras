@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>{{ form.non_field_errors }}</div>
+      </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- BANNER DE ORDEN (solo cuando viene de una orden) -->
+    <!-- ============================================================ -->
+    {% if orden %}
+    <div class="alert alert-primary d-flex align-items-start gap-3 mb-4 shadow-sm" role="alert">
+      <i class="fas fa-file-invoice fa-lg mt-1"></i>
+      <div>
+        <strong>Orden de Trabajo:</strong> {{ orden.numero_orden }}<br>
+        <span class="small text-muted">
+          Colonia:&nbsp;<strong>{{ datos_geo.colonia.nombre|default:'—' }}</strong>
+          &nbsp;|&nbsp;Período:&nbsp;{{ orden.fecha_inicio_planeada|date:"d/m/Y" }} — {{ orden.fecha_fin_planeada|date:"d/m/Y" }}
+          &nbsp;|&nbsp;Estado:&nbsp;<strong>{{ orden.get_estado_display }}</strong>
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- CABECERA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header position-relative">
+        <i class="fas fa-clipboard-list"></i>
+        <h2 class="mb-0">{{ title }}</h2>
+        {% if relevamiento %}
+          <span class="mode-badge edit-mode ms-auto">
+            <i class="fas fa-pencil-alt me-1"></i>Edición
+          </span>
+        {% else %}
+          <span class="mode-badge ms-auto">
+            <i class="fas fa-plus me-1"></i>Nuevo
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 1: DATOS GEOGRÁFICOS -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-map-marker-alt"></i>
+        <h2 class="mb-0">Datos Geográficos</h2>
+        {% if orden %}
+          <span class="badge bg-secondary ms-auto">
+            <i class="fas fa-lock me-1"></i>Tomados de la orden
+          </span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+
+        {% if orden and datos_geo %}
+        <!-- MODO BLOQUEADO: datos vienen de la orden -->
+        <!-- Hidden inputs para que se envíen los valores correctos -->
+        {% if datos_geo.departamento %}
+          <input type="hidden" name="departamento" value="{{ datos_geo.departamento.pk }}">
+        {% endif %}
+        {% if datos_geo.distrito %}
+          <input type="hidden" name="distrito" value="{{ datos_geo.distrito.pk }}">
+        {% endif %}
+        {% if datos_geo.colonia %}
+          <input type="hidden" name="colonia" value="{{ datos_geo.colonia.pk }}">
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-map-marked-alt me-1 text-muted"></i>Departamento
+            </label>
+            <div class="read-only-field">
+              {{ datos_geo.departamento.nombre|default:'—' }}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-map me-1 text-muted"></i>Distrito
+            </label>
+            <div class="read-only-field">
+              {{ datos_geo.distrito.nombre|default:'—' }}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold highlight-field p-1 rounded">
+              <i class="fas fa-tractor me-1 text-muted"></i>Colonia
+            </label>
+            <div class="read-only-field highlight-field">
+              {{ datos_geo.colonia.nombre|default:'—' }}
+            </div>
+          </div>
+        </div>
+
+        {% else %}
+        <!-- MODO NORMAL: el usuario elige -->
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.departamento.label }}</label>
+            {{ form.departamento }}
+            {% if form.departamento.errors %}<div class="text-danger small mt-1">{{ form.departamento.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.distrito.label }}</label>
+            {{ form.distrito }}
+            {% if form.distrito.errors %}<div class="text-danger small mt-1">{{ form.distrito.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold highlight-field p-1 rounded">{{ form.colonia.label }}</label>
+            {{ form.colonia }}
+            {% if form.colonia.errors %}<div class="text-danger small mt-1">{{ form.colonia.errors }}</div>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Manzana y lotes siempre editables -->
+        <div class="row g-3 mt-1">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.manzana.label }}</label>
+            {{ form.manzana }}
+            {% if form.manzana.errors %}<div class="text-danger small mt-1">{{ form.manzana.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.lote_indert.label }}</label>
+            {{ form.lote_indert }}
+            {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.lote_sirt.label }}</label>
+            {{ form.lote_sirt }}
+            {% if form.lote_sirt.errors %}<div class="text-danger small mt-1">{{ form.lote_sirt.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 2: INFORMACIÓN DE LA ENCUESTA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-file-alt"></i>
+        <h2 class="mb-0">Información de la Encuesta</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.formulario.label }}</label>
+            {{ form.formulario }}
+            {% if form.formulario.errors %}<div class="text-danger small mt-1">{{ form.formulario.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
+            {{ form.estado_entrevista }}
+            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.firmo_solicitud.label }}</label>
+            {{ form.firmo_solicitud }}
+            {% if form.firmo_solicitud.errors %}<div class="text-danger small mt-1">{{ form.firmo_solicitud.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
+            {{ form.observacion_encuesta }}
+            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 3: DATOS DEL LOTE -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown">
+        <i class="fas fa-ruler-combined"></i>
+        <h2 class="mb-0">Datos del Lote</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.nro_titulo.label }}</label>
+            {{ form.nro_titulo }}
+            {% if form.nro_titulo.errors %}<div class="text-danger small mt-1">{{ form.nro_titulo.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.tipo_lote.label }}</label>
+            {{ form.tipo_lote }}
+            {% if form.tipo_lote.errors %}<div class="text-danger small mt-1">{{ form.tipo_lote.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.condicion_vivienda.label }}</label>
+            {{ form.condicion_vivienda }}
+            {% if form.condicion_vivienda.errors %}<div class="text-danger small mt-1">{{ form.condicion_vivienda.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.superficie_ha.label }}</label>
+            {{ form.superficie_ha }}
+            {% if form.superficie_ha.errors %}<div class="text-danger small mt-1">{{ form.superficie_ha.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.dimensiones.label }}</label>
+            {{ form.dimensiones }}
+            {% if form.dimensiones.errors %}<div class="text-danger small mt-1">{{ form.dimensiones.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Uso del Lote (checkboxes) -->
+        <div class="inner-subsection mt-3">
+          <label class="form-label fw-semibold mb-2">
+            <i class="fas fa-check-square me-1 text-primary"></i>{{ form.uso_lote.label }}
+          </label>
+          <div class="row row-cols-2 row-cols-md-3 g-2">
+            {% for choice in form.uso_lote %}
+              <div class="col">
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% if form.uso_lote.errors %}<div class="text-danger small mt-1">{{ form.uso_lote.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 4: DATOS DEL OCUPANTE -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown">
+        <i class="fas fa-user"></i>
+        <h2 class="mb-0">Datos del Ocupante</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.condicion_encuestado.label }}</label>
+            {{ form.condicion_encuestado }}
+            {% if form.condicion_encuestado.errors %}<div class="text-danger small mt-1">{{ form.condicion_encuestado.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.vive_en_lote.label }}</label>
+            {{ form.vive_en_lote }}
+            {% if form.vive_en_lote.errors %}<div class="text-danger small mt-1">{{ form.vive_en_lote.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }}</label>
+            {{ form.quien_es_el_ocupante }}
+            {% if form.quien_es_el_ocupante.errors %}<div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.parentesco.label }}</label>
+            {{ form.parentesco }}
+            {% if form.parentesco.errors %}<div class="text-danger small mt-1">{{ form.parentesco.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.residencia_manzana.label }}</label>
+            {{ form.residencia_manzana }}
+            {% if form.residencia_manzana.errors %}<div class="text-danger small mt-1">{{ form.residencia_manzana.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.residencia_lote.label }}</label>
+            {{ form.residencia_lote }}
+            {% if form.residencia_lote.errors %}<div class="text-danger small mt-1">{{ form.residencia_lote.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 5: DATOS PRODUCTIVOS -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-tractor"></i>
+        <h2 class="mb-0">Datos Productivos</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.produccion_agricola_ha.label }}</label>
+            {{ form.produccion_agricola_ha }}
+            {% if form.produccion_agricola_ha.errors %}<div class="text-danger small mt-1">{{ form.produccion_agricola_ha.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.produccion_ganadera_ha.label }}</label>
+            {{ form.produccion_ganadera_ha }}
+            {% if form.produccion_ganadera_ha.errors %}<div class="text-danger small mt-1">{{ form.produccion_ganadera_ha.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.reforestado_ha.label }}</label>
+            {{ form.reforestado_ha }}
+            {% if form.reforestado_ha.errors %}<div class="text-danger small mt-1">{{ form.reforestado_ha.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.bosque_natural_ha.label }}</label>
+            {{ form.bosque_natural_ha }}
+            {% if form.bosque_natural_ha.errors %}<div class="text-danger small mt-1">{{ form.bosque_natural_ha.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.barbecho_ha.label }}</label>
+            {{ form.barbecho_ha }}
+            {% if form.barbecho_ha.errors %}<div class="text-danger small mt-1">{{ form.barbecho_ha.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 6: MEJORAS E INFRAESTRUCTURA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-tools"></i>
+        <h2 class="mb-0">Mejoras e Infraestructura</h2>
+      </div>
+      <div class="card-body">
+        <div class="inner-subsection mb-3">
+          <label class="form-label fw-semibold mb-2">
+            <i class="fas fa-check-square me-1 text-primary"></i>{{ form.mejoras.label }}
+          </label>
+          <div class="row row-cols-2 row-cols-md-3 g-2">
+            {% for choice in form.mejoras %}
+              <div class="col">
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% if form.mejoras.errors %}<div class="text-danger small mt-1">{{ form.mejoras.errors }}</div>{% endif %}
+        </div>
+
+        <div class="inner-subsection">
+          <label class="form-label fw-semibold mb-2">
+            <i class="fas fa-check-square me-1 text-primary"></i>{{ form.equipamientos.label }}
+          </label>
+          <div class="row row-cols-2 row-cols-md-3 g-2">
+            {% for choice in form.equipamientos %}
+              <div class="col">
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% if form.equipamientos.errors %}<div class="text-danger small mt-1">{{ form.equipamientos.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 7: MODIFICACIONES POST-TITULACIÓN -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-history"></i>
+        <h2 class="mb-0">Modificaciones Post-titulación</h2>
+      </div>
+      <div class="card-body">
+        <div class="inner-subsection">
+          <label class="form-label fw-semibold mb-2">
+            <i class="fas fa-check-square me-1 text-primary"></i>{{ form.modificaciones_post.label }}
+          </label>
+          <div class="row row-cols-2 row-cols-md-3 g-2">
+            {% for choice in form.modificaciones_post %}
+              <div class="col">
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% if form.modificaciones_post.errors %}<div class="text-danger small mt-1">{{ form.modificaciones_post.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- BOTONES DE ACCIÓN -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-end gap-2">
+        {% if orden %}
+          <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+          </a>
+        {% elif relevamiento %}
+          <a href="{% url 'relevamiento:resumen_relevamiento' relevamiento.pk %}" class="btn btn-secondary">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </a>
+        {% else %}
+          <a href="/" class="btn btn-secondary">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </a>
+        {% endif %}
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
