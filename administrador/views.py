@@ -233,7 +233,7 @@ class CustomPasswordChangeView(PasswordChangeView):
 def listar_grupos(request):
     """Lista todos los grupos con usuarios y roles pre-cargados"""
     grupos = Grupo.objects.prefetch_related(
-        'usuarios', 'roles_asociados').all()
+        'usuarios', 'roles_asociados', 'tipos_objetivo_list').all()
     usuarios = User.objects.filter(estado='ACTIVO')
     roles = Rol.objects.all()
 
@@ -249,7 +249,17 @@ def listar_grupos(request):
 @login_required
 def crear_grupo(request):
     """Crea un nuevo grupo con validaciones AJAX"""
-    form = GrupoForm(request.POST, request=request)
+    # Procesartipos_objetivo desde JSON
+    data = request.POST.copy()
+    if 'tipos_objetivo' in data:
+        try:
+            import json
+            tipos_objetivo_json = data.get('tipos_objetivo', '[]')
+            data.setlist('tipos_objetivo', json.loads(tipos_objetivo_json))
+        except (json.JSONDecodeError, TypeError):
+            data.setlist('tipos_objetivo', [])
+    
+    form = GrupoForm(data, request=request)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if form.is_valid():
@@ -295,7 +305,18 @@ def crear_grupo(request):
 def editar_grupo(request, grupo_id):
     """Edita un grupo existente con validaciones AJAX"""
     grupo = get_object_or_404(Grupo, id=grupo_id)
-    form = GrupoForm(request.POST, instance=grupo, request=request)
+    
+    # Procesar tipos_objetivo desde JSON
+    data = request.POST.copy()
+    if 'tipos_objetivo' in data:
+        try:
+            import json
+            tipos_objetivo_json = data.get('tipos_objetivo', '[]')
+            data.setlist('tipos_objetivo', json.loads(tipos_objetivo_json))
+        except (json.JSONDecodeError, TypeError):
+            data.setlist('tipos_objetivo', [])
+    
+    form = GrupoForm(data, instance=grupo, request=request)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if form.is_valid():
@@ -446,6 +467,174 @@ def asignar_usuario_grupo(request):
 
     except Exception as e:
         return JsonResponse({"success": False, "message": f"Error: {str(e)}"})
+
+
+# ======================================
+# Vistas para Tipos de Objetivo
+# ======================================
+
+@login_required
+def listar_tipos_objetivo(request):
+    """Lista todos los tipos de objetivo con sus grupos"""
+    from administrador.models import TipoObjetivo
+    
+    tipos_objetivo = TipoObjetivo.objects.select_related('grupo', 'creado_por').all()
+    grupos = Grupo.objects.filter(activo=True).order_by('nombre')
+    
+    return render(request, 'includes/administrador/tablas/listar_tipos_objetivo.html', {
+        'tipos_objetivo': tipos_objetivo,
+        'grupos': grupos,
+        'title': 'Gestión de Tipos de Objetivo'
+    })
+
+
+@require_POST
+@login_required
+def crear_tipo_objetivo(request):
+    """Crea un nuevo tipo de objetivo con validaciones AJAX"""
+    from administrador.forms import TipoObjetivoForm
+    
+    form = TipoObjetivoForm(request.POST, request=request)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if form.is_valid():
+        tipo_objetivo = form.save()
+        
+        # Notificar a administradores
+        notificar_a_admins(
+            mensaje=f'Se ha creado un nuevo tipo de objetivo: "{tipo_objetivo.nombre}" para el grupo "{tipo_objetivo.grupo.nombre}".',
+            tipo="INFO",
+            exclude_user=request.user,
+            link=reverse("administrador:listar_tipos_objetivo")
+        )
+        
+        messages.success(
+            request, f'Tipo de objetivo "{tipo_objetivo.nombre}" creado exitosamente!')
+        
+        if is_ajax:
+            return JsonResponse({'success': True})
+        
+        return redirect('administrador:listar_tipos_objetivo')
+    
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+    
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field}: {error}")
+    
+    return redirect('administrador:listar_tipos_objetivo')
+
+
+@require_POST
+@login_required
+def editar_tipo_objetivo(request, tipo_objetivo_id):
+    """Edita un tipo de objetivo existente con validaciones AJAX"""
+    from administrador.models import TipoObjetivo
+    from administrador.forms import TipoObjetivoForm
+    
+    tipo_objetivo = get_object_or_404(TipoObjetivo, id=tipo_objetivo_id)
+    form = TipoObjetivoForm(request.POST, instance=tipo_objetivo, request=request)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if form.is_valid():
+        tipo_objetivo = form.save()
+        
+        # Notificar a administradores
+        notificar_a_admins(
+            mensaje=f'El tipo de objetivo "{tipo_objetivo.nombre}" fue editado.',
+            tipo="WARNING",
+            exclude_user=request.user,
+            link=reverse("administrador:listar_tipos_objetivo")
+        )
+        
+        messages.success(
+            request, f'Tipo de objetivo "{tipo_objetivo.nombre}" editado exitosamente!')
+        
+        if is_ajax:
+            return JsonResponse({'success': True})
+        
+        return redirect('administrador:listar_tipos_objetivo')
+    
+    # Manejo de errores
+    if is_ajax:
+        errors = {}
+        for field, error_list in form.errors.items():
+            errors[field] = [str(error) for error in error_list]
+        
+        return JsonResponse({
+            'success': False,
+            'errors': errors
+        }, status=400)
+    
+    # Si no es AJAX
+    for field, error_list in form.errors.items():
+        for error in error_list:
+            messages.error(request, f"{field}: {error}")
+    
+    return redirect('administrador:listar_tipos_objetivo')
+
+
+@require_POST
+@login_required
+def eliminar_tipo_objetivo(request, tipo_objetivo_id):
+    """Elimina un tipo de objetivo (AJAX)"""
+    from administrador.models import TipoObjetivo
+    
+    tipo_objetivo = get_object_or_404(TipoObjetivo, id=tipo_objetivo_id)
+    nombre = tipo_objetivo.nombre
+    grupo_nombre = tipo_objetivo.grupo.nombre
+    
+    try:
+        tipo_objetivo.delete()
+        
+        # Notificar a administradores
+        notificar_a_admins(
+            mensaje=f'El tipo de objetivo "{nombre}" del grupo "{grupo_nombre}" fue eliminado.',
+            tipo="DANGER",
+            exclude_user=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Tipo de objetivo "{nombre}" eliminado exitosamente.'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar: {str(e)}'
+        }, status=400)
+
+
+@login_required
+def detalles_tipo_objetivo_api(request, tipo_objetivo_id):
+    """Retorna los detalles de un tipo de objetivo en formato JSON"""
+    from administrador.models import TipoObjetivo
+    
+    tipo_objetivo = get_object_or_404(TipoObjetivo, id=tipo_objetivo_id)
+    
+    data = {
+        'id': tipo_objetivo.id,
+        'nombre': tipo_objetivo.nombre,
+        'descripcion': tipo_objetivo.descripcion,
+        'activo': tipo_objetivo.activo,
+        'grupo_id': tipo_objetivo.grupo.id,
+        'grupo_nombre': tipo_objetivo.grupo.nombre,
+        'creado_por': tipo_objetivo.creado_por.username if tipo_objetivo.creado_por else None,
+        'fecha_creacion': tipo_objetivo.fecha_creacion.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    
+    return JsonResponse(data)
+
 
 # ======================================
 # Vistas para Roles (Actualizadas)

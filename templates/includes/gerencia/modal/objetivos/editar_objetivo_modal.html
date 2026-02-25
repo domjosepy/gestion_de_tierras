@@ -1,0 +1,76 @@
+<!-- Modal Editar Objetivo (include) -->
+<div class="modal fade" id="modalEditarObjetivo" tabindex="-1" aria-labelledby="modalEditarObjetivoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="modalEditarObjetivoLabel">
+          <i class="fas fa-edit me-2"></i>Editar Objetivo
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formEditarObjetivo">
+        {% csrf_token %}
+        <input type="hidden" id="editar_objetivo_id" name="objetivo_id">
+        <input type="hidden" id="editar_grupo_id" name="grupo_id">
+        <div class="modal-body">
+          <!-- Información del Grupo (Solo lectura) -->
+          <div class="alert alert-secondary mb-3">
+            <div class="row">
+              <div class="col-md-12">
+                <strong>Grupo:</strong> <span id="editar_grupo_nombre">-</span>
+                <small class="text-muted d-block">El grupo no puede modificarse después de crear el objetivo</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campos Editables -->
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="editar_tipo_objetivo" class="form-label">Tipo de Objetivo <span class="text-danger">*</span></label>
+              <select name="tipo_objetivo" id="editar_tipo_objetivo" class="form-select" required>
+                <option value="">Cargando tipos...</option>
+              </select>
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="editar_fecha_fin" class="form-label">Fecha Final de la Meta <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_fin" id="editar_fecha_fin" class="form-control" required>
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="editar_meta" class="form-label">Meta <span class="text-danger">*</span></label>
+              <input type="number" name="meta" id="editar_meta" class="form-control" min="1" required>
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="editar_avance_actual" class="form-label">Avance Actual</label>
+              <input type="number" name="avance_actual" id="editar_avance_actual" class="form-control" min="0" value="0">
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="col-12">
+              <label for="editar_descripcion" class="form-label">Descripción</label>
+              <textarea name="descripcion" id="editar_descripcion" class="form-control" rows="3" placeholder="Descripción o detalles adicionales (opcional)"></textarea>
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input type="checkbox" name="activo" id="editar_activo" class="form-check-input" checked>
+                <label class="form-check-label" for="editar_activo">
+                  Objetivo Activo
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-2"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-warning text-dark">
+            <i class="fas fa-save me-2"></i>Actualizar Objetivo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

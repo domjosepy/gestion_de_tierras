@@ -1,6 +1,7 @@
 <!-- Modales de detalle (uno por solicitud) -->
 {% for solicitud in solicitudes %}
-    <div class="modal fade modal-info" id="confirmReactivarModal" tabindex="-1">
+    {% with orden=solicitud.ordenes_canceladas.0 %}
+    <div class="modal fade modal-info" id="modalDetalle{{ solicitud.id }}" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
@@ -23,7 +24,7 @@
                                 </span>
                             </p>
                             <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
-                            <p><strong>Solicitante:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
+                            <p><strong>Creado por:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>Digitalizador:</strong> 
@@ -58,13 +59,21 @@
                 </div>
                 <div class="modal-footer justify-content-between">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-                    <!-- Eliminamos el formulario y usamos un botón con atributos data -->
-                    <button type="button" class="btn btn-warning" 
-                            id="confirmReactivarBtn">
-                        <i class="fas fa-undo me-1"></i> Reactivar solicitud
-                    </button>
+                    <!-- Botón usa data-attributes para JS -->
+                    {% if orden %}
+                        <button type="button" class="btn btn-outline-success confirmReactivarBtn"
+                                data-orden-id="{{ orden.id }}"
+                                data-url="{% url 'coordinacion:reactivar_orden' orden.id %}">
+                            <i class="fas fa-undo me-1"></i> Reactivar solicitud
+                        </button>
+                    {% else %}
+                        <button type="button" class="btn btn-warning" disabled>
+                            <i class="fas fa-undo me-1"></i> Reactivar solicitud
+                        </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+    {% endwith %}
 {% endfor %}

@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Subcoordinador{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h2 class="h3 mb-0 text-primary fw-bold">
+      <i class="fas fa-users me-2"></i>Mis Asignaciones
+    </h2>
+  </div>
+
+  <!-- Estadísticas (igual que antes) -->
+  <div class="row mb-4">
+    <!-- Total órdenes -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-primary text-uppercase mb-1">Órdenes Asignadas</div>
+              <div class="h5 mb-0 fw-bold text-primary">{{ total_ordenes }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-tasks fa-2x text-primary opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- En proceso -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-warning text-uppercase mb-1">En Proceso</div>
+              <div class="h5 mb-0 fw-bold text-warning">{{ ordenes_en_proceso }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-spinner fa-2x text-warning opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relevamientos (en subcoordinador mostramos archivos subidos) -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-success shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-success text-uppercase mb-1">Archivos Subidos</div>
+              <div class="h5 mb-0 fw-bold text-success">{{ total_archivos }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-file-archive fa-2x text-success opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completadas -->
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-info text-uppercase mb-1">Completadas</div>
+              <div class="h5 mb-0 fw-bold text-info">{{ ordenes_completadas }}</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-flag-checkered fa-2x text-info opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if colonias %}
+    <div class="row g-4">
+      {% for colonia in colonias %}
+        <div class="col-lg-6 col-xl-4">
+          <div class="card h-100">
+            <!-- Cabecera con color según estado/habilitación (igual que encuestador) -->
+            <div class="card-header 
+              {% if not colonia.habilitar_subida %}card-header-brown-light
+              {% elif colonia.estado_orden == 'completada' %}card-header-success
+              {% elif colonia.estado_orden == 'en_proceso' %}card-header-primary
+              {% else %}card-header-brown-light{% endif %}">
+              <i class="fas fa-map-marker-alt me-2"></i>
+              <h2 class="mb-0">{{ colonia.nombre }}</h2>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-end m-2">
+                  <i class="fas fa-hashtag me-2 text-secondary"></i>
+                  <strong>Orden:</strong>&nbsp;<span>{{ colonia.numero_orden }}</span>
+            </div>
+
+            <!-- Cuerpo principal con datos de la colonia (estilo encuestador) -->
+            <div class="card-body">
+              <!-- Bloque de información básica con íconos -->
+              <div class="inner-subsection mb-3">
+                {% with distrito=colonia.distrito %}
+                  {% if distrito %}
+                    <div class="d-flex align-items-center mb-1">
+                    <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                    <strong>Colonia:</strong>&nbsp;
+                    <span>{{ colonia.nombre }}</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-1">
+                      <i class="fas fa-map me-2 text-secondary"></i>
+                      <strong>Distrito:</strong>&nbsp;<span>{{ distrito.nombre }}</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-1">
+                      <i class="fas fa-globe-americas me-2 text-secondary"></i>
+                      <strong>Departamento:</strong>&nbsp;<span>{{ distrito.departamento.nombre }}</span>
+                    </div>
+                  {% endif %}
+                {% endwith %}
+              </div>
+
+              <!-- Fechas planeadas (igual que encuestador) -->
+              <div class="row g-2 mb-3 text-center">
+                <div class="col-6">
+                  <div class="inner-subsection brown py-2 px-1">
+                    <div class="text-xs text-muted">Inicio planeado</div>
+                    <div class="fw-semibold small">{{ colonia.fecha_inicio_planeada|date:"d/m/Y" }}</div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="inner-subsection brown py-2 px-1">
+                    <div class="text-xs text-muted">Fin planeado</div>
+                    <div class="fw-semibold small">{{ colonia.fecha_fin_planeada|date:"d/m/Y" }}</div>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center mb-1">
+                  <i class="fas fa-file-archive me-2 text-primary"></i>
+                  <strong>Archivos subidos:</strong>&nbsp;<span>{{ colonia.archivos_count }}</span>
+                </div>
+              <!-- Última carga (si existe) -->
+              {% if colonia.ultima_carga %}
+                <div class="py-2 px-2 mb-3 small d-flex align-items-center justify-content-between">
+                  <div>
+                    <i class="fas fa-check-circle me-1"></i>
+                    <strong>Última carga:</strong>&nbsp;
+                    <span class="text-muted">{{ colonia.ultima_carga|date:"d/m/Y H:i" }}</span>
+                  </div>
+                  {% if colonia.archivo_url %}
+                    <a href="{{ colonia.archivo_url }}" class="btn btn-sm btn-outline-primary" download>
+                      <i class="fas fa-download"></i>
+                    </a>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+              <!-- Archivos Precat subidos por el digitalizador (con descarga) -->
+              {% if colonia.habilitar_subida and colonia.precat_files %}
+                <div class="mb-3">
+                  <small class="text-muted">Archivos Precat / Planos:</small>
+                  <ul class="list-unstyled small mb-0">
+                    {% for af in colonia.precat_files %}
+                      <li class="d-flex align-items-center py-1">
+                        <i class="fas fa-file-archive me-2 text-secondary"></i>
+                        <span class="flex-fill">{{ af.nombre }}</span>
+                        <a href="{% url 'digitalizador:descargar_precat' af.id %}" class="btn btn-sm btn-outline-secondary ms-2">
+                          <i class="fas fa-download"></i>
+                        </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              <!-- Estado de la orden (alerta) -->
+              <div class="alert 
+                {% if colonia.estado_orden == 'completada' %}alert-success
+                {% elif colonia.estado_orden == 'en_proceso' %}alert-primary
+                {% else %}alert-secondary{% endif %} 
+                py-2 px-2 mb-0 small">
+                <i class="fas fa-info-circle me-1"></i>Estado: <strong>{{ colonia.estado_orden|title }}</strong>
+              </div>
+            </div> <!-- fin card-body principal -->
+
+            <!-- Segundo cuerpo: formulario de subida (o mensaje si deshabilitado) -->
+            <div class="card-body pt-0">
+               <!-- Upload: solo si el coordinador habilitó la subida -->
+                {% if colonia.habilitar_subida %}
+                    <form class="js-upload-form" data-colonia-id="{{ colonia.id }}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Subir Archivo Comprimido</label>
+                        <input type="file" name="archivo" accept=".zip,.rar,.7z,.tar,.tar.gz,.gz" class="form-control form-control-sm" required />
+                        <div class="form-text small">Formatos Permitidos: ZIP, RAR, 7Z.</div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                        <i class="fas fa-upload me-1"></i>Subir
+                        </button>
+                    </div>
+                    <div class="mt-2 small js-upload-status"></div>
+                    </form>
+                {% else %}
+                <button class="btn btn-secondary btn-sm w-100" disabled title="Subida deshabilitada por el coordinador">
+                  <i class="fas fa-lock me-1"></i>Subida no disponible
+                </button>
+              {% endif %}
+            </div>
+          </div> <!-- fin card -->
+        </div> <!-- fin col -->
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Estado vacío (igual que antes) -->
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="fas fa-inbox fa-4x text-muted mb-3 d-block"></i>
+        <h5 class="text-muted">No hay colonias asignadas</h5>
+        <p class="text-muted small">Las colonias aparecerán aquí cuando sea asignado a un equipo de trabajo.</p>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.js-upload-form').forEach(form => {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const coloniaId = this.dataset.coloniaId;
+      const input = this.querySelector('input[name="archivo"]');
+      const statusEl = this.querySelector('.js-upload-status');
+      const submitBtn = this.querySelector('button[type="submit"]');
+      
+      if (!input || !input.files.length) {
+        statusEl.textContent = 'Seleccione un archivo.';
+        statusEl.className = 'mt-2 small text-danger js-upload-status';
+        return;
+      }
+      
+      const file = input.files[0];
+      const extensionesValidas = ['.zip', '.rar', '.7z', '.tar', '.tar.gz', '.gz'];
+      const nombreArchivo = file.name.toLowerCase();
+      const esValido = extensionesValidas.some(ext => nombreArchivo.endsWith(ext));
+      
+      if (!esValido) {
+        statusEl.textContent = 'Solo se permiten archivos comprimidos (.zip, .rar, .7z, .tar, .tar.gz, .gz)';
+        statusEl.className = 'mt-2 small text-danger js-upload-status';
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('archivo', file);
+      formData.append('colonia_id', coloniaId);
+
+      statusEl.textContent = 'Subiendo...';
+      statusEl.className = 'mt-2 small text-info js-upload-status';
+      submitBtn.disabled = true;
+
+      try {
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        const res = await fetch('{% url "relevamiento:subcoordinador_upload" %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          statusEl.textContent = '✓ Archivo subido correctamente';
+          statusEl.className = 'mt-2 small text-success fw-bold js-upload-status';
+          input.value = '';
+          
+          if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast(
+              data.message || 'Archivo subido exitosamente',
+              data.warning ? 'warning' : 'success'
+            );
+          }
+          
+          setTimeout(() => {
+            statusEl.textContent = '';
+          }, 3000);
+        } else {
+          statusEl.textContent = data.message || 'Error en subida';
+          statusEl.className = 'mt-2 small text-danger js-upload-status';
+          
+          if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast(data.message || 'Error al subir el archivo', 'danger');
+          }
+        }
+      } catch(err) {
+        console.error(err);
+        statusEl.textContent = 'Error de conexión al servidor';
+        statusEl.className = 'mt-2 small text-danger js-upload-status';
+        
+        if (typeof window.mostrarToast === 'function') {
+          window.mostrarToast('Error de conexión al servidor', 'danger');
+        }
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -7,7 +7,8 @@ from .views import (
     asignar_rol_usuario, cambiar_estado_usuario,
     listar_roles, crear_rol, editar_rol, eliminar_rol,
     gestion_permisos_masiva, reporte_permisos, detalles_rol_api, test_ajax,
-    listar_grupos, crear_grupo, editar_grupo, eliminar_grupo, detalles_grupo_api, asignar_usuario_grupo)
+    listar_grupos, crear_grupo, editar_grupo, eliminar_grupo, detalles_grupo_api, asignar_usuario_grupo,
+    listar_tipos_objetivo, crear_tipo_objetivo, editar_tipo_objetivo, eliminar_tipo_objetivo, detalles_tipo_objetivo_api)
 
 app_name = 'administrador'
 
@@ -52,6 +53,15 @@ urlpatterns = [
          detalles_grupo_api, name='detalles_grupo_api'),
     path('grupos/asignar-usuario/', asignar_usuario_grupo,
          name='asignar_usuario_grupo'),
+
+    # ------------------------------------
+    # 7. Vistas de Tipos de Objetivo
+    # ------------------------------------
+    path('tipos-objetivo/', listar_tipos_objetivo, name='listar_tipos_objetivo'),
+    path('tipos-objetivo/crear/', crear_tipo_objetivo, name='crear_tipo_objetivo'),
+    path('tipos-objetivo/editar/<int:tipo_objetivo_id>/', editar_tipo_objetivo, name='editar_tipo_objetivo'),
+    path('tipos-objetivo/eliminar/<int:tipo_objetivo_id>/', eliminar_tipo_objetivo, name='eliminar_tipo_objetivo'),
+    path('tipos-objetivo/detalles/<int:tipo_objetivo_id>/', detalles_tipo_objetivo_api, name='detalles_tipo_objetivo_api'),
 
     # ---------------------------------------------
     # 4. Vistas de Crear usuario Form desde admin

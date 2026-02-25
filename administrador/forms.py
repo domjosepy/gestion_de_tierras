@@ -424,3 +424,84 @@ class GrupoForm(forms.ModelForm):
             grupo.save()
             self.save_m2m()  # Guardar relaciones ManyToMany
         return grupo
+
+
+class TipoObjetivoForm(forms.ModelForm):
+    """Formulario para crear/editar tipos de objetivo asociados a grupos"""
+    
+    grupo = forms.ModelChoiceField(
+        queryset=Grupo.objects.filter(activo=True),
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'required': True
+        }),
+        label='Grupo',
+        help_text='Seleccione el grupo al que pertenece este tipo de objetivo'
+    )
+    
+    class Meta:
+        model = __import__('administrador.models', fromlist=['TipoObjetivo']).TipoObjetivo
+        fields = ['grupo', 'nombre', 'descripcion', 'activo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Colonias Relevadas',
+                'maxlength': '200',
+                'required': True
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Descripción del tipo de objetivo (opcional)',
+                'maxlength': '500'
+            }),
+            'activo': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+        # Ordenar grupos por nombre
+        self.fields['grupo'].queryset = Grupo.objects.filter(
+            activo=True).order_by('nombre')
+    
+    def clean_nombre(self):
+        nombre = self.cleaned_data.get('nombre', '').strip()
+        
+        if not nombre:
+            raise forms.ValidationError("El nombre del tipo de objetivo es obligatorio.")
+        
+        if len(nombre) < 3:
+            raise forms.ValidationError("El nombre debe tener al menos 3 caracteres.")
+        
+        return nombre
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        grupo = cleaned_data.get('grupo')
+        nombre = cleaned_data.get('nombre')
+        
+        if grupo and nombre:
+            # Verificar unicidad (grupo, nombre) excluyendo la instancia actual
+            from administrador.models import TipoObjetivo
+            query = TipoObjetivo.objects.filter(grupo=grupo, nombre=nombre)
+            if self.instance and self.instance.pk:
+                query = query.exclude(pk=self.instance.pk)
+            
+            if query.exists():
+                raise forms.ValidationError(
+                    f'Ya existe un tipo de objetivo con el nombre "{nombre}" para el grupo "{grupo.nombre}".'
+                )
+        
+        return cleaned_data
+    
+    def save(self, commit=True):
+        tipo_objetivo = super().save(commit=False)
+        # Asignar el usuario actual como creador si es nuevo
+        if not tipo_objetivo.pk and self.request and self.request.user.is_authenticated:
+            tipo_objetivo.creado_por = self.request.user
+        if commit:
+            tipo_objetivo.save()
+        return tipo_objetivo

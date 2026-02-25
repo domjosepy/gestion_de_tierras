@@ -159,6 +159,20 @@ class Relevamiento(models.Model):
         verbose_name="Encuestador"
     )
 
+    # Archivo comprimido subido por el subcoordinador
+    archivo_subcoordinador = models.FileField(
+        upload_to='relevamiento/archivos_subcoordinador/',
+        blank=True,
+        null=True,
+        verbose_name="Archivo del Subcoordinador",
+        help_text="Archivo comprimido (.zip, .rar, .7z, etc.) subido por el subcoordinador"
+    )
+    fecha_subida_archivo = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Subida del Archivo"
+    )
+
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
 
@@ -277,3 +291,45 @@ class OcupanteAnterior(models.Model):
 
     def __str__(self):
         return self.nombre_anterior or f"Anterior #{self.pk}"
+
+
+
+
+
+
+### SUBCOORDINADOR
+class ArchivoSubcoordinador(models.Model):
+    """Modelo para registrar archivos comprimidos subidos por subcoordinadores."""
+    orden_trabajo = models.ForeignKey(
+        'coordinacion.OrdenTrabajo',
+        on_delete=models.CASCADE,
+        related_name='archivos_subcoordinador',
+        verbose_name="Orden de Trabajo"
+    )
+    archivo = models.FileField(
+        upload_to='vivser_relevamiento/',
+        verbose_name="Archivo Comprimido"
+    )
+    nombre_archivo = models.CharField(
+        max_length=255,
+        verbose_name="Nombre del Archivo"
+    )
+    subido_por = models.ForeignKey(
+        'administrador.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='archivos_subidos',
+        verbose_name="Subido por"
+    )
+    fecha_subida = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de Subida"
+    )
+    
+    class Meta:
+        verbose_name = "Archivo de Subcoordinador"
+        verbose_name_plural = "Archivos de Subcoordinadores"
+        ordering = ['-fecha_subida']
+    
+    def __str__(self):
+        return f"{self.nombre_archivo} - {self.fecha_subida.strftime('%d/%m/%Y')}"

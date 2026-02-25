@@ -1,0 +1,9 @@
+Arreglos formulario RELEVAMIENTO:
+    EL ENCUESTADOR
+    al final del formulario, agregar campos para subir fotos.
+        1. FOTOS DE RECIBO: seleciona subir la foto y tiene la opcion de usar la camara. puede subir varias fotos. 
+        2. FOTOS DE VIVIENDA: seleciona subir la foto y tiene la opcion de usar la camara. puede subir varias fotos. 
+        3. FOTO DE DOCUMENTO DE IDENTIDAD: seleciona subir la foto y tiene la opcion de usar la camara. puede subir varias fotos. 
+    EL SISTEMA RENOMBRA LA FOTO RECIBO COMO:
+        (TOMA LOS DATOS DEL REGISTRO CREADO)
+         MANZANALOTE-RECIBO-OCUPANTE.

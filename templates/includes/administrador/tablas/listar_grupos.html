@@ -9,10 +9,11 @@
         <h2 class="text-primary fw-bold mb-0">
             <i class="fa-solid fa-users me-3"></i>Grupos
         </h2>
-        
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearGrupoModal">
-            <i class="fas fa-plus me-1"></i> Crear Nuevo Grupo
-        </button>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearGrupoModal">
+                <i class="fas fa-plus me-1"></i> Crear Nuevo Grupo
+            </button>
+        </div>
     </div>
 
     <div class="card shadow mb-4">
@@ -26,6 +27,7 @@
                             <th class="text-center">Líder</th>
                             <th class="text-center">Usuarios</th>
                             <th class="text-center">Roles Asociados</th>
+                            <th class="text-center">Tipos de Objetivo</th>
                             <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
@@ -75,6 +77,25 @@
                                 {% endif %}
                             </td>
                             <td class="text-center">
+                                {% if grupo.tipos_objetivo_list.all %}
+                                    <div class="d-flex flex-wrap gap-1 justify-content-center">
+                                        {% for tipo in grupo.tipos_objetivo_list.all|slice:":2" %}
+                                            <span class="badge bg-info" style="font-size: 0.65rem;" title="{{ tipo.descripcion|default:'Sin descripción' }}">
+                                                {{ tipo.nombre|truncatechars:20 }}
+                                            </span>
+                                        {% endfor %}
+                                        {% if grupo.tipos_objetivo_list.count > 2 %}
+                                            <span class="badge bg-secondary" style="font-size: 0.65rem;">
+                                                +{{ grupo.tipos_objetivo_list.count|add:"-2" }} más
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                {% else %}
+                                    <span class="text-muted">Sin objetivos</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
                                 {% if grupo.activo %}
                                     <span class="badge bg-success">Activo</span>
                                 {% else %}
@@ -94,7 +115,8 @@
                                     data-es-departamento="{{ grupo.es_departamento|yesno:'true,false' }}"
                                     data-activo="{{ grupo.activo|yesno:'true,false' }}"
                                     data-usuarios='[{% for u in grupo.usuarios.all %}{{ u.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'
-                                    data-roles='[{% for r in grupo.roles_asociados.all %}{{ r.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                                    data-roles='[{% for r in grupo.roles_asociados.all %}{{ r.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'
+                                    data-tipos-objetivo='[{% for t in grupo.tipos_objetivo %}"{{ t }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
                                     <i class="fas fa-edit"></i>
                                 </button>
 
@@ -125,7 +147,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center">No hay grupos registrados</td>
+                            <td colspan="8" class="text-center">No hay grupos registrados</td>
                         </tr>
                         {% endfor %}
                     </tbody>

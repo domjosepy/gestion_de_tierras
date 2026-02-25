@@ -151,42 +151,16 @@
                 </form>
                 {% endif %}
 
-                <!-- Finalizar Orden -->
+                <!-- Finalizar Orden (usa modal compartido) -->
                 {% if orden.estado != 'completada' %}
-                <button type="button" class="btn btn-danger btn-sm" 
+                <button type="button" class="btn btn-danger btn-sm js-open-finalizar" 
                         data-bs-toggle="modal" 
-                        data-bs-target="#modalFinalizarOrden{{ orden.pk }}">
+                        data-bs-target="#modalFinalizarOrden"
+                        data-orden-pk="{{ orden.pk }}"
+                        data-orden-numero="{{ orden.numero_orden }}"
+                        data-action-url="{% url 'relevamiento:finalizar_orden_campo' orden.pk %}">
                   <i class="fas fa-flag-checkered me-1"></i>Finalizar Orden
                 </button>
-
-                <!-- Modal de Confirmación Finalizar -->
-                <div class="modal fade" id="modalFinalizarOrden{{ orden.pk }}" tabindex="-1">
-                  <div class="modal-dialog">
-                    <div class="modal-content">
-                      <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title">
-                          <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Finalización
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                      </div>
-                      <div class="modal-body">
-                        <p>¿Está seguro que desea finalizar la orden <strong>{{ orden.numero_orden }}</strong>?</p>
-                        <p class="text-muted small mb-0">
-                          Se cambiará el estado de la orden a "Completada" y la solicitud será reasignada al grupo de Análisis.
-                        </p>
-                      </div>
-                      <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <form method="post" action="{% url 'relevamiento:finalizar_orden_campo' orden.pk %}" class="d-inline">
-                          {% csrf_token %}
-                          <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-check me-1"></i>Confirmar Finalización
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  </div>
-                </div>
                 {% endif %}
 
               </div>
@@ -196,6 +170,35 @@
         </div>
         {% endwith %}
       {% endfor %}
+    </div>
+
+    <!-- Modal compartido para confirmar finalización de orden -->
+    <div class="modal fade" id="modalFinalizarOrden" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">
+              <i class="fas fa-exclamation-triangle me-2"></i>Confirmar Finalización
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Está seguro que desea finalizar la orden <strong id="modalFinalizarOrdenNumero">?</strong>?</p>
+            <p class="text-muted small mb-0">
+              Se cambiará el estado de la orden a "Completada" y la solicitud será reasignada al grupo de Análisis.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <form id="modalFinalizarForm" method="post" action="#" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-danger">
+                <i class="fas fa-check me-1"></i>Confirmar Finalización
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
 
   {% else %}
@@ -210,4 +213,25 @@
   {% endif %}
 
 </div>
+{% endblock %}
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var modalEl = document.getElementById('modalFinalizarOrden');
+  if (!modalEl) return;
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    if (!button) return;
+    var ordenNumero = button.getAttribute('data-orden-numero') || '';
+    var actionUrl = button.getAttribute('data-action-url') || '#';
+    // set texto
+    var numeroEl = document.getElementById('modalFinalizarOrdenNumero');
+    if (numeroEl) numeroEl.textContent = ordenNumero;
+    // set form action
+    var formEl = document.getElementById('modalFinalizarForm');
+    if (formEl) formEl.action = actionUrl;
+  });
+});
+</script>
 {% endblock %}

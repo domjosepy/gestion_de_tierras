@@ -1,0 +1,554 @@
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    {% if grupos_disponibles_json %}
+    <script>
+        window.__GRUPOS_DISPONIBLES__ = {{ grupos_disponibles_json|safe }};
+    </script>
+    {% endif %}
+<!-- Sección: Grupos con Tipos de Objetivo -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 text-white">
+      <i class="fas fa-users me-2"></i>Grupos con Tipos de Objetivo
+    </h5>
+  </div>
+  <div class="card-body">
+    {% if grupos_con_tipos %}
+      <div class="table-responsive">
+        <table class="beautiful-table table-responsive table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th class="text-center">Grupo</th>
+              <th>Tipos asociados</th>
+              <th class="text-center">Usuarios</th>
+              <th>Líder</th>
+              <th class="text-center">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for grupo in grupos_con_tipos %}
+              <tr>
+                <td>{{ grupo.nombre }}</td>
+                <td>
+                  <ul class="mb-0">
+                    {% for tipo in grupo.tipos_activos %}
+                      <li>{{ tipo.nombre }}</li>
+                    {% empty %}
+                      <li class="text-muted small">-</li>
+                    {% endfor %}
+                  </ul>
+                </td>
+                <td class="text-center">{{ grupo.usuarios.count }}</td>
+                <td>
+                  {% if grupo.lider %}
+                    {{ grupo.lider.get_full_name|default:grupo.lider.username }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <button type="button"
+                          class="btn btn-sm btn-outline-primary btn-sm btn-crear-objetivo" 
+                          data-grupo-id="{{ grupo.id }}" 
+                          data-grupo-nombre="{{ grupo.nombre }}">
+                    <i class="fas fa-bullseye me-1"></i>Crear
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info mb-0">No hay tipos de objetivo registrados.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Sección: Objetivos Existentes -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0 text-white">
+      <i class="fas fa-list me-2"></i>Objetivos del Año {{ anio_seleccionado }}
+    </h5>
+    <div>
+      <select id="selectorAnio" class="form-select form-select-sm" onchange="location.href='?anio=' + this.value">
+        {% for anio in anios_disponibles %}
+          <option value="{{ anio }}" {% if anio == anio_seleccionado %}selected{% endif %}>{{ anio }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if objetivos %}
+      <div class="beautiful-table">
+        <table class="beautiful-table table-responsive table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Grupo</th>
+              <th>Tipo de Objetivo</th>
+              <th>Observación</th>
+              <th class="text-center">Meta</th>
+              <th class="text-center">Avance</th>
+              <th class="text-center">Progreso</th>
+              <th class="text-center">Fecha Fin</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for objetivo in objetivos %}
+              <tr>
+                <td><strong>{{ objetivo.grupo.nombre }}</strong></td>
+                <td>{{ objetivo.tipo_objetivo.nombre }}</td>
+                {% if objetivo.descripcion %}
+                  <td>{{ objetivo.descripcion }}</td>
+                {% else %}
+                  <td class="text-muted">Sin Observacion</td>
+                {% endif %}
+
+                <td class="text-center">{{ objetivo.meta }}</td>
+                <td class="text-center">{{ objetivo.avance_actual }}</td>
+                <td class="text-center">
+                  <div class="progress" style="height: 20px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated {% if objetivo.porcentaje_avance >= 100 %}bg-success{% elif objetivo.porcentaje_avance >= 70 %}bg-info{% elif objetivo.porcentaje_avance >= 40 %}bg-warning{% else %}bg-danger{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ objetivo.porcentaje_avance }}%;" 
+                         aria-valuenow="{{ objetivo.porcentaje_avance }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                      {{ objetivo.porcentaje_avance }}%
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center">{{ objetivo.fecha_fin|date:"d/m/Y" }}</td>
+                <td class="text-center">
+                  {% if objetivo.activo %}
+                    <span class="badge bg-success">Activo</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Inactivo</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm m-1" role="group">
+                    <button type="button" 
+                            class="btn btn-outline-warning btn-sm" 
+                            onclick="abrirModalEditarObjetivo({{ objetivo.id }})"
+                            title="Editar objetivo">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                  </div>
+                  <div class="btn-group btn-group-sm m-1" role="group">
+                    <button type="button" 
+                            class="btn btn-outline-danger btn-sm" 
+                            onclick="abrirModalEliminarObjetivo({{ objetivo.id }})"
+                            title="Eliminar objetivo">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info mb-0">
+        <i class="fas fa-info-circle me-2"></i>No hay objetivos registrados para el año {{ anio_seleccionado }}.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Sección: Objetivos Inactivos -->
+  {% if objetivos_inactivos and objetivos_inactivos.count > 0 %}
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0 text-white">
+        <i class="fas fa-file-medical-alt me-2"></i>Objetivos Inactivos del Año {{ anio_seleccionado }}
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="beautiful-table table-responsive table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Grupo</th>
+              <th>Tipo de Objetivo</th>
+              <th>Observación</th>
+              <th class="text-center">Meta</th>
+              <th class="text-center">Avance</th>
+              <th class="text-center">Fecha Fin</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for objetivo in objetivos_inactivos %}
+              <tr>
+                <td><strong>{{ objetivo.grupo.nombre }}</strong></td>
+                <td>{{ objetivo.tipo_objetivo.nombre }}</td>
+                {% if objetivo.descripcion %}
+                  <td>{{ objetivo.descripcion }}</td>
+                {% else %}
+                  <td class="text-muted">Sin Observacion</td>
+                {% endif %}
+
+                <td class="text-center">{{ objetivo.meta }}</td>
+                <td class="text-center">{{ objetivo.avance_actual }}</td>
+                <td class="text-center">{{ objetivo.fecha_fin|date:"d/m/Y" }}</td>
+                <td class="text-center"><span class="badge bg-secondary">Inactivo</span></td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm m-1" role="group">
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="abrirModalEditarObjetivo({{ objetivo.id }})" title="Editar objetivo"><i class="fas fa-edit"></i></button>
+                  </div>
+                    <div class="btn-group btn-group-sm m-1" role="group">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="abrirModalEliminarObjetivo({{ objetivo.id }})" title="Eliminar objetivo"><i class="fas fa-trash-alt"></i></button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+{% include 'includes/gerencia/modal/objetivos/crear_objetivo_modal.html' %}
+{% include 'includes/gerencia/modal/objetivos/editar_objetivo_modal.html' %}
+{% include 'includes/gerencia/modal/objetivos/eliminar_objetivo_modal.html' %}
+
+  
+
+{% endblock %}
+{% block scripts %}
+<script>
+  // Debug: Mostrar grupos disponibles al cargar
+  console.log('Grupos disponibles en contexto:', window.__GRUPOS_DISPONIBLES__);
+
+  // ============ FUNCIONES AUXILIARES ============
+
+  /**
+  * Actualiza el select de tipos de objetivo según el grupo seleccionado
+  */
+  async function actualizarTiposObjetivo(grupoId, selectElement) {
+    if (!grupoId || !selectElement) {
+      console.error('actualizarTiposObjetivo: falta grupoId o selectElement', {grupoId, selectElement});
+      return;
+    }
+    
+    console.log('Cargando tipos para grupo:', grupoId);
+    
+    try {
+      selectElement.innerHTML = '<option value="">Cargando...</option>';
+      const url = `/gerencia/objetivos/tipos-por-grupo/${grupoId}/`;
+      console.log('Haciendo fetch a:', url);
+      
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Datos recibidos:', data);
+      
+      if (data.success && data.tipos_objetivo && data.tipos_objetivo.length > 0) {
+        selectElement.innerHTML = '<option value="">Seleccione un tipo</option>';
+        data.tipos_objetivo.forEach(tipo => {
+          const option = document.createElement('option');
+          option.value = tipo.id;
+          option.textContent = tipo.nombre;
+          if (tipo.descripcion) {
+            option.title = tipo.descripcion;
+          }
+          selectElement.appendChild(option);
+        });
+        console.log(`${data.tipos_objetivo.length} tipos cargados exitosamente`);
+      } else {
+        console.warn('No hay tipos disponibles para este grupo');
+        selectElement.innerHTML = '<option value="">No hay tipos disponibles para este grupo</option>';
+      }
+    } catch (error) {
+      console.error('Error al cargar tipos de objetivo:', error);
+      selectElement.innerHTML = '<option value="">Error al cargar tipos</option>';
+      window.mostrarToast('Error al cargar tipos de objetivo: ' + error.message, 'danger');
+    }
+  }
+
+  // ============ MODAL CREAR OBJETIVO ============
+
+  // Cuando se abre el modal rápido desde el botón, rellenar grupo y cargar tipos
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-crear-objetivo');
+    if (!btn) return;
+    
+    e.preventDefault(); // Prevenir acción por defecto
+    
+    const grupoId = btn.dataset.grupoId;
+    console.log('Botón crear objetivo clickeado. Grupo ID:', grupoId);
+    console.log('Dataset completo:', btn.dataset);
+    
+    if (!grupoId) {
+      console.error('No se encontró grupo_id en el botón');
+      window.mostrarToast('Error: No se pudo identificar el grupo', 'danger');
+      return;
+    }
+    
+    document.getElementById('rapido_grupo_id').value = grupoId;
+
+    // Mostrar info del grupo si está en contexto
+    const grupo = (window.__GRUPOS_DISPONIBLES__ || []).find(g => String(g.id) === String(grupoId));
+    console.log('Grupo encontrado en contexto:', grupo);
+    
+    if (grupo) {
+      const elNombre = document.getElementById('rapido_grupo_nombre');
+      const elUsuarios = document.getElementById('rapido_usuarios_count');
+      const elLider = document.getElementById('rapido_lider');
+      if (elNombre) elNombre.textContent = grupo.nombre || '-';
+      if (elUsuarios) elUsuarios.textContent = grupo.usuarios_count || 0;
+      if (elLider) elLider.textContent = grupo.lider_fullname || grupo.lider_username || '-';
+    } else {
+      console.warn('No se encontró información del grupo en el contexto');
+      // Intentar obtener el nombre del botón
+      const grupoNombre = btn.dataset.grupoNombre || '-';
+      const elNombre = document.getElementById('rapido_grupo_nombre');
+      if (elNombre) elNombre.textContent = grupoNombre;
+    }
+
+    // Cargar tipos vía endpoint existente
+    console.log('Llamando a actualizarTiposObjetivo...');
+    actualizarTiposObjetivo(grupoId, document.getElementById('rapido_tipo_objetivo'));
+    
+    // Abrir el modal manualmente
+    const modal = new bootstrap.Modal(document.getElementById('modalCrearObjetivo'));
+    modal.show();
+  });
+
+  // También escuchar el evento shown del modal como respaldo
+  const modalCrearEl = document.getElementById('modalCrearObjetivo');
+  if (modalCrearEl) {
+    modalCrearEl.addEventListener('shown.bs.modal', function() {
+      console.log('Modal mostrado. Verificando grupo_id...');
+      const grupoId = (document.getElementById('rapido_grupo_id') || {}).value;
+      const selectTipos = document.getElementById('rapido_tipo_objetivo');
+      
+      if (grupoId && selectTipos && selectTipos.options.length <= 1) {
+        console.log('Recargando tipos para grupo:', grupoId);
+        actualizarTiposObjetivo(grupoId, selectTipos);
+      }
+    });
+  }
+
+  // Envío del formulario crear objetivo
+  const formCrearEl = document.getElementById('formCrearObjetivo');
+  if (formCrearEl) {
+    formCrearEl.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = this;
+      const formData = new FormData(form);
+      
+      try {
+        const res = await fetch("{% url 'gerencia:crear_objetivo' %}", {
+          method: 'POST',
+          headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') },
+          body: formData
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          window.mostrarToast(data.message || 'Objetivo creado exitosamente', 'success');
+          const modalEl = document.getElementById('modalCrearObjetivo');
+          if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+          form.reset();
+          setTimeout(() => location.reload(), 800);
+        } else {
+          window.mostrarToast(data.message || 'Error al crear el objetivo', 'danger');
+          if (data.errors) {
+            console.error('Errores de validación:', data.errors);
+          }
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        window.mostrarToast('Error de conexión', 'danger');
+      }
+    });
+  }
+
+  // ============ MODAL EDITAR OBJETIVO ============
+
+  // Variable para guardar el ID del objetivo que se está editando
+  let objetivoEditando = null;
+
+  // Función para abrir el modal de edición
+  async function abrirModalEditarObjetivo(objetivoId) {
+    try {
+      const response = await fetch(`/gerencia/objetivos/${objetivoId}/`);
+      const data = await response.json();
+      
+      if (data) {
+        objetivoEditando = objetivoId;
+        
+        // Llenar información del grupo (solo lectura)
+        const editarGrupoIdEl = document.getElementById('editar_grupo_id');
+        const editarGrupoNombreEl = document.getElementById('editar_grupo_nombre');
+        if (editarGrupoIdEl) editarGrupoIdEl.value = data.grupo_id;
+        if (editarGrupoNombreEl) editarGrupoNombreEl.textContent = data.grupo_nombre;
+        
+        // Cargar tipos de objetivo para este grupo (si existe el select)
+        await actualizarTiposObjetivo(data.grupo_id, document.getElementById('editar_tipo_objetivo'));
+        
+        // Llenar formulario (asignaciones con guards)
+        const editarObjIdEl = document.getElementById('editar_objetivo_id');
+        const editarTipoEl = document.getElementById('editar_tipo_objetivo');
+        const editarFechaFinEl = document.getElementById('editar_fecha_fin');
+        const editarMetaEl = document.getElementById('editar_meta');
+        const editarAvanceEl = document.getElementById('editar_avance_actual');
+        const editarDescripcionEl = document.getElementById('editar_descripcion');
+        if (editarObjIdEl) editarObjIdEl.value = data.id;
+        if (editarTipoEl) editarTipoEl.value = data.tipo_objetivo_id;
+        if (editarFechaFinEl) editarFechaFinEl.value = data.fecha_fin;
+        if (editarMetaEl) editarMetaEl.value = data.meta;
+        if (editarAvanceEl) editarAvanceEl.value = data.avance_actual;
+        if (editarDescripcionEl) editarDescripcionEl.value = data.descripcion || '';
+        const editarActivoEl = document.getElementById('editar_activo');
+        if (editarActivoEl) editarActivoEl.checked = !!data.activo;
+        
+        // Abrir modal
+        const modal = new bootstrap.Modal(document.getElementById('modalEditarObjetivo'));
+        modal.show();
+      }
+    } catch (error) {
+      console.error('Error al obtener objetivo:', error);
+      window.mostrarToast('Error al cargar los datos del objetivo', 'danger');
+    }
+  }
+
+  // Envío del formulario editar objetivo
+  const formEditarEl = document.getElementById('formEditarObjetivo');
+  if (formEditarEl) {
+    formEditarEl.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = this;
+      const formData = new FormData(form);
+      
+      if (!objetivoEditando) {
+        window.mostrarToast('Error: No hay objetivo seleccionado', 'danger');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/gerencia/objetivos/${objetivoEditando}/editar/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') },
+          body: formData
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          window.mostrarToast(data.message || 'Objetivo actualizado exitosamente', 'success');
+          const modalEl = document.getElementById('modalEditarObjetivo');
+          if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+          setTimeout(() => location.reload(), 800);
+        } else {
+          window.mostrarToast(data.message || 'Error al actualizar el objetivo', 'danger');
+          if (data.errors) {
+            console.error('Errores de validación:', data.errors);
+          }
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        window.mostrarToast('Error de conexión', 'danger');
+      }
+    });
+  }
+
+  // No toggle button — only checkbox 'editar_activo' remains
+
+  // ============ MODAL ELIMINAR OBJETIVO ============
+
+  // Variable para guardar el ID del objetivo que se va a eliminar
+  let objetivoEliminar = null;
+
+  // Función para abrir el modal de eliminación
+  async function abrirModalEliminarObjetivo(objetivoId) {
+    try {
+      const response = await fetch(`/gerencia/objetivos/${objetivoId}/`);
+      const data = await response.json();
+      
+      if (data) {
+        objetivoEliminar = objetivoId;
+        
+        // Llenar información del objetivo
+        document.getElementById('eliminar_grupo_nombre').textContent = data.grupo_nombre;
+        document.getElementById('eliminar_tipo_objetivo_nombre').textContent = data.tipo_objetivo_nombre;
+        document.getElementById('eliminar_meta').textContent = data.meta;
+        document.getElementById('eliminar_anio').textContent = data.anio;
+        
+        // Abrir modal
+        const modal = new bootstrap.Modal(document.getElementById('modalEliminarObjetivo'));
+        modal.show();
+      }
+    } catch (error) {
+      console.error('Error al obtener objetivo:', error);
+      window.mostrarToast('Error al cargar los datos del objetivo', 'danger');
+    }
+  }
+
+  // Confirmar eliminación
+  const confirmEliminarEl = document.getElementById('confirmEliminarObjetivo');
+  if (confirmEliminarEl) {
+    confirmEliminarEl.addEventListener('click', async function() {
+      if (!objetivoEliminar) {
+        window.mostrarToast('Error: No hay objetivo seleccionado', 'danger');
+        return;
+      }
+      
+      try {
+        const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+        const token = csrfEl ? csrfEl.value : null;
+        const response = await fetch(`/gerencia/objetivos/${objetivoEliminar}/eliminar/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': token,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          window.mostrarToast(data.message || 'Objetivo eliminado exitosamente', 'success');
+          const modalEl = document.getElementById('modalEliminarObjetivo');
+          if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+          setTimeout(() => location.reload(), 800);
+        } else {
+          window.mostrarToast(data.message || 'Error al eliminar el objetivo', 'danger');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        window.mostrarToast('Error de conexión', 'danger');
+      }
+    });
+  }
+
+  // Exponer funciones globalmente para uso desde botones inline
+  window.abrirModalEditarObjetivo = abrirModalEditarObjetivo;
+  window.abrirModalEliminarObjetivo = abrirModalEliminarObjetivo;
+
+  // Limpiar estado al cerrar el modal de edición para permitir re-apertura sin conflictos
+  const modalEditarEl = document.getElementById('modalEditarObjetivo');
+  if (modalEditarEl) {
+    modalEditarEl.addEventListener('hidden.bs.modal', function() {
+      objetivoEditando = null;
+      if (typeof formEditarEl !== 'undefined' && formEditarEl) {
+        try { formEditarEl.reset(); } catch (e) { /* ignore */ }
+      }
+    });
+  }
+</script>
+{% endblock %}

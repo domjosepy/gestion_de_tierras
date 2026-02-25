@@ -156,6 +156,7 @@
       const activo = button.getAttribute('data-activo') === 'true';
       const usuarios = JSON.parse(button.getAttribute('data-usuarios') || '[]');
       const roles = JSON.parse(button.getAttribute('data-roles') || '[]');
+      const tiposObjetivo = JSON.parse(button.getAttribute('data-tipos-objetivo') || '[]');
 
       // Configurar Formulario
       form.action = "{% url 'administrador:editar_grupo' 0 %}".replace('0', id);
@@ -176,6 +177,8 @@
       document.querySelectorAll('#rolesContainerEditar input').forEach(cb => {
         cb.checked = roles.includes(parseInt(cb.value));
       });
+      
+   
 
       limpiarErroresEditar();
     });
@@ -183,6 +186,9 @@
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       limpiarErroresEditar();
+
+      const tiposArray = tiposInput ? tiposInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
+     
 
       const formData = new FormData(form);
       const btnSubmit = form.querySelector('button[type="submit"]');

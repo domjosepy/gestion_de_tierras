@@ -218,7 +218,7 @@ class Grupo(models.Model):
         verbose_name='Descripción',
         help_text='Propósito u objetivo del grupo'
     )
-
+    
     # Relación con usuarios (muchos a muchos)
     usuarios = models.ManyToManyField(
         User,
@@ -301,10 +301,21 @@ class Grupo(models.Model):
         """Retorna solo los usuarios activos del grupo"""
         return self.usuarios.filter(estado='ACTIVO', is_active=True)
 
+    def tiene_tipo_objetivo(self, tipo):
+        """Verifica si el grupo tiene un tipo de objetivo específico"""
+        return tipo in (self.tipos_objetivo or [])
+
     def save(self, *args, **kwargs):
         # Si no se especifica quién creó el grupo, usar el usuario actual
         if not self.creado_por and hasattr(self, '_current_user'):
             self.creado_por = self._current_user
+        
+        # Validar y asegurar que tipos_objetivo sea una lista
+        if self.tipos_objetivo is None:
+            self.tipos_objetivo = []
+        elif not isinstance(self.tipos_objetivo, list):
+            self.tipos_objetivo = []
+        
         super().save(*args, **kwargs)
 
 
@@ -370,3 +381,54 @@ class FlujoTrabajo(models.Model):
         elif 'campo' in estado:
             return self.grupo_campo
         return None
+
+
+class TipoObjetivo(models.Model):
+    """
+    Modelo para definir tipos de objetivo asociados a un grupo.
+    Un grupo puede tener múltiples tipos de objetivo.
+    """
+    grupo = models.ForeignKey(
+        Grupo,
+        on_delete=models.CASCADE,
+        related_name='tipos_objetivo_list',
+        verbose_name='Grupo'
+    )
+    
+    nombre = models.CharField(
+        max_length=200,
+        verbose_name='Nombre del Tipo de Objetivo',
+        help_text='Ej: Colonias Relevadas, Planos Aprobados, etc.'
+    )
+    
+    descripcion = models.TextField(
+        blank=True,
+        verbose_name='Descripción',
+        help_text='Descripción detallada del tipo de objetivo'
+    )
+    
+    activo = models.BooleanField(
+        default=True,
+        verbose_name='Activo'
+    )
+    
+    creado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tipos_objetivo_creados',
+        verbose_name='Creado por'
+    )
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Tipo de Objetivo'
+        verbose_name_plural = 'Tipos de Objetivo'
+        ordering = ['grupo__nombre', 'nombre']
+        unique_together = [['grupo', 'nombre']]
+    
+    def __str__(self):
+        return f"{self.grupo.nombre} - {self.nombre}"

@@ -23,6 +23,7 @@ from administrador import views as admin_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('login/', admin_views.LoginView.as_view(), name='login'),
     path('administrador/cambiar_estado_usuario/',
          admin_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
     path('', include('administrador.urls', namespace='administrador')),
@@ -37,7 +38,7 @@ urlpatterns = [
     path("coordinacion/", include("coordinacion.urls", namespace="coordinacion")),
     path("relevamiento/", include("relevamiento.urls", namespace="relevamiento")),
     path("relevamiento/", include("relevamiento.urls", namespace="coordinador")),
-    #path("relevamiento/", include("relevamiento.urls", namespace="subcoordinador")),
+    path("relevamiento/", include("relevamiento.urls", namespace="subcoordinador")),
     path("relevamiento/", include("relevamiento.urls", namespace="encuestador")),
 
 ]

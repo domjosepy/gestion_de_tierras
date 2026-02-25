@@ -2,15 +2,9 @@
 <li class="nav-item">
   <a class="nav-link" href="{% url 'gerencia:gerente_dashboard' %}">
     <i class="fas fa-tachometer-alt me-2 text-primary"></i>
-    <span class="justify-content-center">Panel de Gerencia</span>
+    <span class="justify-content-center">GERENCIA</span>
   </a>
 </li>
-
-<hr class="sidebar-divider">
-
-<div class="sidebar-heading text-uppercase small px-3">
-  Gerencia
-</div>
 
 <hr class="sidebar-divider">
 
@@ -65,9 +59,12 @@
       </a>
       <div id="GerenciaTarget" class="collapse">
         <div class="collapse-inner">
-          <a class="collapse-item" href="#">
+          <a class="collapse-item" href="{% url 'gerencia:lista_objetivos' %}">
             <i class="fas fa-chart-pie me-1"></i>
             Ver Objetivos</a>
+          <a class="collapse-item" href="{% url 'gerencia:lista_objetivos' %}?nuevo=1">
+            <i class="fas fa-plus-circle me-1"></i>
+            Nuevo Objetivo</a>
           <a class="collapse-item" href="{% url 'gerencia:lista_solicitudes_relevamiento' %}">
             <i class="fas fa-clipboard-list me-1"></i>
             Ver Solicitudes</a>

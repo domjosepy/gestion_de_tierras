@@ -1,0 +1,39 @@
+<!-- Sidebar Links para Subcoordinadores -->
+
+<!-- Dashboard -->
+<li class="nav-item">
+  <a class="nav-link {% if request.resolver_match.url_name == 'subcoordinador_dashboard' %}active{% endif %}" 
+     href="{% url 'relevamiento:subcoordinador_dashboard' %}">
+    <i class="fas fa-tachometer-alt me-2"></i>
+    <span>SUBCOORDINADOR</span>
+  </a>
+</li>
+
+<!-- Divider -->
+<hr class="sidebar-divider">
+
+<!-- Heading: Relevamientos -->
+<div class="sidebar-heading">
+  Relevamientos
+</div>
+
+<!-- Mis Asignaciones -->
+<li class="nav-item">
+  <a class="nav-link {% if request.resolver_match.url_name == 'subcoordinador_dashboard' %}active{% endif %}" 
+     href="{% url 'relevamiento:subcoordinador_dashboard' %}">
+    <i class="fas fa-map-marked-alt me-2"></i>
+    <span>Mis Asignaciones</span>
+  </a>
+</li>
+
+<!-- Carga de Datos -->
+<li class="nav-item">
+  <a class="nav-link {% if 'carga' in request.path %}active{% endif %}" 
+     href="{% url 'relevamiento:subcoordinador_dashboard' %}">
+    <i class="fas fa-upload me-2"></i>
+    <span>Carga de Datos</span>
+  </a>
+</li>
+
+<!-- Divider -->
+<hr class="sidebar-divider d-none d-md-block">

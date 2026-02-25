@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
 
 from coordinacion.models import OrdenTrabajo
 from .decorators import encuestador_required, coordinador_campo_required
@@ -10,6 +11,11 @@ from .forms import RelevamientoForm
 from django.db import transaction
 from gerencia.models import SolicitudRelevamientoAudit
 from administrador.models import Grupo
+from django.conf import settings
+from django.http import JsonResponse, HttpResponseForbidden
+from django.views.decorators.http import require_POST
+import os
+import re
     
 
 
@@ -178,7 +184,7 @@ def formulario_desde_orden(request, orden_id):
         'orden': orden,
         'datos_geo': datos_geo,
     }
-    return render(request, 'relevamiento/formulario_relevamiento.html', context)
+    return render(request, 'includes/relevamiento/encuestador/formulario_relevamiento.html', context)
 
 
 # ─────────────────────────────────────────────
@@ -247,7 +253,8 @@ def editar_encuesta_relevamiento(request, pk):
 def resumen_relevamiento(request, pk):
     """Muestra el detalle de un Relevamiento."""
     rel = get_object_or_404(Relevamiento, pk=pk)
-    return render(request, 'relevamiento/resumen_relevamiento.html', {'relevamiento': rel})
+    # La plantilla de resumen está en la carpeta de encuestador dentro de includes
+    return render(request, 'includes/relevamiento/encuestador/resumen_relevamiento.html', {'relevamiento': rel})
 
 
 # ─────────────────────────────────────────────
@@ -315,6 +322,184 @@ def coordinador_campo_dashboard(request):
 
 
 @login_required
+def subcoordinador_dashboard(request):
+    """
+    Dashboard para subcoordinadores: muestra las colonias asignadas
+    a través de las órdenes donde el usuario figura como subcoordinador.
+    """
+    # Obtener órdenes donde el usuario es subcoordinador
+    ordenes = (
+        OrdenTrabajo.objects
+        .filter(equipos_asignados__subcoordinadores=request.user)
+        .select_related('solicitud__colonia')
+        .prefetch_related('solicitud__colonia__distritos')
+        .order_by('-fecha_creacion')
+    )
+
+    colonias_map = {}
+    total_relevamientos = 0
+    total_archivos = 0
+    ordenes_completadas = 0
+    ordenes_en_proceso = 0
+    
+    for orden in ordenes:
+        colonia = orden.solicitud.colonia if orden.solicitud else None
+        if not colonia:
+            continue
+        
+        # Contar relevamientos de esta orden
+        relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
+        total_relevamientos += relevamientos_count
+        
+        # Contar archivos subidos para esta orden
+        from .models import ArchivoSubcoordinador
+        archivos_count = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).count()
+        total_archivos += archivos_count
+        
+        # Obtener el archivo más reciente
+        archivo_reciente = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).first()
+        
+        # Contar estados de órdenes
+        if orden.estado == 'completada':
+            ordenes_completadas += 1
+        elif orden.estado in ('en_proceso', 'asignada'):
+            ordenes_en_proceso += 1
+        
+        # Usar la primera orden encontrada para la colonia
+        if colonia.id not in colonias_map:
+            colonias_map[colonia.id] = {
+                'id': colonia.id,
+                'nombre': colonia.nombre,
+                'codigo': getattr(colonia, 'codigo', ''),
+                'distrito': colonia.distritos.first() if colonia.distritos.exists() else None,
+                'ultima_carga': archivo_reciente.fecha_subida if archivo_reciente else None,
+                'archivo_url': archivo_reciente.archivo.url if archivo_reciente else None,
+                'numero_orden': getattr(orden, 'numero_orden', ''),
+                'fecha_inicio_planeada': getattr(orden, 'fecha_inicio_planeada', None),
+                'fecha_fin_planeada': getattr(orden, 'fecha_fin_planeada', None),
+                # Archivos precat subidos por digitalizador (si la solicitud existe)
+                'precat_files': [] if not orden.solicitud else [
+                    {
+                        'id': a.id,
+                        'nombre': getattr(a, 'archivo', None) and getattr(a, 'archivo').name.split('/')[-1] or getattr(a, 'observaciones', '')[:40],
+                        'fecha_subida': a.fecha_subida,
+                        'tipo': a.tipo_archivo,
+                    }
+                    for a in orden.solicitud.precat_archivos.all().order_by('-fecha_subida')
+                ],
+                'estado_orden': orden.estado,
+                'relevamientos_count': relevamientos_count,
+                'archivos_count': archivos_count,
+                # habilitar_subida se controla por la orden (formulario_habilitado)
+                'habilitar_subida': bool(orden.formulario_habilitado),
+            }
+
+    colonias = list(colonias_map.values())
+
+    return render(request, 'relevamiento/subcoordinador_dashboard.html', {
+        'colonias': colonias,
+        'total_ordenes': ordenes.count(),
+        'ordenes_en_proceso': ordenes_en_proceso,
+        'ordenes_completadas': ordenes_completadas,
+        'total_relevamientos': total_relevamientos,
+    })
+
+
+@login_required
+@require_POST
+def subcoordinador_upload(request):
+    """Recibe archivos comprimidos desde el subcoordinador y los guarda en MEDIA_ROOT/vivser_relevamiento/.
+    Nombre: <departamento>_<distrito>_<colonia>_<fecha>.<extension>
+    Extensiones permitidas: .zip, .rar, .7z, .tar, .tar.gz, .gz
+    """
+    from .models import ArchivoSubcoordinador
+    from django.utils import timezone as tz
+    
+    file = request.FILES.get('archivo')
+    colonia_id = request.POST.get('colonia_id')
+    if not file or not colonia_id:
+        return JsonResponse({'success': False, 'message': 'Faltan datos'}, status=400)
+
+    # Extensiones permitidas
+    extensiones_validas = ('.zip', '.rar', '.7z', '.tar', '.tar.gz', '.gz')
+    filename_lower = file.name.lower()
+    if not any(filename_lower.endswith(ext) for ext in extensiones_validas):
+        return JsonResponse({'success': False, 'message': 'Solo se permiten archivos comprimidos (.zip, .rar, .7z, .tar, .tar.gz, .gz)'}, status=400)
+
+    # Buscar la orden más reciente del subcoordinador para esa colonia
+    orden = OrdenTrabajo.objects.filter(
+        solicitud__colonia_id=colonia_id,
+        equipos_asignados__subcoordinadores=request.user
+    ).order_by('-fecha_creacion').first()
+
+    if not orden:
+        return JsonResponse({'success': False, 'message': 'No se encontró orden asociada o no tiene permisos'}, status=403)
+
+    # Obtener datos geográficos
+    colonia = orden.solicitud.colonia if orden.solicitud else None
+    distrito = colonia.distritos.first() if colonia and colonia.distritos.exists() else None
+    departamento = distrito.departamento if distrito else None
+    
+    # Construir nombre del archivo: departamento_distrito_colonia_fecha
+    fecha_str = tz.now().strftime('%Y%m%d_%H%M%S')
+    departamento_str = departamento.nombre.replace(' ', '_') if departamento else 'sin_depto'
+    distrito_str = distrito.nombre.replace(' ', '_') if distrito else 'sin_distrito'
+    colonia_str = colonia.nombre.replace(' ', '_') if colonia else f'colonia{colonia_id}'
+
+    # Extraer extensión del archivo original
+    original_ext = ''
+    if file.name.lower().endswith('.tar.gz'):
+        original_ext = '.tar.gz'
+    else:
+        original_ext = os.path.splitext(file.name)[1]
+
+    # Construir nombre completo del archivo
+    filename = f"{departamento_str}_{distrito_str}_{colonia_str}_{fecha_str}{original_ext}"
+    # Sanitizar nombre: permitir solo letras, números, guiones, guiones bajos, puntos
+    filename = re.sub(r'[^A-Za-z0-9_.\-]', '', filename)
+    # Asegurar longitud máxima razonable (255 - para compatibilidad con FS/DB)
+    if len(filename) > 250:
+        name, ext = os.path.splitext(filename)
+        filename = name[:250 - len(ext)] + ext
+    
+    # Guardar en la base de datos usando el modelo ArchivoSubcoordinador
+    try:
+        # Forzar que el archivo guarde con el nombre construido
+        file.name = filename
+        archivo_obj = ArchivoSubcoordinador(
+            orden_trabajo=orden,
+            archivo=file,
+            nombre_archivo=filename,
+            subido_por=request.user
+        )
+        archivo_obj.save()
+        
+        # También actualizar relevamientos existentes si los hay
+        relevamientos = Relevamiento.objects.filter(orden_trabajo=orden)
+        if relevamientos.exists():
+            for rel in relevamientos:
+                rel.archivo_subcoordinador = archivo_obj.archivo
+                rel.fecha_subida_archivo = archivo_obj.fecha_subida
+                rel.save(update_fields=['archivo_subcoordinador', 'fecha_subida_archivo'])
+            mensaje = f'Archivo subido correctamente y vinculado a {relevamientos.count()} relevamiento(s)'
+        else:
+            mensaje = 'Archivo subido correctamente. Listo para vincular a relevamientos.'
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'message': f'Error al guardar archivo: {str(e)}'
+        }, status=500)
+
+    return JsonResponse({
+        'success': True, 
+        'message': mensaje,
+        'filename': filename,
+        'fecha_subida': archivo_obj.fecha_subida.strftime('%d/%m/%Y %H:%M')
+    })
+
+
+@login_required
 @coordinador_campo_required
 def habilitar_formulario_relevamiento(request, orden_id):
     """
@@ -329,13 +514,63 @@ def habilitar_formulario_relevamiento(request, orden_id):
         return redirect('relevamiento:coordinador_dashboard')
     
     if request.method == 'POST':
-        # Toggle del estado
-        orden.formulario_habilitado = not orden.formulario_habilitado
-        orden.save()
-        
-        estado = 'habilitado' if orden.formulario_habilitado else 'deshabilitado'
-        messages.success(request, f'Formulario {estado} correctamente.')
-        return redirect('relevamiento:coordinador_dashboard')
+        try:
+            with transaction.atomic():
+                # Toggle del estado
+                orden.formulario_habilitado = not orden.formulario_habilitado
+                orden.save()
+
+                solicitud = orden.solicitud
+
+                if orden.formulario_habilitado:
+                    # Habilitado -> pasar solicitud a ejecución en campo y orden a en_proceso
+                    previo = solicitud.estado if solicitud else None
+                    if solicitud:
+                        solicitud.estado = 'en_ejecucion_campo'
+                        solicitud.save()
+                    orden.estado = 'en_proceso'
+                    orden.save()
+
+                    # Auditoría
+                    try:
+                        SolicitudRelevamientoAudit.objects.create(
+                            solicitud=solicitud,
+                            campo='formulario_habilitado',
+                            valor_anterior=previo or '',
+                            valor_nuevo='en_ejecucion_campo',
+                            cambiado_por=request.user,
+                            comentario=f'Formulario habilitado por {request.user.username}'
+                        )
+                    except Exception:
+                        pass
+
+                    messages.success(request, 'Formulario habilitado. Solicitud en ejecución de campo y orden en proceso.')
+                else:
+                    # Deshabilitado -> pasar solicitud a pendiente_cierre
+                    previo = solicitud.estado if solicitud else None
+                    if solicitud:
+                        solicitud.estado = 'pendiente_cierre'
+                        solicitud.save()
+
+                    # Auditoría
+                    try:
+                        SolicitudRelevamientoAudit.objects.create(
+                            solicitud=solicitud,
+                            campo='formulario_habilitado',
+                            valor_anterior=previo or '',
+                            valor_nuevo='pendiente_cierre',
+                            cambiado_por=request.user,
+                            comentario=f'Formulario deshabilitado por {request.user.username}'
+                        )
+                    except Exception:
+                        pass
+
+                    messages.success(request, 'Formulario deshabilitado. Solicitud marcada como pendiente de cierre.')
+
+            return redirect('relevamiento:coordinador_dashboard')
+        except Exception as e:
+            messages.error(request, f'Error al cambiar estado del formulario: {str(e)}')
+            return redirect('relevamiento:coordinador_dashboard')
     
     return redirect('relevamiento:coordinador_dashboard')
 

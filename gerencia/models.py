@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from administrador.models import Grupo, FlujoTrabajo
+from administrador.models import Grupo, FlujoTrabajo, TipoObjetivo
 from django.db.models import Q
 from core.models import Colonia
 from django.db.models import Avg, F, ExpressionWrapper, DurationField
@@ -1024,3 +1024,179 @@ class SolicitudRelevamientoAudit(models.Model):
 
     def __str__(self):
         return f"Auditoría {self.pk} - {self.solicitud} - {self.campo}"
+
+
+class Objetivo(models.Model):
+    """Modelo para gestionar objetivos anuales por grupo y tipo"""
+    
+    # Enlazar con el modelo `Grupo` de la app `administrador` para mantener consistencia
+    grupo = models.ForeignKey(
+        Grupo,
+        on_delete=models.PROTECT,
+        related_name='objetivos',
+        verbose_name='Grupo'
+    )
+    tipo_objetivo = models.ForeignKey(
+        TipoObjetivo,
+        on_delete=models.PROTECT,
+        related_name='objetivos',
+        verbose_name="Tipo de Objetivo",
+        help_text="Seleccione el tipo de objetivo del grupo"
+    )
+    fecha_inicio = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Inicio",
+        help_text="Fecha de inicio del objetivo"
+    )
+    fecha_fin = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha Final",
+        help_text="Fecha límite para alcanzar la meta"
+    )
+    anio = models.IntegerField(
+        verbose_name="Año",
+        help_text="Año del objetivo (derivado de fecha_fin)"
+    )
+    meta = models.IntegerField(
+        verbose_name="Meta",
+        help_text="Cantidad objetivo a alcanzar en el periodo"
+    )
+    avance_actual = models.IntegerField(
+        default=0,
+        verbose_name="Avance Actual",
+        help_text="Cantidad actual alcanzada"
+    )
+    descripcion = models.TextField(
+        blank=True,
+        verbose_name="Descripción"
+    )
+    creado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="objetivos_creados",
+        verbose_name="Creado por"
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Fecha de creación"
+    )
+    fecha_modificacion = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Última modificación"
+    )
+    activo = models.BooleanField(
+        default=True,
+        verbose_name="Activo"
+    )
+    
+    class Meta:
+        verbose_name = "Objetivo"
+        verbose_name_plural = "Objetivos"
+        ordering = ["-anio", "grupo", "tipo_objetivo"]
+        unique_together = ['grupo', 'tipo_objetivo', 'anio']
+        indexes = [
+            models.Index(fields=['anio', 'grupo']),
+            models.Index(fields=['activo', 'anio']),
+        ]
+    
+    def __str__(self):
+        grupo_nombre = self.grupo.nombre if hasattr(self.grupo, 'nombre') else str(self.grupo)
+        tipo_nombre = self.tipo_objetivo.nombre if self.tipo_objetivo else "Sin tipo"
+        return f"{grupo_nombre} - {tipo_nombre} {self.anio}"
+    
+    def save(self, *args, **kwargs):
+        """Calcular automáticamente el año desde fecha_fin y validaciones"""
+        # Si no hay fecha_inicio, usar fecha de creación o hoy
+        if not self.fecha_inicio:
+            if self.pk and self.fecha_creacion:
+                self.fecha_inicio = self.fecha_creacion.date()
+            else:
+                from datetime import date
+                self.fecha_inicio = date.today()
+        
+        # Calcular año desde fecha_fin
+        if self.fecha_fin:
+            self.anio = self.fecha_fin.year
+        elif not self.anio:
+            # Si no hay fecha_fin y no hay año, usar año actual
+            from datetime import datetime
+            self.anio = datetime.now().year
+        
+        # Validar que el tipo de objetivo pertenece al grupo seleccionado
+        if self.tipo_objetivo and self.grupo:
+            if self.tipo_objetivo.grupo_id != self.grupo_id:
+                raise ValidationError(
+                    f"El tipo de objetivo '{self.tipo_objetivo.nombre}' no pertenece al grupo '{self.grupo.nombre}'"
+                )
+        
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_categoria_grupo(cls, grupo):
+        """Detectar categoría aproximada de un `Grupo` (o nombre) basada en su nombre."""
+        nombre = grupo.nombre if hasattr(grupo, 'nombre') else str(grupo)
+        nombre_upper = nombre.upper()
+        if 'RELEVAMIENTO' in nombre_upper or 'CAMPO' in nombre_upper:
+            return 'relevamiento'
+        if 'SIG' in nombre_upper or 'DIGITALIZADOR' in nombre_upper:
+            return 'sig'
+        if 'ANALISIS' in nombre_upper or 'ANALISTA' in nombre_upper:
+            return 'analisis'
+        if 'EXPEDIENTE' in nombre_upper or 'TITULACION' in nombre_upper:
+            return 'expedientes'
+        return None
+    
+    @property
+    def porcentaje_avance(self):
+        """Calcula el porcentaje de avance"""
+        if self.meta == 0:
+            return 0
+        return min(round((self.avance_actual / self.meta) * 100, 1), 100)
+    
+    @property
+    def estado_semaforo(self):
+        """Determina el color del semáforo según avance"""
+        porcentaje = self.porcentaje_avance
+        if porcentaje >= 90:
+            return 'success'  # Verde
+        elif porcentaje >= 70:
+            return 'warning'  # Amarillo
+        elif porcentaje >= 50:
+            return 'info'     # Azul
+        else:
+            return 'danger'   # Rojo
+    
+    @classmethod
+    def obtener_objetivos_por_anio(cls, anio):
+        """Obtener todos los objetivos de un año específico"""
+        return cls.objects.filter(anio=anio, activo=True).select_related('creado_por')
+    
+    @classmethod
+    def obtener_resumen_por_grupo(cls, anio):
+        """Obtener resumen de objetivos agrupados por grupo"""
+        objetivos = cls.objects.filter(anio=anio, activo=True).select_related('grupo')
+        resumen = {}
+
+        # Iterar grupos activos existentes en la app administrador
+        for grupo in Grupo.objects.filter(activo=True).order_by('nombre'):
+            objetivos_grupo = objetivos.filter(grupo=grupo)
+            if objetivos_grupo.exists():
+                total_meta = sum(obj.meta for obj in objetivos_grupo)
+                total_avance = sum(obj.avance_actual for obj in objetivos_grupo)
+                porcentaje = round((total_avance / total_meta * 100), 1) if total_meta > 0 else 0
+
+                resumen[str(grupo.id)] = {
+                    'nombre': grupo.nombre,
+                    'categoria': cls.get_categoria_grupo(grupo),
+                    'total_objetivos': objetivos_grupo.count(),
+                    'total_meta': total_meta,
+                    'total_avance': total_avance,
+                    'porcentaje': porcentaje,
+                    'objetivos': list(objetivos_grupo)
+                }
+
+        return resumen

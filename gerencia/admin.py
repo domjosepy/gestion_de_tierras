@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SolicitudRelevamiento, SolicitudRelevamientoAudit
+from .models import SolicitudRelevamiento, SolicitudRelevamientoAudit, Objetivo
 
 
 @admin.register(SolicitudRelevamiento)
@@ -32,3 +32,29 @@ class SolicitudRelevamientoAuditAdmin(admin.ModelAdmin):
             return f"{obj.valor_nuevo[:20]}..."
         return obj.valor_nuevo
     valor_nuevo_short.short_description = "Valor Nuevo"
+
+
+@admin.register(Objetivo)
+class ObjetivoAdmin(admin.ModelAdmin):
+    list_display = ['id', 'grupo', 'tipo_objetivo', 'anio', 'meta', 'avance_actual', 'porcentaje_avance', 'activo', 'creado_por']
+    list_filter = ['grupo', 'tipo_objetivo', 'anio', 'activo']
+    search_fields = ['descripcion']
+    readonly_fields = ['fecha_creacion', 'fecha_modificacion', 'porcentaje_avance']
+    date_hierarchy = 'fecha_creacion'
+    ordering = ['-anio', 'grupo', 'tipo_objetivo']
+    
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('grupo', 'tipo_objetivo', 'anio')
+        }),
+        ('Metas y Avance', {
+            'fields': ('meta', 'avance_actual', 'porcentaje_avance')
+        }),
+        ('Detalles', {
+            'fields': ('descripcion', 'activo')
+        }),
+        ('Auditoría', {
+            'fields': ('creado_por', 'fecha_creacion', 'fecha_modificacion'),
+            'classes': ('collapse',)
+        }),
+    )

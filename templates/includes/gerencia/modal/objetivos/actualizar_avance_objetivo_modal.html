@@ -1,0 +1,33 @@
+<!-- Modal Actualizar Avance -->
+<div class="modal fade" id="modalActualizarAvance" tabindex="-1" aria-labelledby="modalActualizarAvanceLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalActualizarAvanceLabel">
+          <i class="fas fa-plus-circle me-2"></i>Actualizar Avance
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formActualizarAvance">
+        {% csrf_token %}
+        <input type="hidden" id="avance_objetivo_id" name="objetivo_id">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="avance_actual_input" class="form-label">Nuevo Avance <span class="text-danger">*</span></label>
+            <input type="number" id="avance_actual_input" name="avance_actual" class="form-control" min="0" required>
+            <div class="form-text">
+              Avance actual: <strong id="avance_actual_display">0</strong> / Meta: <strong id="meta_display">0</strong>
+            </div>
+            <div class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-check me-2"></i>Actualizar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

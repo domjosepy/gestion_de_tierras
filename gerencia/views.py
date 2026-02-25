@@ -5,24 +5,21 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
-from django.views.generic import (
-    CreateView,
-    DeleteView,
-    ListView,
-    TemplateView,
-    UpdateView,
-)
+from django.views.generic import TemplateView
 
-from administrador.models import Grupo
+
+from administrador.models import Grupo, TipoObjetivo
+from coordinacion.models import OrdenTrabajo
 from core.forms import ColoniaForm, DistritoForm
 from core.models import Colonia, Departamento, Distrito
-from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
-from gerencia.forms import CrearSolicitudRelevamientoForm, EditarSolicitudRelevamientoForm
+from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit, Objetivo
+from gerencia.forms import CrearSolicitudRelevamientoForm, EditarSolicitudRelevamientoForm, ObjetivoForm
+from datetime import datetime
 
 
 # MUESTRA LA VISTA DEL ADMINISTRADOR
@@ -41,6 +38,60 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
         context['departamentos'] = Departamento.objects.all()
         context['distritos'] = Distrito.objects.all()
         context['colonias'] = Colonia.objects.all()
+
+        # Agregar objetivos activos recientes para el dashboard
+        try:
+            anio_actual = datetime.now().year
+            objetivos_activos = Objetivo.objects.filter(anio=anio_actual, activo=True).select_related('grupo', 'tipo_objetivo').order_by('grupo__nombre')[:8]
+            # Preparar una lista ligera para la plantilla
+            context['objetivos_activos'] = [
+                {
+                    'id': o.id,
+                    'grupo_nombre': o.grupo.nombre,
+                    'tipo_nombre': o.tipo_objetivo.nombre,
+                    'meta': o.meta,
+                    'avance_actual': o.avance_actual,
+                    'porcentaje_avance': o.porcentaje_avance,
+                    'fecha_fin': o.fecha_fin,
+                }
+                for o in objetivos_activos
+            ]
+        except Exception:
+            context['objetivos_activos'] = []
+
+        # Agregar solicitudes relevantes para el dashboard (grupos específicos)
+        try:
+            grupos_filtro = Grupo.objects.filter(
+                Q(nombre__iexact='coordinacion y monitoreo') | Q(nombre__iexact='relevamiento') | Q(nombre__iexact='analisis')
+            )
+            solicitudes_qs = SolicitudRelevamiento.objects.select_related(
+                'colonia', 'grupo_asignado'
+            ).filter(grupo_asignado__in=grupos_filtro).order_by('-fecha_creacion')[:8]
+
+            solicitudes_dashboard = []
+            for sol in solicitudes_qs:
+                colonia = sol.colonia
+                distrito = colonia.distritos.first() if colonia and colonia.distritos.exists() else None
+                departamento = distrito.departamento if distrito else None
+
+                solicitudes_dashboard.append({
+                    'id': sol.id,
+                    'colonia_nombre': colonia.nombre if colonia else 'Sin colonia',
+                    'colonia_codigo': colonia.codigo if colonia else '',
+                    'distrito_nombre': distrito.nombre if distrito else 'Sin distrito',
+                    'departamento_nombre': departamento.nombre if departamento else 'Sin departamento',
+                    'tipo': sol.tipo,
+                    'tipo_display': sol.get_tipo_display(),
+                    'prioridad': sol.prioridad,
+                    'prioridad_display': sol.get_prioridad_display(),
+                    'grupo_nombre': sol.grupo_asignado.nombre if sol.grupo_asignado else '-',
+                    'observaciones': sol.observaciones,
+                    'fecha_creacion': sol.fecha_creacion,
+                })
+
+            context['solicitudes_dashboard'] = solicitudes_dashboard
+        except Exception:
+            context['solicitudes_dashboard'] = []
 
         return context
 
@@ -94,6 +145,14 @@ def lista_solicitudes_relevamiento(request):
     # Obtener estadísticas usando los métodos del modelo
     estadisticas = SolicitudRelevamiento.obtener_estadisticas()
     estadisticas_por_estado = SolicitudRelevamiento.obtener_estadisticas_por_estado()
+
+    # Recalcular 'finalizadas' usando órdenes de trabajo con estado 'completada'
+    try:
+        ordenes_finalizadas_count = OrdenTrabajo.objects.filter(estado='completada').count()
+        estadisticas['finalizadas'] = ordenes_finalizadas_count
+    except Exception:
+        # en caso de error, mantener el valor anterior
+        pass
 
     # Solicitudes recientes (últimas 10)
     solicitudes_recientes = SolicitudRelevamiento.obtener_solicitudes_recientes(
@@ -605,3 +664,270 @@ def api_info_colonia(request, colonia_id):
     }
 
     return JsonResponse(data)
+
+
+# ==================== VISTAS PARA OBJETIVOS ====================
+
+@login_required
+def lista_objetivos(request):
+    """Vista principal de objetivos con dashboard"""
+    anio_actual = datetime.now().year
+    anio_seleccionado = request.GET.get('anio', anio_actual)
+    
+    try:
+        anio_seleccionado = int(anio_seleccionado)
+    except (ValueError, TypeError):
+        anio_seleccionado = anio_actual
+    
+    # Obtener todos los objetivos activos del año
+    objetivos = Objetivo.objects.filter(anio=anio_seleccionado, activo=True).select_related('creado_por', 'grupo', 'tipo_objetivo')
+    # Obtener objetivos inactivos del mismo año para la tabla separada
+    objetivos_inactivos = Objetivo.objects.filter(anio=anio_seleccionado, activo=False).select_related('creado_por', 'grupo', 'tipo_objetivo')
+    
+    # Obtener resumen agrupado
+    resumen = Objetivo.obtener_resumen_por_grupo(anio_seleccionado)
+    
+    # Obtener años disponibles para el selector
+    anios_disponibles = Objetivo.objects.values_list('anio', flat=True).distinct().order_by('-anio')
+    if not anios_disponibles:
+        anios_disponibles = [anio_actual]
+    
+    # Obtener grupos activos para el formulario
+    grupos_disponibles = Grupo.objects.filter(activo=True).order_by('nombre')
+    # Prefetch tipos de objetivo activos por grupo y construir lista de grupos que tengan tipos
+    tipos_qs = TipoObjetivo.objects.filter(activo=True).order_by('nombre')
+    grupos_prefetch = grupos_disponibles.prefetch_related(
+        Prefetch('tipos_objetivo_list', queryset=tipos_qs, to_attr='tipos_activos')
+    )
+    grupos_con_tipos = [g for g in grupos_prefetch if getattr(g, 'tipos_activos', [])]
+    # Serializar información mínima de grupos para uso en JS (modal rápido)
+    grupos_serializados = []
+    for g in grupos_disponibles:
+        lider = getattr(g, 'lider', None)
+        grupos_serializados.append({
+            'id': g.id,
+            'nombre': g.nombre,
+            'usuarios_count': g.usuarios.count() if hasattr(g, 'usuarios') else 0,
+            'lider_fullname': lider.get_full_name() if lider else None,
+            'lider_username': lider.username if lider else None,
+        })
+    grupos_disponibles_json = json.dumps(grupos_serializados, ensure_ascii=False)
+    
+    # Obtener todos los tipos de objetivo activos
+    tipos_objetivo_disponibles = TipoObjetivo.objects.filter(activo=True).select_related('grupo').order_by('grupo__nombre', 'nombre')
+    
+    context = {
+        'objetivos': objetivos,
+        'objetivos_inactivos': objetivos_inactivos,
+        'resumen': resumen,
+        'anio_seleccionado': anio_seleccionado,
+        'anios_disponibles': anios_disponibles,
+        'anio_actual': anio_actual,
+        'grupos_disponibles': grupos_disponibles,
+        'grupos_con_tipos': grupos_con_tipos,
+        'tipos_objetivo_disponibles': tipos_objetivo_disponibles,
+        'grupos_disponibles_json': grupos_disponibles_json,
+    }
+    
+    return render(request, 'includes/gerencia/objetivos/gerencia_objetivos.html', context)
+
+
+@login_required
+def tipos_objetivo_por_grupo(request, grupo_id):
+    """Obtener tipos de objetivo filtrados por grupo (AJAX)"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Solicitando tipos de objetivo para grupo {grupo_id}")
+    
+    try:
+        # Verificar que el grupo existe
+        grupo = Grupo.objects.get(id=grupo_id, activo=True)
+        logger.info(f"Grupo encontrado: {grupo.nombre}")
+        
+        tipos_objetivo = TipoObjetivo.objects.filter(
+            grupo_id=grupo_id, 
+            activo=True
+        ).values('id', 'nombre', 'descripcion').order_by('nombre')
+        
+        tipos_list = list(tipos_objetivo)
+        logger.info(f"Tipos encontrados: {len(tipos_list)}")
+        
+        return JsonResponse({
+            'success': True,
+            'tipos_objetivo': tipos_list,
+            'grupo_nombre': grupo.nombre
+        })
+    except Grupo.DoesNotExist:
+        logger.error(f"Grupo {grupo_id} no encontrado")
+        return JsonResponse({
+            'success': False,
+            'message': 'Grupo no encontrado'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error al cargar tipos: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+
+
+@login_required
+@require_POST
+def crear_objetivo(request):
+    """Crear un nuevo objetivo"""
+    grupo_id = request.POST.get('grupo_id')
+    
+    if not grupo_id:
+        return JsonResponse({
+            'success': False,
+            'message': 'No se especificó el grupo para el objetivo'
+        }, status=400)
+    
+    try:
+        grupo = Grupo.objects.get(id=grupo_id, activo=True)
+    except Grupo.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'El grupo seleccionado no existe o no está activo'
+        }, status=404)
+    
+    form = ObjetivoForm(request.POST, grupo=grupo)
+    
+    if form.is_valid():
+        objetivo = form.save(commit=False)
+        objetivo.creado_por = request.user
+        objetivo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Objetivo creado exitosamente',
+            'objetivo_id': objetivo.id
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'message': 'Error al crear el objetivo',
+            'errors': form.errors
+        }, status=400)
+
+
+@login_required
+def obtener_objetivo(request, pk):
+    """Obtener datos de un objetivo para edición (AJAX)"""
+    objetivo = get_object_or_404(Objetivo, pk=pk)
+    
+    data = {
+        'id': objetivo.id,
+        'grupo_id': objetivo.grupo.id,
+        'grupo_nombre': objetivo.grupo.nombre,
+        'tipo_objetivo_id': objetivo.tipo_objetivo.id,
+        'tipo_objetivo_nombre': objetivo.tipo_objetivo.nombre,
+        'fecha_fin': objetivo.fecha_fin.strftime('%Y-%m-%d'),
+        'anio': objetivo.anio,
+        'meta': objetivo.meta,
+        'avance_actual': objetivo.avance_actual,
+        'descripcion': objetivo.descripcion or '',
+        'activo': objetivo.activo,
+        'porcentaje_avance': objetivo.porcentaje_avance,
+        'estado_semaforo': objetivo.estado_semaforo,
+        'categoria': Objetivo.get_categoria_grupo(objetivo.grupo),
+    }
+    
+    return JsonResponse(data)
+
+
+@login_required
+@require_POST
+def editar_objetivo(request, pk):
+    """Editar un objetivo existente"""
+    objetivo = get_object_or_404(Objetivo, pk=pk)
+    # Soporte para toggle de activo desde el modal (botón activar/desactivar)
+    if request.POST.get('toggle_activo'):
+        objetivo.activo = not objetivo.activo
+        objetivo.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'Objetivo actualizado exitosamente',
+            'objetivo_id': objetivo.id,
+            'activo': objetivo.activo
+        })
+
+    # Pasar el grupo del objetivo existente al formulario
+    form = ObjetivoForm(request.POST, instance=objetivo, grupo=objetivo.grupo)
+
+    if form.is_valid():
+        form.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Objetivo actualizado exitosamente',
+            'objetivo_id': objetivo.id,
+            'porcentaje_avance': objetivo.porcentaje_avance
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'message': 'Error al actualizar el objetivo',
+            'errors': form.errors
+        }, status=400)
+
+
+@login_required
+@require_POST
+def eliminar_objetivo(request, pk):
+    """Eliminar permanentemente un objetivo (DELETE)"""
+    objetivo = get_object_or_404(Objetivo, pk=pk)
+    try:
+        objetivo.delete()
+        return JsonResponse({
+            'success': True,
+            'message': 'Objetivo eliminado exitosamente'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error al eliminar objetivo: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_POST
+def actualizar_avance_objetivo(request, pk):
+    """Actualizar solo el avance de un objetivo (AJAX)"""
+    objetivo = get_object_or_404(Objetivo, pk=pk)
+    
+    try:
+        data = json.loads(request.body)
+        nuevo_avance = data.get('avance_actual')
+        
+        if nuevo_avance is None:
+            return JsonResponse({
+                'success': False,
+                'message': 'Debe proporcionar un valor de avance'
+            }, status=400)
+        
+        nuevo_avance = int(nuevo_avance)
+        
+        if nuevo_avance < 0:
+            return JsonResponse({
+                'success': False,
+                'message': 'El avance no puede ser negativo'
+            }, status=400)
+        
+        objetivo.avance_actual = nuevo_avance
+        objetivo.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Avance actualizado exitosamente',
+            'avance_actual': objetivo.avance_actual,
+            'porcentaje_avance': objetivo.porcentaje_avance,
+            'estado_semaforo': objetivo.estado_semaforo
+        })
+        
+    except (ValueError, json.JSONDecodeError):
+        return JsonResponse({
+            'success': False,
+            'message': 'Datos inválidos'
+        }, status=400)

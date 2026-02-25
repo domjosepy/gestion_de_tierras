@@ -1240,6 +1240,165 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
   transform: scale(1.1) rotate(-8deg); 
 }
 
+/* ===================================== */
+/* CARD HEADER - SECONDARY (GRIS AZULADO)*/
+/* ===================================== */
+.card-header-secondary {
+  background: linear-gradient(90deg, #495057 70%, #6c757d 100%) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-secondary h2 {
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(73,80,87,0.15);
+}
+
+.card-header-secondary i {
+  font-size: 1.4rem;
+  color: #adb5bd;
+}
+.card-header-secondary i:hover {
+  color: #ced4da;
+  transform: scale(1.1) rotate(-8deg);
+}
+
+
+/* ===================================== */
+/* CARD HEADER - SUCCESS (VERDE)         */
+/* ===================================== */
+.card-header-success {
+  background: linear-gradient(90deg, #2d6a4f 70%, #40916c 100%) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-success h2 {
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(45,106,79,0.15);
+}
+
+.card-header-success i {
+  font-size: 1.4rem;
+  color: #95d5b2;
+}
+.card-header-success i:hover {
+  color: #b7e4c7;
+  transform: scale(1.1) rotate(-8deg);
+}
+
+
+/* ===================================== */
+/* CARD HEADER - DANGER (ROJO)           */
+/* ===================================== */
+.card-header-danger {
+  background: linear-gradient(90deg, #b02a37 70%, #d00000 100%) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-danger h2 {
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(176,42,55,0.15);
+}
+
+.card-header-danger i {
+  font-size: 1.4rem;
+  color: #ff8787;
+}
+.card-header-danger i:hover {
+  color: #ffb3b3;
+  transform: scale(1.1) rotate(-8deg);
+}
+
+
+/* ===================================== */
+/* CARD HEADER - YELLOW (AMARILLO)       */
+/* ===================================== */
+.card-header-yellow {
+  background: linear-gradient(90deg, #f6bd60 70%, #ffd166 100%) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-yellow h2 {
+  font-weight: 600;
+  color: #3e2f1c;
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(62,47,28,0.15);
+}
+
+.card-header-yellow i {
+  font-size: 1.4rem;
+  color: #e09f3e;
+}
+.card-header-yellow i:hover {
+  color: #f4a261;
+  transform: scale(1.1) rotate(-8deg);
+}
+
+
+/* ===================================== */
+/* CARD HEADER - WARNING (NARANJA)       */
+/* ===================================== */
+.card-header-warning {
+  background: linear-gradient(90deg, #e85d04 70%, #f48c06 100%) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-warning h2 {
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(232,93,4,0.15);
+}
+
+.card-header-warning i {
+  font-size: 1.4rem;
+  color: #ffba08;
+}
+.card-header-warning i:hover {
+  color: #ffd166;
+  transform: scale(1.1) rotate(-8deg);
+}
+
 /* ================================ */
 /* CARD HEADER - TONOS MARRONES     */
 /* ================================ */

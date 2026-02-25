@@ -1,68 +1,63 @@
-<!-- encuestador_sidebar.html -->
+<!-- === sidebar_encuestador.html (menú de Encuestador) === -->
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'encuestador:encuestador_dashboard' %}">
+    <i class="fas fa-clipboard-list me-2 text-success"></i>
+    <span class="justify-content-center">Encuestador</span>
+  </a>
+</li>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small px-3">
+  Módulos
+</div>
+
+<!-- sidebar.html -->
 <div class="sidebar">
   <div class="sidebar-brand">
     <div class="sidebar-brand-icon">
-      <i class="fas fa-clipboard-list"></i>
+      <i class="fas fa-clipboard-check"></i>
     </div>
     <div class="sidebar-brand-text">Encuestador</div>
   </div>
 
   <ul class="nav flex-column">
     <li class="nav-item">
-      <a class="nav-link" href="{% url 'relevamiento:encuestador_dashboard' %}" title="Dashboard">
+      <a class="nav-link active text-center" title="Panel de Encuestador" data-bs-toggle="tooltip" href="{% url 'encuestador:encuestador_dashboard' %}">
         <i class="fas fa-tachometer-alt"></i>
         <span>Dashboard</span>
       </a>
     </li>
-
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-heading text-uppercase small px-3">Acciones</div>
+    
     <li class="nav-item">
-      <a class="nav-link" href="{% url 'relevamiento:encuestador_dashboard' %}">
-        <i class="fas fa-folder-open"></i>
-        <span>Mis Órdenes</span>
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseEncuestasMenu" aria-expanded="false" aria-controls="collapseEncuestasMenu" title="Gestión de Encuestas">
+        <i class="fas fa-edit"></i>
+        <span>Encuestas</span>
       </a>
+      <div id="collapseEncuestasMenu" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="#">
+            <i class="fas fa-tasks me-2"></i>Mis Encuestas
+          </a>
+          <a class="collapse-item" href="#">
+            <i class="fas fa-plus-circle me-2"></i>Nueva Encuesta
+          </a>
+          <a class="collapse-item" href="#">
+             <i class="fas fa-clock me-2"></i>Encuestas Pendientes
+          </a>
+        </div>
+      </div>
     </li>
 
-    <hr class="sidebar-divider">
-
-    {% if orden and orden.solicitud.colonia %}
-      <div class="sidebar-heading text-uppercase small px-3">Colonia: {{ orden.solicitud.colonia.nombre }}</div>
-
-      <li class="nav-item px-3 py-2">
-        <div class="small text-muted">Relevamientos registrados</div>
-        <div class="h5 fw-bold">{{ colonia_relevamientos_count }}</div>
-      </li>
-
-      <li class="nav-item px-3 py-2">
-        <div class="small text-muted">Solicitudes en la colonia</div>
-        <div class="h5 fw-bold">{{ colonia_solicitudes_count }}</div>
-      </li>
-
-      <li class="nav-item px-3 py-2 d-flex align-items-center gap-2">
-        <i class="fas fa-home text-success"></i>
-        <div>
-          <div class="small text-muted">Condición vivienda: Presente</div>
-          <div class="fw-bold">{{ colonia_condicion_presente }}</div>
-        </div>
-      </li>
-
-      <li class="nav-item px-3 py-2 d-flex align-items-center gap-2">
-        <i class="fas fa-water text-primary"></i>
-        <div>
-          <div class="small text-muted">Condición vivienda: Servicio</div>
-          <div class="fw-bold">{{ colonia_condicion_servicio }}</div>
-        </div>
-      </li>
-
-      <hr class="sidebar-divider">
-    {% endif %}
-
   </ul>
+
+  <button id="sidebarToggle">
+    <i class="fas fa-angle-double-right"></i>
+  </button>
 </div>
 
 <!-- content wrapper -->
 <div id="content-wrapper">
-  {% block content %}{% endblock %}
+  {% block content %}
+  {% endblock %}
 </div>

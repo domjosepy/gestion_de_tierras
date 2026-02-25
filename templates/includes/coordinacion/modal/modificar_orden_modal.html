@@ -1,11 +1,11 @@
 
-{% if orden.estado != 'completada' and orden.estado != 'cancelada' %}
+
 <div class="modal fade modal-warning" id="modalModificarOrden" tabindex="-1" aria-labelledby="modalModificarOrdenLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalModificarOrdenLabel">
-                    <i class="fas fa-edit me-2"></i>Modificar Orden {{ orden.numero_orden }}
+                    <i class="fas fa-edit me-2"></i>{% if orden %}Modificar Orden {{ orden.numero_orden }}{% else %}Modificar Orden{% endif %}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
@@ -18,11 +18,11 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Fecha inicio planeada</label>
-                            <input type="date" name="fecha_inicio_planeada" class="form-control" value="{{ orden.fecha_inicio_planeada|date:'Y-m-d' }}" required>
+                            <input type="date" name="fecha_inicio_planeada" class="form-control" value="{% if orden %}{{ orden.fecha_inicio_planeada|date:'Y-m-d' }}{% endif %}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Fecha fin planeada</label>
-                            <input type="date" name="fecha_fin_planeada" class="form-control" value="{{ orden.fecha_fin_planeada|date:'Y-m-d' }}" required>
+                            <input type="date" name="fecha_fin_planeada" class="form-control" value="{% if orden %}{{ orden.fecha_fin_planeada|date:'Y-m-d' }}{% endif %}" required>
                         </div>
                     </div>
 
@@ -34,7 +34,7 @@
                         <select name="coordinador_campo" class="form-select">
                             <option value="">---------</option>
                             {% for user in coordinadores %}
-                                <option value="{{ user.id }}" {% if orden.solicitud.coordinador_campo and user.id == orden.solicitud.coordinador_campo.id %}selected{% endif %}>
+                                <option value="{{ user.id }}" {% if orden and orden.solicitud.coordinador_campo and user.id == orden.solicitud.coordinador_campo.id %}selected{% endif %}>
                                     {{ user.get_full_name|default:user.username }}
                                 </option>
                             {% endfor %}
@@ -49,7 +49,7 @@
                         </label>
                         <select name="subcoordinadores" class="form-select" multiple size="4">
                             {% for user in subcoordinadores %}
-                                <option value="{{ user.id }}" {% if user in orden.solicitud.subcoordinadores.all %}selected{% endif %}>
+                                <option value="{{ user.id }}" {% if orden and user in orden.solicitud.subcoordinadores.all %}selected{% endif %}>
                                     {{ user.get_full_name|default:user.username }}
                                 </option>
                             {% endfor %}
@@ -64,7 +64,7 @@
                         </label>
                         <select name="encuestadores" class="form-select" multiple size="4">
                             {% for user in encuestadores %}
-                                <option value="{{ user.id }}" {% if user in orden.solicitud.relevadores_asignados.all %}selected{% endif %}>
+                                <option value="{{ user.id }}" {% if orden and user in orden.solicitud.relevadores_asignados.all %}selected{% endif %}>
                                     {{ user.get_full_name|default:user.username }}
                                 </option>
                             {% endfor %}
@@ -79,7 +79,7 @@
                         </label>
                         <select name="choferes" class="form-select" multiple size="4">
                             {% for user in choferes %}
-                                <option value="{{ user.id }}" {% if user in orden.solicitud.choferes.all %}selected{% endif %}>
+                                <option value="{{ user.id }}" {% if orden and user in orden.solicitud.choferes.all %}selected{% endif %}>
                                     {{ user.get_full_name|default:user.username }}
                                 </option>
                             {% endfor %}
@@ -91,7 +91,7 @@
                         <label class="form-label fw-bold">
                             <i class="fas fa-comment text-warning me-2"></i>Comentario (opcional)
                         </label>
-                        <textarea name="comentario" class="form-control" rows="2" placeholder="Motivo de la modificación"></textarea>
+                        <textarea name="comentario" class="form-control" rows="2" placeholder="Motivo de la modificación">{% if orden and orden.solicitud %}{% endif %}</textarea>
                     </div>
                 </div>
                 <div class="modal-footer justify-content-between">
@@ -104,4 +104,3 @@
         </div>
     </div>
 </div>
-{% endif %}

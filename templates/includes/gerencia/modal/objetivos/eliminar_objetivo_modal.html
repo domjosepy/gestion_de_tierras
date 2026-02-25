@@ -1,0 +1,33 @@
+<!-- Modal Eliminar Objetivo (include) -->
+<div class="modal fade" id="modalEliminarObjetivo" tabindex="-1" aria-labelledby="modalEliminarObjetivoLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="modalEliminarObjetivoLabel">
+          <i class="fas fa-trash-alt me-2"></i>Eliminar Objetivo
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+          <div>
+            <strong>¡Atención!</strong> Esta acción desactivará el objetivo y no podrá deshacerse.
+          </div>
+        </div>
+        <p class="mb-2"><strong>Grupo:</strong> <span id="eliminar_grupo_nombre">-</span></p>
+        <p class="mb-2"><strong>Tipo:</strong> <span id="eliminar_tipo_objetivo_nombre">-</span></p>
+        <p class="mb-2"><strong>Meta:</strong> <span id="eliminar_meta">-</span></p>
+        <p class="mb-0"><strong>Año:</strong> <span id="eliminar_anio">-</span></p>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancelar
+        </button>
+        <button type="button" id="confirmEliminarObjetivo" class="btn btn-outline-danger">
+          <i class="fas fa-trash-alt me-2"></i>Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

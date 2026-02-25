@@ -8,7 +8,9 @@ from core.views import (
 from gerencia.views import (
     lista_solicitudes_relevamiento, obtener_datos_solicitud, crear_solicitud_relevamiento, editar_solicitud_relevamiento,
     eliminar_solicitud_relevamiento, detalle_solicitud,
-    asignar_grupo, cambiar_estado, api_info_colonia
+    asignar_grupo, cambiar_estado, api_info_colonia,
+    lista_objetivos, crear_objetivo, obtener_objetivo, editar_objetivo, eliminar_objetivo, actualizar_avance_objetivo,
+    tipos_objetivo_por_grupo
 )
 
 app_name = "gerencia"
@@ -80,4 +82,15 @@ urlpatterns = [
 
     path('solicitudes/<int:solicitud_id>/cambiar-estado/',
          cambiar_estado, name='cambiar_estado'),
+
+    # ------------------------------------
+    # 7. Vistas de Objetivos
+    # ------------------------------------
+    path('objetivos/', lista_objetivos, name='lista_objetivos'),
+    path('objetivos/crear/', crear_objetivo, name='crear_objetivo'),
+    path('objetivos/<int:pk>/', obtener_objetivo, name='obtener_objetivo'),
+    path('objetivos/<int:pk>/editar/', editar_objetivo, name='editar_objetivo'),
+    path('objetivos/<int:pk>/eliminar/', eliminar_objetivo, name='eliminar_objetivo'),
+    path('objetivos/<int:pk>/actualizar-avance/', actualizar_avance_objetivo, name='actualizar_avance_objetivo'),
+    path('objetivos/tipos-por-grupo/<int:grupo_id>/', tipos_objetivo_por_grupo, name='tipos_objetivo_por_grupo'),
 ]

@@ -205,13 +205,7 @@
                                         class="btn btn-sm btn-outline-primary" title="Ver detalles">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                       
-                                    <!-- Enlace para editar o gestionar, si corresponde -->
-                                    {% if orden.estado == 'generada' or orden.estado == 'asignada' %}
-                                    <a href="#" class="btn btn-sm btn-outline-warning" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% endif %}
+                                    
                                 </td>
                             </tr>
                             {% endfor %}
@@ -226,6 +220,10 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal para asignar personal (reutilizado para modificar asignación) -->
+    {% include 'includes/coordinacion/modal/modificar_orden_modal.html' with orden=orden coordinadores=coordinadores subcoordinadores=subcoordinadores encuestadores=encuestadores choferes=choferes %}
+
 {% endblock %}
 
 {% block scripts %}
@@ -254,6 +252,78 @@
                     }
                 });
             }
+        });
+
+        const modal = document.getElementById('modalModificarOrden');
+        if (!modal) return;
+
+        const form = document.getElementById('formModificarOrden');
+
+        // When modal opens, set form.dataset.url from the triggering button (if present)
+        modal.addEventListener('show.bs.modal', function(event) {
+            const trigger = event.relatedTarget;
+            if (trigger && trigger.dataset && trigger.dataset.url) {
+                form.dataset.url = trigger.dataset.url;
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Recopilar datos del formulario
+            const formData = new FormData(form);
+            const data = {
+                fecha_inicio_planeada: formData.get('fecha_inicio_planeada'),
+                fecha_fin_planeada: formData.get('fecha_fin_planeada'),
+                coordinador_campo: formData.get('coordinador_campo') || null,
+                subcoordinadores: [],
+                encuestadores: [],
+                choferes: [],
+                comentario: formData.get('comentario')
+            };
+
+            // Obtener valores seleccionados de los múltiples
+            const subcoordinadoresSelect = form.querySelector('[name="subcoordinadores"]');
+            data.subcoordinadores = Array.from(subcoordinadoresSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+            const encuestadoresSelect = form.querySelector('[name="encuestadores"]');
+            data.encuestadores = Array.from(encuestadoresSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+            const choferesSelect = form.querySelector('[name="choferes"]');
+            data.choferes = Array.from(choferesSelect.selectedOptions).map(opt => parseInt(opt.value));
+
+            // Enviar vía fetch. Use dynamic URL set on modal open.
+            const targetUrl = form.dataset.url;
+            if (!targetUrl) {
+                mostrarToast('URL de destino no encontrada para modificar la orden.', 'danger');
+                return;
+            }
+            // Enviar vía fetch
+            fetch(targetUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cerrar modal
+                    bootstrap.Modal.getInstance(modal).hide();
+                    // Mostrar toast de éxito
+                    mostrarToast(data.message, 'success');
+                    // Recargar para ver cambios
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    mostrarToast(data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarToast('Error de conexión', 'danger');
+            });
         });
 
     });

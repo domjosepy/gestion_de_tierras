@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Encuestador{% endblock %}
+{% block title %}Encuestador{% endblock %}
 
 {% block content %}
 <div class="container-fluid fade-in">
@@ -98,6 +98,7 @@
   <!-- ============================================================ -->
   <!-- LISTADO DE ÓRDENES -->
   <!-- ============================================================ -->
+
   {% if ordenes_context %}
     <div class="row g-4">
       {% for item in ordenes_context %}
@@ -108,7 +109,7 @@
             <!-- Card Header: color según estado; si formulario no habilitado, forzar -brown-light -->
             <div class="card-header {% if not item.formulario_habilitado %}card-header-brown-light{% elif orden.estado == 'completada' %}card-header-success{% elif orden.estado == 'en_proceso' or orden.estado == 'asignada' %}{% else %}card-header-brown-light{% endif %}">
               <i class="fas {{ item.estado_icon }}"></i>
-              <h2 class="mb-0">{{ orden.numero_orden }}</h2>
+              <h2 class="mb-0">{{ orden.solicitud.colonia.nombre|default:orden.numero_orden }}</h2>
             </div>
 
             <div class="card-body">
@@ -118,7 +119,7 @@
                 <div class="d-flex align-items-center mb-1">
                   <i class="fas fa-map-marker-alt me-2 text-primary"></i>
                   <strong>Colonia:</strong>&nbsp;
-                  <span>{{ orden.solicitud.colonia.nombre|default:'—' }}</span>
+                  <span>{{ orden.solicitud.colonia.nombre}}</span>
                 </div>
                 {% with solicitud=orden.solicitud %}
                   {% with colonia=solicitud.colonia %}
@@ -136,6 +137,9 @@
                     {% endwith %}
                   {% endwith %}
                 {% endwith %}
+                <div class="mb-2">
+                  <small class="text-muted">Orden:</small> <strong>{{ orden.numero_orden }}</strong>
+                </div>
               </div>
 
               <!-- Fechas -->

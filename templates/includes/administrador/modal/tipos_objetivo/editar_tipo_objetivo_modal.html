@@ -1,0 +1,162 @@
+<!-- Modal Editar Tipo de Objetivo -->
+<div class="modal fade modal-warning" id="editarTipoObjetivoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="formEditarTipoObjetivo" method="post" action="" novalidate>
+      {% csrf_token %}
+      <input type="hidden" id="tipoObjetivoIdEditar" name="tipo_objetivo_id">
+      
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-edit me-2"></i> Editar Tipo de Objetivo
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-12">
+              <!-- Grupo -->
+              <div class="mb-3">
+                <label for="grupoEditar" class="form-label fw-bold">
+                  Grupo <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="grupoEditar" name="grupo" required>
+                  <option value="">Seleccione un grupo</option>
+                  {% for grupo in grupos %}
+                    <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+                  {% endfor %}
+                </select>
+                <div id="errorGrupoEditar" class="text-danger small mt-2"></div>
+              </div>
+
+              <!-- Nombre -->
+              <div class="mb-3">
+                <label for="nombreEditar" class="form-label fw-bold">
+                  Nombre del Tipo de Objetivo <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="nombreEditar" name="nombre" 
+                       maxlength="200" minlength="3" required>
+                <div id="errorNombreEditar" class="text-danger small mt-2"></div>
+              </div>
+
+              <!-- Descripción -->
+              <div class="mb-3">
+                <label for="descripcionEditar" class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control" id="descripcionEditar" name="descripcion" 
+                          rows="3" maxlength="500"></textarea>
+                <div id="errorDescripcionEditar" class="text-danger small mt-2"></div>
+              </div>
+
+              <!-- Activo -->
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="activoEditar" name="activo">
+                <label class="form-check-label fw-bold" for="activoEditar">Activo</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="editarTipoObjetivoError" class="alert alert-danger d-none mt-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Actualizar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('editarTipoObjetivoModal');
+    const form = document.getElementById('formEditarTipoObjetivo');
+    const errorDiv = document.getElementById('editarTipoObjetivoError');
+
+    function limpiarErroresEditar() {
+      form.querySelectorAll('.is-invalid').forEach(input => input.classList.remove('is-invalid'));
+      form.querySelectorAll('.text-danger').forEach(div => div.textContent = '');
+      errorDiv.classList.add('d-none');
+    }
+
+    function mostrarErrorEditar(campo, mensaje) {
+      const idCampo = campo.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+      const errorElement = document.getElementById(`error${idCampo}Editar`);
+      const inputElement = document.getElementById(`${campo.toLowerCase()}Editar`);
+      
+      if (errorElement) errorElement.textContent = mensaje;
+      if (inputElement) inputElement.classList.add('is-invalid');
+    }
+
+    modal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      
+      // Obtener datos del botón
+      const id = button.getAttribute('data-id');
+      const nombre = button.getAttribute('data-nombre');
+      const descripcion = button.getAttribute('data-descripcion');
+      const grupoId = button.getAttribute('data-grupo-id');
+      const activo = button.getAttribute('data-activo') === 'true';
+
+      // Configurar Formulario
+      form.action = "{% url 'administrador:editar_tipo_objetivo' 0 %}".replace('0', id);
+      document.getElementById('tipoObjetivoIdEditar').value = id;
+      document.getElementById('nombreEditar').value = nombre;
+      document.getElementById('descripcionEditar').value = descripcion || '';
+      document.getElementById('grupoEditar').value = grupoId || '';
+      document.getElementById('activoEditar').checked = activo;
+
+      limpiarErroresEditar();
+    });
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      limpiarErroresEditar();
+
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const oldText = btnSubmit.innerHTML;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Actualizando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modal).hide();
+          location.reload();
+        } else if (data.errors) {
+          for (const [field, messages] of Object.entries(data.errors)) {
+            if (field === '__all__' || field === 'non_field_errors') {
+              errorDiv.textContent = messages.join(' ');
+              errorDiv.classList.remove('d-none');
+            } else {
+              mostrarErrorEditar(field, messages.join(' '));
+            }
+          }
+        }
+      })
+      .catch(() => {
+        errorDiv.textContent = 'Error de conexión.';
+        errorDiv.classList.remove('d-none');
+      })
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = oldText;
+      });
+    });
+  });
+</script>

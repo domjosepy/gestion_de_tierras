@@ -7,6 +7,8 @@ from relevamiento.views import (
     coordinador_campo_dashboard,
     habilitar_formulario_relevamiento,
     finalizar_orden_campo,
+    subcoordinador_dashboard,
+    subcoordinador_upload,
 )
 
 app_name = "relevamiento"
@@ -22,6 +24,10 @@ urlpatterns = [
 
     # Dashboard del encuestador
     path("dashboard/", encuestador_dashboard, name="encuestador_dashboard"),
+
+    # Dashboard Subcoordinador
+    path("subcoordinador/dashboard/", subcoordinador_dashboard, name="subcoordinador_dashboard"),
+    path("subcoordinador/upload/", subcoordinador_upload, name="subcoordinador_upload"),
 
     # Crear relevamiento SOLO desde una orden de trabajo (OBLIGATORIO)
     path("orden/<int:orden_id>/nueva-encuesta/", formulario_desde_orden, name="formulario_desde_orden"),

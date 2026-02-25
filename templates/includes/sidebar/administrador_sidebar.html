@@ -2,17 +2,12 @@
 <li class="nav-item">
   <a class="nav-link" href="{% url 'administrador:administrador_dashboard' %}">
     <i class="fas fa-tachometer-alt me-2 text-primary"></i>
-    <span class="justify-content-center">Panel de Control</span>
+    <span class="justify-content-center">ADMINISTRADOR</span>
   </a>
 </li>
 
 <hr class="sidebar-divider">
 
-<div class="sidebar-heading text-uppercase small px-3">
-  Administración
-</div>
-
-<hr class="sidebar-divider">
 
 <div class="sidebar-heading text-uppercase small px-3">
   Módulos
@@ -61,6 +56,9 @@
                   {% if user.tiene_permiso or user.is_superuser %}
                     <a class="collapse-item" href="{% url 'administrador:listar_grupos' %}">
                       <i class="fas fa-users me-2"></i>Grupos
+                      </a>
+                    <a class="collapse-item" href="{% url 'administrador:listar_tipos_objetivo' %}">
+                      <i class="fas fa-bullseye me-2"></i>Tipos de Objetivo
                       </a>
                   {% endif %}
                   <a class="collapse-item" href="{% url 'administrador:listar_roles' %}">
