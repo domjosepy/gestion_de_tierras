@@ -8,16 +8,21 @@ from .models import ArchivoSubcoordinador
 from django.utils import timezone as tz
 from coordinacion.models import OrdenTrabajo
 from .decorators import encuestador_required, coordinador_campo_required
-from .models import Relevamiento
-from .forms import RelevamientoForm
+from .models import Relevamiento, Documento, limpiar_nombre_carpeta
+from .forms import RelevamientoForm, FotosRelevamientoForm
 from django.db import transaction
 from gerencia.models import SolicitudRelevamientoAudit, SolicitudRelevamiento
 from administrador.models import Grupo
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
+from django.core.files.base import ContentFile
+from PIL import Image
 import os
 import re
+import json
+import io
+
 
 
 # ─────────────────────────────────────────────
@@ -259,20 +264,149 @@ def resumen_relevamiento(request, pk):
 
 
 @login_required
+@encuestador_required
+def mis_encuestas(request):
+    """Vista para gestionar y filtrar encuestas/relevamientos del encuestador."""
+   
+    # Obtener todos los relevamientos del usuario actual
+    relevamientos = Relevamiento.objects.filter(
+        encuestador=request.user
+    ).select_related(
+        'colonia',
+        'distrito',
+        'departamento',
+        'orden_trabajo'
+    ).order_by('-creado_en')
+    
+    # Serializar relevamientos a JSON
+    relevamientos_data = []
+    for rel in relevamientos:
+        relevamientos_data.append({
+            'id': rel.id,
+            'fechaRegistro': rel.creado_en.strftime('%Y-%m-%d'),
+            'departamento': rel.departamento.nombre if rel.departamento else '',
+            'distrito': rel.distrito.nombre if rel.distrito else '',
+            'colonia': rel.colonia.nombre if rel.colonia else '',
+            'manzana': rel.manzana or 'Sin datos',
+            'loteSirt': rel.lote_sirt or 'Sin datos',
+            'condicionVivienda': rel.get_condicion_vivienda_display() if rel.condicion_vivienda else 'Sin datos',
+            'condicionEncuestado': rel.get_condicion_encuestado_display() if rel.condicion_encuestado else 'Sin datos',
+            'quien_es_el_ocupante': rel.quien_es_el_ocupante or 'Sin información',
+            'observaciones': rel.observacion_encuesta or 'Sin observaciones',
+            'formularioHabilitado': rel.orden_trabajo.formulario_habilitado if rel.orden_trabajo else False,
+        })
+    
+    context = {
+        'relevamientos': relevamientos,
+        'relevamientos_json': json.dumps(relevamientos_data, ensure_ascii=False),
+    }
+    return render(request, 'includes/relevamiento/encuestador/mis_encuestas.html', context)
+
+
+@login_required
 def agregar_fotos(request, pk):
-    """Vista simple para agregar fotos a un relevamiento (placeholder).
-
-    Actualmente muestra un formulario base o instrucciones. Se puede
-    ampliar para aceptar subida de múltiples imágenes.
+    """Vista para agregar fotos a un relevamiento en 4 categorías.
+    
+    Maneja la subida de múltiples archivos por categoría (recibo, vivienda,
+    documento, lote) y los guarda con un patrón de nombres específico:
+    relevamiento_{manzana}_{lote_sirt}_{tipo_foto}_{indice}.jpg
+    
+    Los archivos se organizan en subcarpetas dentro de la colonia correspondiente.
     """
+
     rel = get_object_or_404(Relevamiento, pk=pk)
-
+    
     if request.method == 'POST':
-        # Placeholder: en la implementación real procesar archivos aquí
-        messages.success(request, 'Fotos subidas (simulación).')
-        return redirect(reverse('relevamiento:resumen_relevamiento', kwargs={'pk': rel.pk}))
-
-    return render(request, 'relevamiento/agregar_fotos.html', {'relevamiento': rel})
+        form = FotosRelevamientoForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Mapeo de campos a tipo de foto
+            categorias = [
+                ('fotos_recibo', 'recibo'),
+                ('fotos_vivienda', 'vivienda'),
+                ('fotos_documento', 'ci'),
+                ('fotos_lote', 'lote'),
+            ]
+            
+            # Preparar datos para nombres de archivo
+            manzana = limpiar_nombre_carpeta(rel.manzana or 'sin_manzana')
+            lote_sirt = limpiar_nombre_carpeta(rel.lote_sirt or 'sin_lote')
+            
+            total_archivos = 0
+            
+            # Procesar cada categoría
+            for campo, tipo_foto in categorias:
+                archivos = request.FILES.getlist(campo)
+                
+                for indice, archivo in enumerate(archivos, start=1):
+                    try:
+                        # Determinar extensión del archivo
+                        ext = os.path.splitext(archivo.name)[1].lower()
+                        if not ext:
+                            ext = '.jpg'
+                        
+                        # Construir nombre del archivo según patrón
+                        # relevamiento_{manzana}_{lote_sirt}_{tipo_foto}_{indice}.jpg
+                        nombre_archivo = f"relevamiento_{manzana}_{lote_sirt}_{tipo_foto}_{indice}{ext}"
+                        
+                        # Convertir a JPG si es necesario (optimización opcional)
+                        if ext.lower() in ['.jpg', '.jpeg', '.png', '.gif']:
+                            # Abrir imagen con Pillow para validar y opcionalmente convertir
+                            try:
+                                img = Image.open(archivo)
+                                # Convertir a RGB si es necesario (para PNG con transparencia)
+                                if img.mode in ('RGBA', 'LA', 'P'):
+                                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                                    if img.mode == 'P':
+                                        img = img.convert('RGBA')
+                                    rgb_img.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                                    img = rgb_img
+                                
+                                # Guardar como JPG optimizado
+                                buffer = io.BytesIO()
+                                img.save(buffer, format='JPEG', quality=85, optimize=True)
+                                buffer.seek(0)
+                                
+                                # Crear objeto ContentFile
+                                content_file = ContentFile(buffer.read(), name=nombre_archivo)
+                            except Exception as img_error:
+                                # Si falla la conversión, usar el archivo original
+                                print(f"Error al procesar imagen {archivo.name}: {img_error}")
+                                archivo.seek(0)  # Resetear puntero del archivo
+                                content_file = ContentFile(archivo.read(), name=nombre_archivo)
+                        else:
+                            # Para otros tipos de archivo, usar directamente
+                            archivo.seek(0)
+                            content_file = ContentFile(archivo.read(), name=nombre_archivo)
+                        
+                        # Crear registro de Documento
+                        documento = Documento(
+                            relevamiento=rel,
+                            tipo=tipo_foto if tipo_foto in ['recibo'] else 'otros',
+                            nombre_archivo=nombre_archivo
+                        )
+                        # Asignar el archivo procesado
+                        documento.archivo.save(nombre_archivo, content_file, save=True)
+                        
+                        total_archivos += 1
+                        
+                    except Exception as e:
+                        messages.warning(request, f'Error al procesar {archivo.name}: {str(e)}')
+                        continue
+            
+            if total_archivos > 0:
+                messages.success(request, f'Se subieron {total_archivos} foto(s) correctamente.')
+            else:
+                messages.info(request, 'No se seleccionaron archivos para subir.')
+            
+            return redirect(reverse('relevamiento:resumen_relevamiento', kwargs={'pk': rel.pk}))
+    else:
+        form = FotosRelevamientoForm()
+    
+    context = {
+        'form': form,
+        'relevamiento': rel,
+    }
+    return render(request, 'relevamiento/agregar_fotos.html', context)
 
 
 # ─────────────────────────────────────────────
@@ -654,5 +788,91 @@ def finalizar_orden_campo(request, orden_id):
             messages.error(request, f'Error al finalizar la orden: {str(e)}')
     
     return redirect('relevamiento:coordinador_dashboard')
+
+
+@login_required
+@coordinador_campo_required
+def detalle_relevamiento_coordinador(request, orden_id):
+    """
+    Vista detallada de relevamiento para coordinador de campo.
+    Muestra resumen por encuestador y subcoordinador.
+    """
+    orden = get_object_or_404(
+        OrdenTrabajo.objects.select_related(
+            'solicitud__colonia',
+            'coordinador_responsable'
+        ).prefetch_related(
+            'equipos_asignados__subcoordinadores',
+            'equipos_asignados__encuestadores'
+        ),
+        id=orden_id
+    )
+    
+    # Datos geográficos
+    datos_geo = _datos_geograficos_desde_orden(orden)
+    
+    # Personal asignado
+    subcoordinadores = []
+    encuestadores = []
+    for equipo in orden.equipos_asignados.all():
+        subcoordinadores.extend(equipo.subcoordinadores.all())
+        encuestadores.extend(equipo.encuestadores.all())
+    
+    # Eliminar duplicados manteniendo orden
+    subcoordinadores = list(dict.fromkeys(subcoordinadores))
+    encuestadores = list(dict.fromkeys(encuestadores))
+    
+    # Resumen por encuestador
+    encuestadores_stats = []
+    for encuestador in encuestadores:
+        # Contar encuestas en esta colonia por este encuestador
+        total_encuestas = Relevamiento.objects.filter(
+            encuestador=encuestador,
+            colonia=datos_geo['colonia']
+        ).count()
+        
+        # Contar fotos registradas por este encuestador en esta orden
+        total_fotos = Documento.objects.filter(
+            relevamiento__encuestador=encuestador,
+            relevamiento__orden_trabajo=orden,
+            tipo__in=['recibo', 'vivienda', 'documento', 'lote']
+        ).count()
+        
+        encuestadores_stats.append({
+            'encuestador': encuestador,
+            'total_encuestas': total_encuestas,
+            'total_fotos': total_fotos,
+        })
+    
+    # Resumen por subcoordinador
+    subcoordinadores_stats = []
+    for subcoordinador in subcoordinadores:
+        # Contar archivos subidos por este subcoordinador en esta orden
+        total_archivos = ArchivoSubcoordinador.objects.filter(
+            subido_por=subcoordinador,
+            orden_trabajo=orden
+        ).count()
+        
+        subcoordinadores_stats.append({
+            'subcoordinador': subcoordinador,
+            'total_archivos': total_archivos,
+        })
+    
+    # Total de solicitudes en la colonia
+    total_solicitudes = SolicitudRelevamiento.objects.filter(
+        colonia=datos_geo['colonia']
+    ).count() if datos_geo['colonia'] else 0
+    
+    context = {
+        'orden': orden,
+        'datos_geo': datos_geo,
+        'subcoordinadores': subcoordinadores,
+        'encuestadores': encuestadores,
+        'encuestadores_stats': encuestadores_stats,
+        'subcoordinadores_stats': subcoordinadores_stats,
+        'total_solicitudes': total_solicitudes,
+    }
+    
+    return render(request, 'includes/relevamiento/coordinador/detalle_relevamiento.html', context)
 
 

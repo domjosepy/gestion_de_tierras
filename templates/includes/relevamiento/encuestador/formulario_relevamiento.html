@@ -387,21 +387,21 @@
     <!-- BOTONES DE ACCIÓN -->
     <!-- ============================================================ -->
     <div class="card mb-4">
-      <div class="card-body d-flex justify-content-end gap-2">
+      <div class="card-body d-flex justify-content-between gap-2">
         {% if orden %}
-          <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+          <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger">
+            <i class="fas fa-cancel me-1"></i>Cerrar Formulario
           </a>
         {% elif relevamiento %}
-          <a href="{% url 'relevamiento:resumen_relevamiento' relevamiento.pk %}" class="btn btn-secondary">
+          <a href="{% url 'relevamiento:resumen_relevamiento' relevamiento.pk %}" class="btn btn-outline-danger">
             <i class="fas fa-times me-1"></i>Cancelar
           </a>
         {% else %}
-          <a href="/" class="btn btn-secondary">
+          <a href="/" class="btn btn-outline-danger">
             <i class="fas fa-times me-1"></i>Cancelar
           </a>
         {% endif %}
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-outline-primary">
           <i class="fas fa-save me-1"></i>Guardar
         </button>
       </div>

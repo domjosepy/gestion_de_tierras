@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Encuestas{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+  
+  <!-- Encabezado -->
+  <div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h2 class="h3 mb-0 text-primary fw-bold">
+      <i class="fas fa-clipboard-list me-2"></i>Mis Encuestas de Relevamiento
+    </h2>
+    <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-primary">
+      <i class="fas fa-arrow-left me-2"></i>Volver al inicio.
+    </a>
+  </div>
+
+  <!-- Tarjetas de Estadísticas -->
+  <div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-primary shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Encuestas</div>
+              <div class="h5 mb-0 fw-bold text-primary" id="totalCount">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-clipboard-list fa-2x text-primary opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-success shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-success text-uppercase mb-1">Encuestas Completas</div>
+              <div class="h5 mb-0 fw-bold text-success" id="completasCount">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-check-circle fa-2x text-success opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-info shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-info text-uppercase mb-1">Colonias Visitadas</div>
+              <div class="h5 mb-0 fw-bold text-info" id="coloniasCount">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-map-marked-alt fa-2x text-info opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-3">
+      <div class="card border-start-warning shadow h-100 py-2">
+        <div class="card-body">
+          <div class="row no-gutters align-items-center">
+            <div class="col me-2">
+              <div class="text-xs fw-bold text-warning text-uppercase mb-1">Resultados Filtrados</div>
+              <div class="h5 mb-0 fw-bold text-warning" id="resultCount">0</div>
+            </div>
+            <div class="col-auto">
+              <i class="fas fa-filter fa-2x text-warning opacity-50"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel de Filtros -->
+  <div class="card shadow mb-4">
+    <div class="card-header-secondary py-3">
+      <h6 class="m-0 fw-bold text-white">
+        <i class="fas fa-filter me-2"></i>Filtros Geográficos
+      </h6>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-globe-americas me-1 text-primary"></i>
+            Departamento
+          </label>
+          <select id="filterDepartamento" class="form-select">
+            <option value="">Todos los departamentos</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-map me-1 text-primary"></i>
+            Distrito
+          </label>
+          <select id="filterDistrito" class="form-select">
+            <option value="">Todos los distritos</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">
+            <i class="fas fa-map-marker-alt me-1 text-primary"></i>
+            Colonia
+          </label>
+          <select id="filterColonia" class="form-select">
+            <option value="">Todas las colonias</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de Resultados -->
+  <div class="card shadow">
+    <div class="card-header py-3">
+      <h6 class="m-0 fw-bold text-white">
+        <i class="fas fa-table me-2"></i>
+        Resultados
+      </h6>
+    </div>
+    
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="beautiful-table table-sm" id="dataTable">
+          <thead class="bg-light">
+            <tr>
+              <th style="width: 8%;">Fecha</th>
+              <th style="width: 12%;">Ubicación</th>
+              <th style="width: 14%;">Ocupante</th>
+              <th style="width: 11%;">Estado</th>
+              <th style="width: 38%;">Observaciones</th>
+              <th style="width: 17%;" class="text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Los datos se cargarán dinámicamente con JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="text-center py-5" style="display: none;">
+        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+        <h5 class="text-muted">No se encontraron resultados</h5>
+        <p class="text-muted">
+          Intente ajustar los filtros o agregue nuevas encuestas desde el inicio.
+        </p>
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-primary mt-3">
+          <i class="fas fa-arrow-left me-2"></i>Volver al inicio
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================================
+// DATOS REALES DESDE EL BACKEND
+// ============================================================================
+const relevamientosData = {{ relevamientos_json|safe }};
+
+// ============================================================================
+// VARIABLES GLOBALES
+// ============================================================================
+let allData = [];
+let filteredData = [];
+
+// ============================================================================
+// FUNCIONES DE UTILIDAD
+// ============================================================================
+
+function formatDate(dateString) {
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function truncateText(text, maxLength = 60) {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
+function getUniqueValues(data, key) {
+  return [...new Set(data.map(item => item[key]))].filter(v => v).sort();
+}
+
+// ============================================================================
+// FUNCIONES DE POBLACIÓN DE FILTROS
+// ============================================================================
+
+function populateFilters(data) {
+  const departamentos = getUniqueValues(data, 'departamento');
+  const distritos = getUniqueValues(data, 'distrito');
+  const colonias = getUniqueValues(data, 'colonia');
+  
+  const deptoSelect = document.getElementById('filterDepartamento');
+  const distSelect = document.getElementById('filterDistrito');
+  const coloniaSelect = document.getElementById('filterColonia');
+  
+  // Limpiar opciones existentes (excepto la primera)
+  deptoSelect.innerHTML = '<option value="">Todos los departamentos</option>';
+  distSelect.innerHTML = '<option value="">Todos los distritos</option>';
+  coloniaSelect.innerHTML = '<option value="">Todas las colonias</option>';
+  
+  // Poblar departamentos
+  departamentos.forEach(depto => {
+    const option = document.createElement('option');
+    option.value = depto;
+    option.textContent = depto;
+    deptoSelect.appendChild(option);
+  });
+  
+  // Poblar distritos
+  distritos.forEach(dist => {
+    const option = document.createElement('option');
+    option.value = dist;
+    option.textContent = dist;
+    distSelect.appendChild(option);
+  });
+  
+  // Poblar colonias
+  colonias.forEach(col => {
+    const option = document.createElement('option');
+    option.value = col;
+    option.textContent = col;
+    coloniaSelect.appendChild(option);
+  });
+}
+
+// ============================================================================
+// FUNCIÓN DE FILTRADO
+// ============================================================================
+
+function filterData() {
+  const deptoValue = document.getElementById('filterDepartamento').value;
+  const distValue = document.getElementById('filterDistrito').value;
+  const coloniaValue = document.getElementById('filterColonia').value;
+  
+  filteredData = allData.filter(item => {
+    const matchDepto = !deptoValue || item.departamento === deptoValue;
+    const matchDist = !distValue || item.distrito === distValue;
+    const matchColonia = !coloniaValue || item.colonia === coloniaValue;
+    
+    return matchDepto && matchDist && matchColonia;
+  });
+  
+  renderTable(filteredData);
+}
+
+// ============================================================================
+// FUNCIÓN DE RENDERIZADO DE TABLA
+// ============================================================================
+
+function renderTable(data) {
+  const tableBody = document.getElementById('tableBody');
+  const emptyState = document.getElementById('emptyState');
+  const resultCount = document.getElementById('resultCount');
+  
+  resultCount.textContent = data.length;
+  
+  if (data.length === 0) {
+    tableBody.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  
+  const rows = data.map(item => {
+    const fullObservaciones = item.observaciones || 'Sin observaciones';
+    const shortObservaciones = truncateText(fullObservaciones);
+    const needsTooltip = fullObservaciones.length > 60;
+    
+    return `
+      <tr>
+        <td class="text-nowrap">
+          <small>${formatDate(item.fechaRegistro)}</small>
+        </td>
+        <td>
+          <div class="small">
+            <strong class="text-primary">M:</strong> ${item.manzana} |
+            <strong class="text-secondary">L:</strong> ${item.loteSirt}
+          </div>
+          <div class="text-muted" style="font-size: 0.75rem;">
+            ${item.colonia}
+          </div>
+        </td>
+        <td>
+          <span class="small">
+            ${truncateText(item.quien_es_el_ocupante || 'Sin información', 35)}
+          </span>
+        </td>
+        <td>
+          <div class="d-flex flex-column gap-1">
+            <span class="badge bg-info text-white" style="font-size: 0.7rem;">
+              <i class="fas fa-home"></i> ${item.condicionVivienda}
+            </span>
+            <span class="badge bg-success text-white" style="font-size: 0.7rem;">
+              <i class="fas fa-user"></i> ${item.condicionEncuestado}
+            </span>
+          </div>
+        </td>
+        <td>
+          <span class="small" ${needsTooltip ? `data-bs-toggle="tooltip" data-bs-placement="top" title="${fullObservaciones}"` : ''}>
+            ${shortObservaciones}
+          </span>
+        </td>
+        <td class="text-center text-nowrap">
+          <a href="/relevamiento/${item.id}/fotos/agregar/" 
+             class="btn btn-info btn-sm me-1" 
+             title="Ver/Agregar Fotos">
+            <i class="fas fa-camera"></i>
+          </a>
+          ${item.formularioHabilitado ? 
+            `<a href="/relevamiento/${item.id}/editar/" 
+                class="btn btn-primary btn-sm" 
+                title="Editar Encuesta">
+              <i class="fas fa-pencil-alt"></i>
+            </a>` : 
+            `<button class="btn btn-secondary btn-sm" 
+                    disabled 
+                    title="Formulario deshabilitado">
+              <i class="fas fa-lock"></i>
+            </button>`
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  tableBody.innerHTML = rows;
+  
+  // Inicializar tooltips de Bootstrap
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+}
+
+// ============================================================================
+// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS
+// ============================================================================
+
+function updateStats(data) {
+  // Total de encuestas
+  document.getElementById('totalCount').textContent = data.length;
+  
+  // Encuestas completas (estado_entrevista === 'completa')
+  const completasCount = data.filter(item => 
+    item.condicionEncuestado === 'Titular' || item.condicionEncuestado === 'Titular'
+  ).length;
+  document.getElementById('completasCount').textContent = completasCount;
+  
+  // Colonias únicas
+  const coloniasUnicas = new Set(data.map(item => item.colonia).filter(c => c));
+  document.getElementById('coloniasCount').textContent = coloniasUnicas.size;
+}
+
+// ============================================================================
+// INICIALIZACIÓN
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Cargar datos desde el backend
+  allData = relevamientosData;
+  filteredData = allData;
+  
+  // Poblar filtros
+  populateFilters(allData);
+  
+  // Actualizar estadísticas
+  updateStats(allData);
+  
+  // Renderizar tabla inicial
+  renderTable(filteredData);
+  
+  // Agregar event listeners a los filtros
+  document.getElementById('filterDepartamento').addEventListener('change', filterData);
+  document.getElementById('filterDistrito').addEventListener('change', filterData);
+  document.getElementById('filterColonia').addEventListener('change', filterData);
+});
+</script>
+{% endblock %}

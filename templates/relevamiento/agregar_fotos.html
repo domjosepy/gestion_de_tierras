@@ -6,24 +6,133 @@
 {% block content %}
 <div class="container mt-4">
   <div class="card">
-    <div class="card-header">
-      <h4>Agregar Fotos — Relevamiento #{{ relevamiento.pk }}</h4>
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">
+        <i class="fas fa-camera me-2"></i>
+        Agregar Fotos — Relevamiento #{{ relevamiento.pk }}
+      </h4>
     </div>
     <div class="card-body">
-      <p>Suba las fotos relacionadas con este relevamiento.</p>
-      <!-- Placeholder: reemplazar por formulario de subida de archivos -->
-      <form method="post" enctype="multipart/form-data">
+      <div class="alert alert-info mb-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Instrucciones:</strong> Puede seleccionar múltiples fotos de su galería o usar la cámara directamente para cada categoría.
+        <br><small class="text-muted">Colonia: {{ relevamiento.colonia }} | Manzana: {{ relevamiento.manzana|default:"N/A" }} | Lote SIRT: {{ relevamiento.lote_sirt|default:"N/A" }}</small>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" id="formFotos">
         {% csrf_token %}
-        <div class="mb-3">
-          <label class="form-label">Seleccionar archivos</label>
-          <input type="file" name="fotos" class="form-control" multiple>
+        
+        <!-- Sección: Fotos de Recibo -->
+        <div class="mb-4 p-3 border rounded bg-light">
+          <h5 class="mb-3">
+            <i class="fas fa-receipt text-primary me-2"></i>
+            Fotos de Recibo
+          </h5>
+          <div class="mb-3">
+            {{ form.fotos_recibo }}
+            <small class="form-text text-muted d-block mt-1">
+              Seleccione uno o varios archivos de recibos (servicios, impuestos, etc.)
+            </small>
+          </div>
         </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary" type="submit">Subir fotos</button>
-          <a href="{% url 'relevamiento:resumen_relevamiento' relevamiento.pk %}" class="btn btn-secondary">Volver</a>
+
+        <!-- Sección: Fotos de Vivienda -->
+        <div class="mb-4 p-3 border rounded bg-light">
+          <h5 class="mb-3">
+            <i class="fas fa-home text-success me-2"></i>
+            Fotos de Vivienda
+          </h5>
+          <div class="mb-3">
+            {{ form.fotos_vivienda }}
+            <small class="form-text text-muted d-block mt-1">
+              Fotografías de la vivienda principal y construcciones
+            </small>
+          </div>
+        </div>
+
+        <!-- Sección: Fotos de Documento de Identidad -->
+        <div class="mb-4 p-3 border rounded bg-light">
+          <h5 class="mb-3">
+            <i class="fas fa-id-card text-warning me-2"></i>
+            Fotos de Documento de Identidad
+          </h5>
+          <div class="mb-3">
+            {{ form.fotos_documento }}
+            <small class="form-text text-muted d-block mt-1">
+              Fotografías de cédula de identidad, RUC u otros documentos oficiales
+            </small>
+          </div>
+        </div>
+
+        <!-- Sección: Fotos del Lote -->
+        <div class="mb-4 p-3 border rounded bg-light">
+          <h5 class="mb-3">
+            <i class="fas fa-map-marked-alt text-danger me-2"></i>
+            Fotos del Lote
+          </h5>
+          <div class="mb-3">
+            {{ form.fotos_lote }}
+            <small class="form-text text-muted d-block mt-1">
+              Fotografías generales del terreno, cultivos, límites, etc.
+            </small>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between gap-2 mt-4">
+          <a href="{% url 'relevamiento:resumen_relevamiento' relevamiento.pk %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver
+          </a>
+          <button class="btn btn-primary btn-lg" type="submit" id="btnSubir">
+            <i class="fas fa-cloud-upload-alt me-2"></i>Subir Fotos
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<script>
+// Mostrar contador de archivos seleccionados
+document.addEventListener('DOMContentLoaded', function() {
+  const fileInputs = document.querySelectorAll('input[type="file"]');
+  
+  fileInputs.forEach(input => {
+    input.addEventListener('change', function() {
+      const numFiles = this.files.length;
+      const parent = this.closest('.mb-3');
+      
+      // Remover mensaje anterior si existe
+      const existingMsg = parent.querySelector('.file-count-msg');
+      if (existingMsg) {
+        existingMsg.remove();
+      }
+      
+      // Agregar nuevo mensaje
+      if (numFiles > 0) {
+        const msg = document.createElement('div');
+        msg.className = 'file-count-msg alert alert-success alert-sm mt-2 py-1 px-2';
+        msg.innerHTML = `<i class="fas fa-check-circle me-1"></i>${numFiles} archivo(s) seleccionado(s)`;
+        parent.appendChild(msg);
+      }
+    });
+  });
+  
+  // Validar al menos un archivo antes de enviar
+  document.getElementById('formFotos').addEventListener('submit', function(e) {
+    const allInputs = Array.from(fileInputs);
+    const hasFiles = allInputs.some(input => input.files.length > 0);
+    
+    if (!hasFiles) {
+      e.preventDefault();
+      alert('Por favor seleccione al menos una foto antes de enviar.');
+      return false;
+    }
+    
+    // Deshabilitar botón para evitar doble envío
+    const btnSubir = document.getElementById('btnSubir');
+    btnSubir.disabled = true;
+    btnSubir.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Subiendo...';
+  });
+});
+</script>
 {% endblock %}

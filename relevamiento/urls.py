@@ -10,6 +10,8 @@ from relevamiento.views import (
     subcoordinador_dashboard,
     subcoordinador_upload,
     agregar_fotos,
+    mis_encuestas,
+    detalle_relevamiento_coordinador,
 )
 
 app_name = "relevamiento"
@@ -21,10 +23,13 @@ urlpatterns = [
          habilitar_formulario_relevamiento, name="habilitar_formulario"),
     path("coordinador-campo/orden/<int:orden_id>/finalizar/", 
          finalizar_orden_campo, name="finalizar_orden_campo"),
+    path("coordinador-campo/orden/<int:orden_id>/detalle/",
+         detalle_relevamiento_coordinador, name="detalle_relevamiento_coordinador"),
 
 
     # Dashboard del encuestador
     path("dashboard/", encuestador_dashboard, name="encuestador_dashboard"),
+    path("mis-encuestas/", mis_encuestas, name="mis_encuestas"),
 
     # Dashboard Subcoordinador
     path("subcoordinador/dashboard/", subcoordinador_dashboard, name="subcoordinador_dashboard"),
