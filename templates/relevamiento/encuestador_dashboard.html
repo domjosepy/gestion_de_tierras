@@ -113,6 +113,10 @@
             </div>
 
             <div class="card-body">
+              <div class="d-flex align-items-center justify-content-end m-2">
+                <i class="fas fa-hashtag me-2 text-secondary"></i>
+                  <strong>Orden:</strong><small>{{ orden.numero_orden }}</small>
+                </div>
 
               <!-- Info de la solicitud -->
               <div class="inner-subsection mb-3">
@@ -137,9 +141,7 @@
                     {% endwith %}
                   {% endwith %}
                 {% endwith %}
-                <div class="mb-2">
-                  <small class="text-muted">Orden:</small> <strong>{{ orden.numero_orden }}</strong>
-                </div>
+                
               </div>
 
               <!-- Fechas -->
@@ -169,7 +171,7 @@
                     <small class="fw-semibold">{{ item.relevamientos_count }}/{{ item.meta_encuestas }}</small>
                   </div>
                   <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-primary" role="progressbar"
+                    <div class="progress-bar bg-success  progress-bar-striped progress-bar-animated" role="progressbar"
                          style="width: {{ item.progreso_percent }}%;"
                          aria-valuenow="{{ item.progreso_percent }}"
                          aria-valuemin="0" aria-valuemax="100">

@@ -50,6 +50,10 @@
             <td class="read-only-field">{{ relevamiento.mejoras|join:", " }}</td>
           </tr>
           <tr>
+            <th>Ocupante</th>
+            <td class="read-only-field">{{ relevamiento.quien_es_el_ocupante|default:"Sin Informacion" }}</td>
+          </tr>
+          <tr>
             <th>Estado entrevista</th>
             <td class="read-only-field">{{ relevamiento.get_estado_entrevista_display }}</td>
           </tr>
@@ -62,9 +66,14 @@
     </div>
 
     <div class="card-body d-flex justify-content-between gap-2">
-      <a href="{% url 'relevamiento:edit' relevamiento.pk %}" class="btn btn-primary">
-        <i class="fas fa-edit me-1"></i>Editar
-      </a>
+      <div>
+        <a href="{% url 'relevamiento:edit' relevamiento.pk %}" class="btn btn-primary">
+          <i class="fas fa-edit me-1"></i>Editar
+        </a>
+        <a href="{% url 'relevamiento:agregar_fotos' relevamiento.pk %}" class="btn btn-outline-primary ms-2">
+          <i class="fas fa-camera me-1"></i>Agregar Fotos
+        </a>
+      </div>
       <a href="/" class="btn btn-secondary">Volver</a>
     </div>
   </div>

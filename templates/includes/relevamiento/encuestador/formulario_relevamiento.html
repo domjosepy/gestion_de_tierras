@@ -40,15 +40,7 @@
       <div class="card-header position-relative">
         <i class="fas fa-clipboard-list"></i>
         <h2 class="mb-0">{{ title }}</h2>
-        {% if relevamiento %}
-          <span class="mode-badge edit-mode ms-auto">
-            <i class="fas fa-pencil-alt me-1"></i>Edición
-          </span>
-        {% else %}
-          <span class="mode-badge ms-auto">
-            <i class="fas fa-plus me-1"></i>Nuevo
-          </span>
-        {% endif %}
+
       </div>
     </div>
 
@@ -59,11 +51,6 @@
       <div class="card-header">
         <i class="fas fa-map-marker-alt"></i>
         <h2 class="mb-0">Datos Geográficos</h2>
-        {% if orden %}
-          <span class="badge bg-secondary ms-auto">
-            <i class="fas fa-lock me-1"></i>Tomados de la orden
-          </span>
-        {% endif %}
       </div>
       <div class="card-body">
 
@@ -98,10 +85,10 @@
             </div>
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold highlight-field p-1 rounded">
+            <label class="form-label fw-semibold">
               <i class="fas fa-tractor me-1 text-muted"></i>Colonia
             </label>
-            <div class="read-only-field highlight-field">
+            <div class="read-only-field">
               {{ datos_geo.colonia.nombre|default:'—' }}
             </div>
           </div>

@@ -9,6 +9,7 @@ from relevamiento.views import (
     finalizar_orden_campo,
     subcoordinador_dashboard,
     subcoordinador_upload,
+    agregar_fotos,
 )
 
 app_name = "relevamiento"
@@ -37,4 +38,5 @@ urlpatterns = [
 
     # Resumen / detalle
     path("<int:pk>/", resumen_relevamiento, name="resumen_relevamiento"),
+    path("<int:pk>/fotos/agregar/", agregar_fotos, name="agregar_fotos"),
 ]

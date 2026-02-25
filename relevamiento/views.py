@@ -3,20 +3,21 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-
+from django.db.models import Count
+from .models import ArchivoSubcoordinador
+from django.utils import timezone as tz
 from coordinacion.models import OrdenTrabajo
 from .decorators import encuestador_required, coordinador_campo_required
 from .models import Relevamiento
 from .forms import RelevamientoForm
 from django.db import transaction
-from gerencia.models import SolicitudRelevamientoAudit
+from gerencia.models import SolicitudRelevamientoAudit, SolicitudRelevamiento
 from administrador.models import Grupo
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.decorators.http import require_POST
 import os
 import re
-    
 
 
 # ─────────────────────────────────────────────
@@ -242,7 +243,7 @@ def editar_encuesta_relevamiento(request, pk):
         'orden': orden,
         'datos_geo': datos_geo,
     }
-    return render(request, 'relevamiento/formulario_relevamiento.html', context)
+    return render(request, 'includes/relevamiento/encuestador/formulario_relevamiento.html', context)
 
 
 # ─────────────────────────────────────────────
@@ -257,6 +258,23 @@ def resumen_relevamiento(request, pk):
     return render(request, 'includes/relevamiento/encuestador/resumen_relevamiento.html', {'relevamiento': rel})
 
 
+@login_required
+def agregar_fotos(request, pk):
+    """Vista simple para agregar fotos a un relevamiento (placeholder).
+
+    Actualmente muestra un formulario base o instrucciones. Se puede
+    ampliar para aceptar subida de múltiples imágenes.
+    """
+    rel = get_object_or_404(Relevamiento, pk=pk)
+
+    if request.method == 'POST':
+        # Placeholder: en la implementación real procesar archivos aquí
+        messages.success(request, 'Fotos subidas (simulación).')
+        return redirect(reverse('relevamiento:resumen_relevamiento', kwargs={'pk': rel.pk}))
+
+    return render(request, 'relevamiento/agregar_fotos.html', {'relevamiento': rel})
+
+
 # ─────────────────────────────────────────────
 # DASHBOARD COORDINADOR DE CAMPO
 # ─────────────────────────────────────────────
@@ -268,8 +286,6 @@ def coordinador_campo_dashboard(request):
     Dashboard para coordinadores de campo: muestra todas las órdenes donde
     el usuario está asignado como coordinador de campo.
     """
-    from gerencia.models import SolicitudRelevamiento
-    from django.db.models import Count
     
     # Filtrar órdenes donde el usuario es coordinador_campo en la solicitud
     ordenes = (
@@ -412,8 +428,6 @@ def subcoordinador_upload(request):
     Nombre: <departamento>_<distrito>_<colonia>_<fecha>.<extension>
     Extensiones permitidas: .zip, .rar, .7z, .tar, .tar.gz, .gz
     """
-    from .models import ArchivoSubcoordinador
-    from django.utils import timezone as tz
     
     file = request.FILES.get('archivo')
     colonia_id = request.POST.get('colonia_id')
@@ -551,6 +565,7 @@ def habilitar_formulario_relevamiento(request, orden_id):
                     if solicitud:
                         solicitud.estado = 'pendiente_cierre'
                         solicitud.save()
+
 
                     # Auditoría
                     try:

@@ -84,6 +84,7 @@
 
   {% if colonias %}
     <div class="row g-4">
+      
       {% for colonia in colonias %}
         <div class="col-lg-6 col-xl-4">
           <div class="card h-100">
@@ -106,6 +107,9 @@
             <div class="card-body">
               <!-- Bloque de información básica con íconos -->
               <div class="inner-subsection mb-3">
+                <h6 class="fw-bold text-muted mb-2">
+                  <i class="fas fa-map-marked-alt me-1"></i>Datos Geográficos
+                </h6>
                 {% with distrito=colonia.distrito %}
                   {% if distrito %}
                     <div class="d-flex align-items-center mb-1">
