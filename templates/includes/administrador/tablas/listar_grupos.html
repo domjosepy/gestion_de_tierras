@@ -116,7 +116,7 @@
                                     data-activo="{{ grupo.activo|yesno:'true,false' }}"
                                     data-usuarios='[{% for u in grupo.usuarios.all %}{{ u.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'
                                     data-roles='[{% for r in grupo.roles_asociados.all %}{{ r.id }}{% if not forloop.last %},{% endif %}{% endfor %}]'
-                                    data-tipos-objetivo='[{% for t in grupo.tipos_objetivo %}"{{ t }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                                    data-tipos-objetivo='[{% for t in grupo.tipos_objetivo_list.all %}"{{ t.nombre }}"{% if not forloop.last %},{% endif %}{% endfor %}]'>
                                     <i class="fas fa-edit"></i>
                                 </button>
 

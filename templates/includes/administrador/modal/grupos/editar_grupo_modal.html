@@ -186,9 +186,8 @@
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       limpiarErroresEditar();
+      // Nota: el campo "Tipos de Objetivo" fue eliminado; no procesamos tipos aquí.
 
-      const tiposArray = tiposInput ? tiposInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
-     
 
       const formData = new FormData(form);
       const btnSubmit = form.querySelector('button[type="submit"]');

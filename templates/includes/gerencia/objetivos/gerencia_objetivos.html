@@ -75,7 +75,7 @@
       <i class="fas fa-list me-2"></i>Objetivos del Año {{ anio_seleccionado }}
     </h5>
     <div>
-      <select id="selectorAnio" class="form-select form-select-sm" onchange="location.href='?anio=' + this.value">
+      <select id="selectorAnio" class="form-select form-select-sm bg-dark text-white" onchange="location.href='?anio=' + this.value">
         {% for anio in anios_disponibles %}
           <option value="{{ anio }}" {% if anio == anio_seleccionado %}selected{% endif %}>{{ anio }}</option>
         {% endfor %}
@@ -227,9 +227,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-  // Debug: Mostrar grupos disponibles al cargar
-  console.log('Grupos disponibles en contexto:', window.__GRUPOS_DISPONIBLES__);
-
+  
   // ============ FUNCIONES AUXILIARES ============
 
   /**
@@ -241,22 +239,15 @@
       return;
     }
     
-    console.log('Cargando tipos para grupo:', grupoId);
-    
     try {
       selectElement.innerHTML = '<option value="">Cargando...</option>';
       const url = `/gerencia/objetivos/tipos-por-grupo/${grupoId}/`;
-      console.log('Haciendo fetch a:', url);
-      
-      const response = await fetch(url);
-      console.log('Response status:', response.status);
-      
+      const response = await fetch(url);      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log('Datos recibidos:', data);
       
       if (data.success && data.tipos_objetivo && data.tipos_objetivo.length > 0) {
         selectElement.innerHTML = '<option value="">Seleccione un tipo</option>';
@@ -269,13 +260,11 @@
           }
           selectElement.appendChild(option);
         });
-        console.log(`${data.tipos_objetivo.length} tipos cargados exitosamente`);
+
       } else {
-        console.warn('No hay tipos disponibles para este grupo');
         selectElement.innerHTML = '<option value="">No hay tipos disponibles para este grupo</option>';
       }
     } catch (error) {
-      console.error('Error al cargar tipos de objetivo:', error);
       selectElement.innerHTML = '<option value="">Error al cargar tipos</option>';
       window.mostrarToast('Error al cargar tipos de objetivo: ' + error.message, 'danger');
     }
@@ -291,39 +280,34 @@
     e.preventDefault(); // Prevenir acción por defecto
     
     const grupoId = btn.dataset.grupoId;
-    console.log('Botón crear objetivo clickeado. Grupo ID:', grupoId);
-    console.log('Dataset completo:', btn.dataset);
     
     if (!grupoId) {
-      console.error('No se encontró grupo_id en el botón');
       window.mostrarToast('Error: No se pudo identificar el grupo', 'danger');
       return;
     }
     
-    document.getElementById('rapido_grupo_id').value = grupoId;
+    document.getElementById('grupo_id').value = grupoId;
 
     // Mostrar info del grupo si está en contexto
     const grupo = (window.__GRUPOS_DISPONIBLES__ || []).find(g => String(g.id) === String(grupoId));
-    console.log('Grupo encontrado en contexto:', grupo);
+
     
     if (grupo) {
-      const elNombre = document.getElementById('rapido_grupo_nombre');
-      const elUsuarios = document.getElementById('rapido_usuarios_count');
-      const elLider = document.getElementById('rapido_lider');
+      const elNombre = document.getElementById('grupo_nombre');
+      const elUsuarios = document.getElementById('usuarios_count');
+      const elLider = document.getElementById('lider');
       if (elNombre) elNombre.textContent = grupo.nombre || '-';
       if (elUsuarios) elUsuarios.textContent = grupo.usuarios_count || 0;
       if (elLider) elLider.textContent = grupo.lider_fullname || grupo.lider_username || '-';
     } else {
-      console.warn('No se encontró información del grupo en el contexto');
       // Intentar obtener el nombre del botón
       const grupoNombre = btn.dataset.grupoNombre || '-';
-      const elNombre = document.getElementById('rapido_grupo_nombre');
+      const elNombre = document.getElementById('grupo_nombre');
       if (elNombre) elNombre.textContent = grupoNombre;
     }
 
     // Cargar tipos vía endpoint existente
-    console.log('Llamando a actualizarTiposObjetivo...');
-    actualizarTiposObjetivo(grupoId, document.getElementById('rapido_tipo_objetivo'));
+    actualizarTiposObjetivo(grupoId, document.getElementById('tipo_objetivo'));
     
     // Abrir el modal manualmente
     const modal = new bootstrap.Modal(document.getElementById('modalCrearObjetivo'));
@@ -334,12 +318,10 @@
   const modalCrearEl = document.getElementById('modalCrearObjetivo');
   if (modalCrearEl) {
     modalCrearEl.addEventListener('shown.bs.modal', function() {
-      console.log('Modal mostrado. Verificando grupo_id...');
-      const grupoId = (document.getElementById('rapido_grupo_id') || {}).value;
-      const selectTipos = document.getElementById('rapido_tipo_objetivo');
+      const grupoId = (document.getElementById('grupo_id') || {}).value;
+      const selectTipos = document.getElementById('tipo_objetivo');
       
       if (grupoId && selectTipos && selectTipos.options.length <= 1) {
-        console.log('Recargando tipos para grupo:', grupoId);
         actualizarTiposObjetivo(grupoId, selectTipos);
       }
     });
@@ -409,13 +391,13 @@
         const editarFechaFinEl = document.getElementById('editar_fecha_fin');
         const editarMetaEl = document.getElementById('editar_meta');
         const editarAvanceEl = document.getElementById('editar_avance_actual');
-        const editarDescripcionEl = document.getElementById('editar_descripcion');
+        const editarObservacionEl = document.getElementById('editar_observacion');
         if (editarObjIdEl) editarObjIdEl.value = data.id;
         if (editarTipoEl) editarTipoEl.value = data.tipo_objetivo_id;
         if (editarFechaFinEl) editarFechaFinEl.value = data.fecha_fin;
         if (editarMetaEl) editarMetaEl.value = data.meta;
         if (editarAvanceEl) editarAvanceEl.value = data.avance_actual;
-        if (editarDescripcionEl) editarDescripcionEl.value = data.descripcion || '';
+        if (editarObservacionEl) editarObservacionEl.value = data.observacion || '';
         const editarActivoEl = document.getElementById('editar_activo');
         if (editarActivoEl) editarActivoEl.checked = !!data.activo;
         
@@ -424,7 +406,6 @@
         modal.show();
       }
     } catch (error) {
-      console.error('Error al obtener objetivo:', error);
       window.mostrarToast('Error al cargar los datos del objetivo', 'danger');
     }
   }
@@ -495,7 +476,6 @@
         modal.show();
       }
     } catch (error) {
-      console.error('Error al obtener objetivo:', error);
       window.mostrarToast('Error al cargar los datos del objetivo', 'danger');
     }
   }

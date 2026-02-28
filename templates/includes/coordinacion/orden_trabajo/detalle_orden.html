@@ -104,11 +104,9 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs fw-bold text-warning text-uppercase mb-1">
-                                Equipos en Campo
+                                Personal de Campo
                             </div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">
-                                {{ orden.equipos_asignados.count }}
-                            </div>
+                            
                             <div class="text-xs text-muted mt-1">
                                 {% for equipo in orden.equipos_asignados.all %}
                                     <span class="badge bg-warning text-dark me-1">{{ equipo.nombre }}</span>
@@ -247,7 +245,7 @@
             <div class="card shadow h-100">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 fw-bold text-white">
-                        <i class="fas fa-people-arrows me-2"></i>Equipo de Campo
+                        <i class="fas fa-people-arrows me-2"></i>Personal de Campo
                     </h6>
                 </div>
                 <div class="d-flex flex-wrap gap-4 mb-2 p-3">

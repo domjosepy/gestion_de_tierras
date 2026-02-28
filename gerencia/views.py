@@ -39,11 +39,11 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
         context['distritos'] = Distrito.objects.all()
         context['colonias'] = Colonia.objects.all()
 
-        # Agregar objetivos activos recientes para el dashboard
+        # Agregar objetivos activos recientes
         try:
             anio_actual = datetime.now().year
             objetivos_activos = Objetivo.objects.filter(anio=anio_actual, activo=True).select_related('grupo', 'tipo_objetivo').order_by('grupo__nombre')[:8]
-            # Preparar una lista ligera para la plantilla
+
             context['objetivos_activos'] = [
                 {
                     'id': o.id,
@@ -59,34 +59,39 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
         except Exception:
             context['objetivos_activos'] = []
 
-        # Agregar solicitudes relevantes para el dashboard (grupos específicos)
+        # Agregar solicitudes cuyo/ cuya Orden de Trabajo esté completada
         try:
-            grupos_filtro = Grupo.objects.filter(
-                Q(nombre__iexact='coordinacion y monitoreo') | Q(nombre__iexact='relevamiento') | Q(nombre__iexact='analisis')
-            )
-            solicitudes_qs = SolicitudRelevamiento.objects.select_related(
-                'colonia', 'grupo_asignado'
-            ).filter(grupo_asignado__in=grupos_filtro).order_by('-fecha_creacion')[:8]
+            ordenes_qs = OrdenTrabajo.objects.select_related('solicitud__colonia', 'coordinador_responsable').filter(estado='completada', activa=True).order_by('-fecha_creacion')[:8]
 
             solicitudes_dashboard = []
-            for sol in solicitudes_qs:
+            for orden in ordenes_qs:
+                sol = orden.solicitud
                 colonia = sol.colonia
-                distrito = colonia.distritos.first() if colonia and colonia.distritos.exists() else None
+                distrito = colonia.distritos.first() if colonia and hasattr(colonia, 'distritos') and colonia.distritos.exists() else None
                 departamento = distrito.departamento if distrito else None
+
+                # Conteos: encuestas asociadas a la orden y archivos (archivos subcoordinador + documentos/fotos de relevamientos)
+                encuestas_total = orden.relevamientos.count()
+                archivos_subcoor = orden.archivos_subcoordinador.count()
+                archivos_relevamientos = 0
+                for r in orden.relevamientos.all():
+                    if hasattr(r, 'documentos'):
+                        archivos_relevamientos += r.documentos.count()
+                    if hasattr(r, 'fotos'):
+                        archivos_relevamientos += r.fotos.count()
+
+                total_archivos = archivos_subcoor + archivos_relevamientos
 
                 solicitudes_dashboard.append({
                     'id': sol.id,
                     'colonia_nombre': colonia.nombre if colonia else 'Sin colonia',
-                    'colonia_codigo': colonia.codigo if colonia else '',
                     'distrito_nombre': distrito.nombre if distrito else 'Sin distrito',
                     'departamento_nombre': departamento.nombre if departamento else 'Sin departamento',
-                    'tipo': sol.tipo,
-                    'tipo_display': sol.get_tipo_display(),
-                    'prioridad': sol.prioridad,
-                    'prioridad_display': sol.get_prioridad_display(),
                     'grupo_nombre': sol.grupo_asignado.nombre if sol.grupo_asignado else '-',
-                    'observaciones': sol.observaciones,
-                    'fecha_creacion': sol.fecha_creacion,
+                    'fecha_cierre': orden.fecha_fin_real or sol.fecha_finalizacion,
+                    'encuestas_total': encuestas_total,
+                    'total_archivos': total_archivos,
+                    'estado_orden': orden.get_estado_display(),
                 })
 
             context['solicitudes_dashboard'] = solicitudes_dashboard
@@ -104,7 +109,7 @@ def lista_solicitudes_relevamiento(request):
     Lista todas las solicitudes de relevamiento con información de departamento y distrito
     """
     # Optimizar las consultas CON información de grupos
-    solicitudes = SolicitudRelevamiento.objects.select_related(
+    solicitudes = SolicitudRelevamiento.objects.exclude(grupo_asignado__nombre='ANALISIS').select_related(
         "colonia",
         "creado_por",
         "grupo_asignado",
@@ -388,13 +393,14 @@ def crear_solicitud_relevamiento(request, colonia_id):
     colonia = get_object_or_404(Colonia, pk=colonia_id)
 
     if request.method == "POST":
-        print(f"Datos POST recibidos: {dict(request.POST)}")
 
         # Verificar si ya existe solicitud activa ANTES de crear el formulario
         solicitudes_activas = SolicitudRelevamiento.objects.filter(
             colonia=colonia,
             estado__in=[estado for estado, _ in SolicitudRelevamiento.ESTADOS
-                        if estado not in ["rechazado", "finalizado"]]
+                        if not getattr(SolicitudRelevamiento, 'relevamiento_terminado', False)
+                          and not getattr(SolicitudRelevamiento, 'actualizacion_terminado', False)
+                            or estado not in ["rechazado", "finalizado"]]
         )
 
         if solicitudes_activas.exists():
@@ -792,7 +798,12 @@ def crear_objetivo(request):
             'message': 'El grupo seleccionado no existe o no está activo'
         }, status=404)
     
-    form = ObjetivoForm(request.POST, grupo=grupo)
+    # Soportar campo 'observacion' en los templates: mapear a 'descripcion' que usa el modelo/form
+    post_data = request.POST.copy()
+    if 'observacion' in post_data and 'descripcion' not in post_data:
+        post_data['descripcion'] = post_data.get('observacion', '')
+
+    form = ObjetivoForm(post_data, grupo=grupo)
     
     if form.is_valid():
         objetivo = form.save(commit=False)
@@ -827,7 +838,7 @@ def obtener_objetivo(request, pk):
         'anio': objetivo.anio,
         'meta': objetivo.meta,
         'avance_actual': objetivo.avance_actual,
-        'descripcion': objetivo.descripcion or '',
+        'observacion': objetivo.descripcion or '',
         'activo': objetivo.activo,
         'porcentaje_avance': objetivo.porcentaje_avance,
         'estado_semaforo': objetivo.estado_semaforo,
@@ -854,7 +865,11 @@ def editar_objetivo(request, pk):
         })
 
     # Pasar el grupo del objetivo existente al formulario
-    form = ObjetivoForm(request.POST, instance=objetivo, grupo=objetivo.grupo)
+    post_data = request.POST.copy()
+    if 'observacion' in post_data and 'descripcion' not in post_data:
+        post_data['descripcion'] = post_data.get('observacion', '')
+
+    form = ObjetivoForm(post_data, instance=objetivo, grupo=objetivo.grupo)
 
     if form.is_valid():
         form.save()

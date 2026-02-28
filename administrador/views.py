@@ -18,13 +18,12 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView, CreateView, ListView
 from core.notificaciones.utils import notificar_a_admins
-from administrador.models import Grupo
+from administrador.models import Grupo, TipoObjetivo
 
 # Local application imports
 from .forms import (CustomUserCreationForm, CustomPasswordChangeForm,
-                    SimpleUserCreationForm, RolForm, GrupoForm)
+                    SimpleUserCreationForm, RolForm, GrupoForm, TipoObjetivoForm)
 from .models import User, Rol
-
 # VISTA DE INICIO DE SESION PERSONALIZADA
 
 
@@ -476,7 +475,6 @@ def asignar_usuario_grupo(request):
 @login_required
 def listar_tipos_objetivo(request):
     """Lista todos los tipos de objetivo con sus grupos"""
-    from administrador.models import TipoObjetivo
     
     tipos_objetivo = TipoObjetivo.objects.select_related('grupo', 'creado_por').all()
     grupos = Grupo.objects.filter(activo=True).order_by('nombre')
@@ -492,8 +490,7 @@ def listar_tipos_objetivo(request):
 @login_required
 def crear_tipo_objetivo(request):
     """Crea un nuevo tipo de objetivo con validaciones AJAX"""
-    from administrador.forms import TipoObjetivoForm
-    
+
     form = TipoObjetivoForm(request.POST, request=request)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
@@ -539,8 +536,6 @@ def crear_tipo_objetivo(request):
 @login_required
 def editar_tipo_objetivo(request, tipo_objetivo_id):
     """Edita un tipo de objetivo existente con validaciones AJAX"""
-    from administrador.models import TipoObjetivo
-    from administrador.forms import TipoObjetivoForm
     
     tipo_objetivo = get_object_or_404(TipoObjetivo, id=tipo_objetivo_id)
     form = TipoObjetivoForm(request.POST, instance=tipo_objetivo, request=request)
@@ -588,7 +583,6 @@ def editar_tipo_objetivo(request, tipo_objetivo_id):
 @login_required
 def eliminar_tipo_objetivo(request, tipo_objetivo_id):
     """Elimina un tipo de objetivo (AJAX)"""
-    from administrador.models import TipoObjetivo
     
     tipo_objetivo = get_object_or_404(TipoObjetivo, id=tipo_objetivo_id)
     nombre = tipo_objetivo.nombre
@@ -618,8 +612,7 @@ def eliminar_tipo_objetivo(request, tipo_objetivo_id):
 @login_required
 def detalles_tipo_objetivo_api(request, tipo_objetivo_id):
     """Retorna los detalles de un tipo de objetivo en formato JSON"""
-    from administrador.models import TipoObjetivo
-    
+
     tipo_objetivo = get_object_or_404(TipoObjetivo, id=tipo_objetivo_id)
     
     data = {

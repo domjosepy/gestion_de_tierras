@@ -1,48 +1,162 @@
-<!-- Modal Crear Objetivo Rápido -->
-<div class="modal fade" id="modalCrearObjetivoRapido" tabindex="-1" aria-hidden="true">
+<!-- Modal Crear Tipo de Objetivo -->
+<div class="modal fade modal-primary" id="crearTipoObjetivoModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title">Crear Objetivo (Rápido)</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <form id="formCrearObjetivoRapido">
-        {% csrf_token %}
-        <input type="hidden" id="rapido_grupo_id" name="grupo">
+    <form id="formCrearTipoObjetivo" method="post" action="" novalidate>
+      {% csrf_token %}
+      <input type="hidden" id="tipoObjetivoIdCrear" name="tipo_objetivo_id">
+      
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-plus me-2"></i> Crear Tipo de Objetivo
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
         <div class="modal-body">
-          <div class="mb-2">
-            <strong>Usuarios asignados:</strong> <span id="rapido_usuarios_count">0</span>
-          </div>
-          <div class="mb-2">
-            <strong>Líder:</strong> <span id="rapido_lider">-</span>
+          <div class="row">
+            <div class="col-12">
+              <!-- Grupo -->
+              <div class="mb-3">
+                <label for="grupoCrear" class="form-label fw-bold">
+                  Grupo <span class="text-danger">*</span>
+                </label>
+                <select class="form-select" id="grupoCrear" name="grupo" required>
+                  <option value="">Seleccione un grupo</option>
+                  {% for grupo in grupos %}
+                    <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+                  {% endfor %}
+                </select>
+                <div id="errorGrupoCrear" class="text-danger small mt-2"></div>
+              </div>
+
+              <!-- Nombre -->
+              <div class="mb-3">
+                <label for="nombreCrear" class="form-label fw-bold">
+                  Nombre del Tipo de Objetivo <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="nombreCrear" name="nombre" 
+                       maxlength="200" minlength="3" required>
+                <div id="errorNombreCrear" class="text-danger small mt-2"></div>
+              </div>
+
+              <!-- Descripción -->
+              <div class="mb-3">
+                <label for="descripcionCrear" class="form-label fw-bold">Descripción</label>
+                <textarea class="form-control" id="descripcionCrear" name="descripcion" 
+                          rows="3" maxlength="500"></textarea>
+                <div id="errorDescripcionCrear" class="text-danger small mt-2"></div>
+              </div>
+
+              <!-- Activo -->
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input" type="checkbox" id="activoCrear" name="activo">
+                <label class="form-check-label fw-bold" for="activoCrear">Activo</label>
+              </div>
+            </div>
           </div>
 
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Tipo de Objetivo <span class="text-danger">*</span></label>
-              <select id="rapido_tipo_objetivo" name="tipo_objetivo" class="form-select" required>
-                <option value="">Seleccione un tipo</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Fecha de Conclusión <span class="text-danger">*</span></label>
-              <input type="date" name="fecha_fin" id="rapido_fecha_fin" class="form-control" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Cantidad / Meta <span class="text-danger">*</span></label>
-              <input type="number" name="meta" id="rapido_meta" class="form-control" min="1" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Descripción (opcional)</label>
-              <textarea name="descripcion" id="rapido_descripcion" class="form-control" rows="3"></textarea>
-            </div>
-          </div>
+          <div id="crearTipoObjetivoError" class="alert alert-danger d-none mt-3"></div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Crear Objetivo</button>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-warning" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i> Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="fas fa-save me-1"></i> Crear
+          </button>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('crearTipoObjetivoModal');
+    const form = document.getElementById('formCrearTipoObjetivo');
+    const errorDiv = document.getElementById('crearTipoObjetivoError');
+
+    function limpiarErroresCrear() {
+      form.querySelectorAll('.is-invalid').forEach(input => input.classList.remove('is-invalid'));
+      form.querySelectorAll('.text-danger').forEach(div => div.textContent = '');
+      errorDiv.classList.add('d-none');
+    }
+
+    function mostrarErrorCrear(campo, mensaje) {
+      const idCampo = campo.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
+      const errorElement = document.getElementById(`error${idCampo}Crear`);
+      const inputElement = document.getElementById(`${campo.toLowerCase()}Crear`);
+      
+      if (errorElement) errorElement.textContent = mensaje;
+      if (inputElement) inputElement.classList.add('is-invalid');
+    }
+
+    modal.addEventListener('show.bs.modal', function(event) {
+      const button = event.relatedTarget;
+      
+      // Obtener datos del botón
+      const id = button.getAttribute('data-id');
+      const nombre = button.getAttribute('data-nombre');
+      const descripcion = button.getAttribute('data-descripcion');
+      const grupoId = button.getAttribute('data-grupo-id');
+      const activo = button.getAttribute('data-activo') === 'true';
+
+      // Configurar Formulario
+      form.action = "{% url 'administrador:crear_tipo_objetivo' %}";
+      document.getElementById('tipoObjetivoIdCrear').value = id;
+      document.getElementById('nombreCrear').value = nombre;
+      document.getElementById('descripcionCrear').value = descripcion || '';
+      document.getElementById('grupoCrear').value = grupoId || '';
+      document.getElementById('activoCrear').checked = activo;
+
+      limpiarErroresCrear();
+    });
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      limpiarErroresCrear();
+
+      const formData = new FormData(form);
+      const btnSubmit = form.querySelector('button[type="submit"]');
+      const oldText = btnSubmit.innerHTML;
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creando...';
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(modal).hide();
+          location.reload();
+        } else if (data.errors) {
+          for (const [field, messages] of Object.entries(data.errors)) {
+            if (field === '__all__' || field === 'non_field_errors') {
+              errorDiv.textContent = messages.join(' ');
+              errorDiv.classList.remove('d-none');
+            } else {
+              mostrarErrorCrear(field, messages.join(' '));
+            }
+          }
+        }
+      })
+      .catch(() => {
+        errorDiv.textContent = 'Error de conexión.';
+        errorDiv.classList.remove('d-none');
+      })
+      .finally(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = oldText;
+      });
+    });
+  });
+</script>

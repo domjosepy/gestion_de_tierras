@@ -282,14 +282,16 @@ class ColoniaListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         # Anotar cada colonia con el conteo de solicitudes activas
+        # Definir estados activos (todos menos 'rechazado' y 'finalizado')
+        estados_activos = [estado for estado, _ in SolicitudRelevamiento.ESTADOS if estado not in ['rechazado', 'finalizado']]
+
         qs = Colonia.objects.annotate(
             num_solicitudes_activas=Count(
                 'solicitudes_relevamiento',
-                filter=Q(
-                    solicitudes_relevamiento__estado__in=[
-                        estado for estado, _ in SolicitudRelevamiento.ESTADOS
-                        if estado not in ["rechazado", "finalizado"]
-                    ]
+                filter=(
+                    Q(solicitudes_relevamiento__estado__in=estados_activos) &
+                    Q(solicitudes_relevamiento__relevamiento_terminado=False) &
+                    Q(solicitudes_relevamiento__actualizacion_terminado=False)
                 )
             )
         ).prefetch_related(

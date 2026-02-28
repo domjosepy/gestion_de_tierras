@@ -755,27 +755,68 @@ def finalizar_orden_campo(request, orden_id):
                         nombre__icontains='ANALISIS',
                         activo=True
                     ).first()
-                    
+                    # PARA MEJOR ESCLARECIMIENTO DEL FLUJO, UNA VEZ QUE LA COLONIA SE TERMINA
+                    # 1. EL ESTADO PASA A FINALIZADO: EN ESTE ESTADO SE ENCUENTRA LA SOLICITUD 
+                    # CUANDO EL COORDINADOR DE CAMPO FINALIZA LA ORDEN DE TRABAJO, PERO ANTES 
+                    # DE REASIGNARLA AL GRUPO DE ANALISIS. EN ESTE ESTADO, LA SOLICITUD NO PUEDE SER 
+                    # REABIERTO POR EL COORDINADOR DE CAMPO, NI ASIGNADA A UN NUEVO EQUIPO DE CAMPO. 
+                    # SOLO EL GRUPO DE ANALISIS PUEDE VER LAS SOLICITUDES EN ESTADO FINALIZADO 
+                    # Y ASIGNARLAS A UN ANALISTA PARA SU PROCESAMIENTO.
                     if grupo_analisis:
-                        solicitud.estado = 'pendiente_asignacion_analista'
+                        solicitud.estado = 'finalizado'
+
+                        # Marcar la solicitud según su tipo como terminada
+                        if solicitud.tipo == SolicitudRelevamiento.TIPO_RELEVAMIENTO:
+                            solicitud.relevamiento_terminado = True
+                            
+                        elif solicitud.tipo == SolicitudRelevamiento.TIPO_ACTUALIZACION:
+                            solicitud.actualizacion_terminado = True
                         solicitud.grupo_asignado = grupo_analisis
                         solicitud.usuario_asignado = None
                         solicitud.save()
+                        # Si existen otras solicitudes para la misma colonia creadas
+                        # posteriormente a esta solicitud, marcarlas como actualización
+                        try:
+                            otras = SolicitudRelevamiento.objects.filter(
+                                colonia=solicitud.colonia
+                            ).exclude(pk=solicitud.pk).filter(fecha_creacion__gte=solicitud.fecha_creacion)
+
+                            for otra in otras:
+                                tipo_anterior = otra.tipo
+                                if tipo_anterior != SolicitudRelevamiento.TIPO_ACTUALIZACION:
+                                    otra.tipo = SolicitudRelevamiento.TIPO_ACTUALIZACION
+                                    otra.save()
+                                    # Registrar auditoría por el cambio de tipo
+                                    try:
+                                        SolicitudRelevamientoAudit.objects.create(
+                                            solicitud=otra,
+                                            campo='tipo',
+                                            valor_anterior=tipo_anterior,
+                                            valor_nuevo=SolicitudRelevamiento.TIPO_ACTUALIZACION,
+                                            cambiado_por=request.user,
+                                            comentario=f"Tipo marcado como 'actualizacion' al finalizar orden {orden.numero_orden}"
+                                        )
+                                    except Exception:
+                                        # No interrumpimos el flujo por fallo en auditoría
+                                        pass
+                        except Exception as e:
+                            messages.warning(request, f'No se pudo actualizar tipo de otras solicitudes: {str(e)}')
                         
                         # Registrar auditoría
                         SolicitudRelevamientoAudit.objects.create(
                             solicitud=solicitud,
                             campo='finalizacion_campo',
                             valor_anterior='en_ejecucion_campo',
-                            valor_nuevo='pendiente_asignacion_analista',
+                            valor_nuevo='finalizado',
                             cambiado_por=request.user,
                             comentario=f'Orden finalizada por coordinador de campo: {request.user.username}'
                         )
                         
-                        messages.success(
+                        messages.info(
                             request,
-                            f'Orden {orden.numero_orden} finalizada. Solicitud asignada a Análisis.'
+                            f'Orden {orden.numero_orden} finalizada.'
                         )
+                        
                     else:
                         messages.warning(
                             request,

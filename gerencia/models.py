@@ -5,7 +5,7 @@ from django.utils import timezone
 from administrador.models import Grupo, FlujoTrabajo, TipoObjetivo
 from django.db.models import Q
 from core.models import Colonia
-from django.db.models import Avg, F, ExpressionWrapper, DurationField
+from django.db.models import Avg
 
 User = settings.AUTH_USER_MODEL
 
@@ -90,6 +90,7 @@ class SolicitudRelevamiento(models.Model):
         related_name="solicitudes_relevamiento",
         verbose_name="Colonia"
     )
+
     tipo = models.CharField(
         max_length=20,
         choices=TIPOS,
@@ -131,6 +132,19 @@ class SolicitudRelevamiento(models.Model):
     motivo_rechazo = models.TextField(
         blank=True,
         verbose_name="Motivo de rechazo"
+    )
+
+      # Indicador booleano adicional para marcar el relevamiento como terminado (útil para reportes y filtros)
+    relevamiento_terminado = models.BooleanField(
+        default=False,
+        verbose_name="Relevamiento Terminado",
+        help_text="Marca si el relevamiento fue terminado o completado."
+    )
+    # Indicador booleano adicional para marcar la actualización como terminada (útil para reportes y filtros)
+    actualizacion_terminado = models.BooleanField(
+        default=False,
+        verbose_name="Actualización Terminada",
+        help_text="Marca si la actualización fue terminada o completada."
     )
 
     # ASIGNACIÓN DINÁMICA

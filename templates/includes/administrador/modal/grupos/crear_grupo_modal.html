@@ -34,15 +34,7 @@
                 <small class="text-muted">Opcional. Mínimo 10 caracteres si se proporciona.</small>
               </div>
 
-              <!-- Tipos de Objetivo -->
-              <div class="mb-3">
-                <label for="tipos_objetivo_input" class="form-label fw-bold">Tipos de Objetivo</label>
-                <input type="text" class="form-control" id="tipos_objetivo_input" 
-                       placeholder="Ej: Relevamiento, SIG, Análisis">
-                <input type="hidden" id="tipos_objetivo" name="tipos_objetivo">
-                <div id="errorTiposObjetivo" class="text-danger small mt-2"></div>
-                <small class="text-muted">Ingrese los tipos de objetivo separados por comas (opcional).</small>
-              </div>
+              <!-- (Eliminado campo 'Tipos de Objetivo') -->
 
               <!-- Color y Líder -->
               <div class="row">
@@ -199,10 +191,7 @@
       e.preventDefault();
       limpiarErroresGrupo();
 
-      // Convertir tipos_objetivo de texto a JSON array
-      const tiposInput = document.getElementById('tipos_objetivo_input').value.trim();
-      const tiposArray = tiposInput ? tiposInput.split(',').map(t => t.trim()).filter(t => t !== '') : [];
-      document.getElementById('tipos_objetivo').value = JSON.stringify(tiposArray);
+      // (Eliminado manejo de 'Tipos de Objetivo')
 
       const formData = new FormData(formGrupo);
       const btnSubmit = formGrupo.querySelector('button[type="submit"]');

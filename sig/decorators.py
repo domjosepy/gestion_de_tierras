@@ -10,6 +10,10 @@ def requiere_ser_sig(view_func):
     Decorador que verifica si el usuario pertenece al grupo SIG
     """
     def check_sig(user):
+        # Permitir siempre al superuser
+        if user.is_authenticated and user.is_superuser:
+            return True
+
         # Usamos grupos_pertenece (related_name del modelo Grupo)
         # Filtramos por grupos que contengan 'SIG' en el nombre
         if user.is_authenticated and user.grupos_pertenece.filter(nombre__icontains='SIG').exists():

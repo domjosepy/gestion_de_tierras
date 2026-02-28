@@ -210,10 +210,9 @@ def generar_orden_view(request, solicitud_id):
                 # Guardar cambios en solicitud (el método asignar_relevadores ya hace save, pero por si acaso)
                 solicitud.save()
 
-                # 4. Crear equipo de relevamiento (opcional, pero útil)
                 if coordinador or subcoordinadores or encuestadores or choferes:
                     equipo = EquipoRelevamiento.objects.create(
-                        nombre=f"Equipo OT-{orden.numero_orden}",
+                        nombre=f"Equipo {orden.numero_orden}",
                         tipo='completo',
                         estado='planificado',
                         coordinador_campo=coordinador or request.user,
@@ -318,6 +317,7 @@ def detalle_orden(request, orden_id):
     choferes = User.objects.filter(
         groups__name__icontains='Rol_CHOFER', is_active=True
     ).order_by('username')
+    
 
     colonia = None
     colonia_relevamientos_count = 0

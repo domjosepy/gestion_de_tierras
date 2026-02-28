@@ -68,7 +68,7 @@
 
           <p class="text-muted">Gestione sus registros.</p>
           <a href="{% url 'gerencia:listar_departamentos' %}" class="btn btn-outline-primary btn-sm">
-            <i class="fa-solid fa-eye me-2"></i>Ver lista
+            <i class="fa-solid fa-eye me-2"></i>Ver Departamentos
           </a>
         </div>
       </div>
@@ -83,7 +83,7 @@
           <p class="text-muted">Total de distritos: {{ distritos.count }}</p>
           <p class="text-muted">Administre los distritos asociados.</p>
           <a href="{% url 'gerencia:listar_distritos' %}" class="btn btn-outline-success btn-sm">
-            <i class="fa-solid fa-eye me-2"></i>Ver lista
+            <i class="fa-solid fa-eye me-2"></i>Ver Distritos
           </a>
         </div>
       </div>
@@ -98,7 +98,7 @@
           <p class="text-muted">Total de colonias: {{ colonias.count }}</p>
           <p class="text-muted">Consulte o agregue colonias territoriales.</p>
           <a href="{% url 'gerencia:listar_colonias' %}" class="btn btn-outline-warning btn-sm">
-            <i class="fa-solid fa-eye me-2"></i>Ver lista
+            <i class="fa-solid fa-eye me-2"></i>Ver Colonias
           </a>
         </div>
       </div>
@@ -106,12 +106,12 @@
   </div>
 </div>
 
-<!-- Antecedentes de Solicitudes de Relevamiento -->
+<!-- Órdenes de Trabajo: mostrar sólo órdenes en estado "Completo" -->
 
 <div class="container py-4">
   <div class="d-flex justify-content-between align-items-center">
     <h2 class="text-warning fw-bold">
-      <i class="fa-solid fas fa-map-marked-alt me-2"></i>Solicitudes de Relevamiento
+      <i class="fa-solid fas fa-map-marked-alt me-2"></i>Colonias Relevadas
     </h2>
   </div>
 </div>
@@ -124,11 +124,13 @@
           <thead class="table-light">
             <tr>
               <th class="text-center">#</th>
-              <th>Datos Geográficos</th>
-              <th class="text-center">Tipo</th>
-              <th class="text-center">Prioridad</th>
-              <th class="text-center">Grupo</th>
-              <th class="text-center">Observación</th>
+              <th>Departamento</th>
+              <th>Distrito</th>
+              <th>Colonia</th>
+              <th class="text-center">Fecha cierre</th>
+              <th class="text-center">Encuestas</th>
+              <th class="text-center">Archivos</th>
+              <th class="text-center">Estado</th>
               <th class="text-center">Acciones</th>
             </tr>
           </thead>
@@ -137,27 +139,25 @@
               {% for s in solicitudes_dashboard %}
                 <tr>
                   <td class="text-center">{{ forloop.counter }}</td>
-                  <td>
-                    <div class="small text-muted">{{ s.colonia_nombre }}</div>
-                    <div class="small">{{ s.distrito_nombre }} - {{ s.departamento_nombre }}</div>
-                  </td>
-                  <td class="text-center small">{{ s.tipo_display }}</td>
-                  <td class="text-center small">{{ s.prioridad_display }}</td>
-                  <td class="text-center small">{{ s.grupo_nombre }}</td>
-                  <td class="small text-truncate" style="max-width:200px;">{{ s.observaciones|default:"-" }}</td>
+                  <td class="small">{{ s.departamento_nombre|default:"-" }}</td>
+                  <td class="small">{{ s.distrito_nombre|default:"-" }}</td>
+                  <td class="small">{{ s.colonia_nombre|default:"-" }}</td>
+                  <td class="text-center small">{{ s.fecha_cierre|default:"-" }}</td>
+                  <td class="text-center small">{{ s.encuestas_total|default:"0" }}</td>
+                  <td class="text-center small">{{ s.total_archivos|default:"0" }}</td>
+                  <td class="text-center small">{{ s.estado_orden|default:"-" }}</td>
                   <td class="text-center">
-                    <!-- Modal ver detalles -->
-                        <button class="btn btn-sm btn-info me-1" 
-                          onclick="verDetalleSolicitud({{ s.id }})"
-                          title="Ver detalles">
-                        <i class="fas fa-eye"></i>
+                    <button class="btn btn-sm btn-info me-1" 
+                      onclick="verDetalleSolicitud({{ s.id }})"
+                      title="Ver detalles">
+                    <i class="fas fa-eye"></i>
                     </button>
                   </td>
                 </tr>
               {% endfor %}
             {% else %}
               <tr>
-                <td colspan="7" class="text-center">No hay solicitudes recientes para estos grupos.</td>
+                <td colspan="10" class="text-center">No hay órdenes de trabajo completas para estos grupos.</td>
               </tr>
             {% endif %}
           </tbody>

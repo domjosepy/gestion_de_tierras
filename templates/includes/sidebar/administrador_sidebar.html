@@ -75,11 +75,85 @@
         </li>
         
     <div class="sidebar-heading">Módulos</div>
+    <!-- Subitem: Dashboards de módulos -->
     <li class="nav-item">
-      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAnalisis" aria-expanded="false" aria-controls="collapseAnalisis" title="Análisis">
-        <i class="fas fa-chart-bar"></i>
-        <span>Análisis</span>
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseDashboardsGerencia" aria-expanded="false" aria-controls="collapseDashboards" title="Dashboards de Módulos">
+        <i class="fas fa-th-large"></i>
+        <span>Gerencia</span>
       </a>
+      <div id="collapseDashboardsGerencia" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'gerencia:gerente_dashboard' %}">
+            <i class="fas fa-building me-2"></i>Gerencia
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">
+            <i class="fas fa-file-upload me-2"></i>Lista de Objetivos
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:lista_solicitudes_relevamiento' %}">
+            <i class="fas fa-globe me-2"></i>Solicitudes de Relevamiento
+          </a>
+          <hr>
+          <span class="collapse-header">Datos Geográficos</span>
+          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">
+            <i class="fas fa-tasks me-2"></i>Departamentos
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:listar_distritos' %}">
+            <i class="fas fa-tasks me-2"></i>Distritos
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:listar_colonias' %}">
+            <i class="fas fa-clipboard-list me-2"></i>Colonias
+          </a>
+        </div>
+      </div>
+    </li>
+    <!-- Subitem: Dashboards de módulos SIG-->
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseDashboardsSIG" aria-expanded="false" aria-controls="collapseDashboardsSIG" title="Dashboards de Módulos SIG">
+        <i class="fas fa-globe"></i>
+        <span>SIG</span>
+      </a>
+      <div id="collapseDashboardsSIG" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'sig:sig_dashboard' %}">
+            <i class="fas fa-globe me-2"></i>SIG
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">
+            <i class="fas fa-file-upload me-2"></i>Lista de Objetivos
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:lista_solicitudes_relevamiento' %}">
+            <i class="fas fa-globe me-2"></i>Solicitudes de Relevamiento
+          </a>
+          <hr>
+          <span class="collapse-header">Datos Geográficos</span>
+          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">
+            <i class="fas fa-tasks me-2"></i>Departamentos
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:listar_distritos' %}">
+            <i class="fas fa-tasks me-2"></i>Distritos
+          </a>
+          <a class="collapse-item" href="{% url 'gerencia:listar_colonias' %}">
+            <i class="fas fa-clipboard-list me-2"></i>Colonias
+          </a>
+        </div>
+      </div>
+    </li>
+
+
+
+    <li class="nav-item">
+      <a class="collapse-item" href="{% url 'sig:sig_dashboard' %}">
+            <i class="fas fa-globe me-2"></i>SIG
+          </a>
+          <a class="collapse-item" href="{% url 'digitalizador:digitalizador_dashboard' %}">
+            <i class="fas fa-file-upload me-2"></i>Digitalizador
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:coordinacion_dashboard' %}">
+            <i class="fas fa-tasks me-2"></i>Coordinación
+          </a>
+          <a class="collapse-item" href="{% url 'relevamiento:encuestador_dashboard' %}">
+            <i class="fas fa-clipboard-list me-2"></i>Relevamiento
+          </a>
+      
       <div id="collapseAnalisis" class="collapse">
         <div class="collapse-inner">
           <a class="collapse-item" href="#">Reportes</a>

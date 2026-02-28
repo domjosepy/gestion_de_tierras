@@ -1,5 +1,5 @@
 <!-- Modal Crear Objetivo Rápido (archivo separado) -->
-<div class="modal fade" id="modalCrearObjetivo" tabindex="-1" aria-hidden="true">
+<div class="modal fade modal-primary" id="modalCrearObjetivo" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
@@ -10,19 +10,19 @@
       </div>
       <form id="formCrearObjetivo">
         {% csrf_token %}
-        <input type="hidden" id="rapido_grupo_id" name="grupo_id">
+        <input type="hidden" id="grupo_id" name="grupo_id">
         <div class="modal-body">
           <!-- Información del Grupo -->
           <div class="alert alert-info mb-3">
             <div class="row">
               <div class="col-md-12 mb-2">
-                <strong>Grupo:</strong> <span id="rapido_grupo_nombre">-</span>
+                <strong>Grupo:</strong> <span id="grupo_nombre">-</span>
               </div>
               <div class="col-md-6">
-                <strong>Usuarios asignados:</strong> <span id="rapido_usuarios_count">0</span>
+                <strong>Usuarios asignados:</strong> <span id="usuarios_count">0</span>
               </div>
               <div class="col-md-6">
-                <strong>Líder:</strong> <span id="rapido_lider">-</span>
+                <strong>Líder:</strong> <span id="lider">-</span>
               </div>
             </div>
           </div>
@@ -30,36 +30,36 @@
           <!-- Campos del Objetivo -->
           <div class="row g-3">
             <div class="col-md-6">
-              <label for="rapido_tipo_objetivo" class="form-label">Tipo de Objetivo <span class="text-danger">*</span></label>
-              <select id="rapido_tipo_objetivo" name="tipo_objetivo" class="form-select" required>
+              <label for="tipo_objetivo" class="form-label">Tipo de Objetivo <span class="text-danger">*</span></label>
+              <select id="tipo_objetivo" name="tipo_objetivo" class="form-select" required>
                 <option value="">Cargando tipos...</option>
               </select>
               <div class="invalid-feedback"></div>
             </div>
             <div class="col-md-6">
-              <label for="rapido_fecha_fin" class="form-label">Fecha Final de la Meta <span class="text-danger">*</span></label>
-              <input type="date" name="fecha_fin" id="rapido_fecha_fin" class="form-control" required>
+              <label for="fecha_fin" class="form-label">Fecha Final de la Meta <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" required>
               <div class="invalid-feedback"></div>
             </div>
             <div class="col-md-6">
-              <label for="rapido_meta" class="form-label">Meta <span class="text-danger">*</span></label>
-              <input type="number" name="meta" id="rapido_meta" class="form-control" min="1" placeholder="Cantidad a alcanzar" required>
+              <label for="meta" class="form-label">Meta <span class="text-danger">*</span></label>
+              <input type="number" name="meta" id="meta" class="form-control" min="1" placeholder="Cantidad a alcanzar" required>
               <div class="invalid-feedback"></div>
             </div>
             <div class="col-md-6">
-              <label for="rapido_avance_actual" class="form-label">Avance Actual</label>
-              <input type="number" name="avance_actual" id="rapido_avance_actual" class="form-control" min="0" value="0" placeholder="0">
+              <label for="avance_actual" class="form-label">Avance Actual</label>
+              <input type="number" name="avance_actual" id="avance_actual" class="form-control" min="0" value="0" placeholder="0">
               <small class="text-muted">Opcional: dejar en 0 si es un objetivo nuevo</small>
             </div>
             <div class="col-12">
-              <label for="rapido_descripcion" class="form-label">Descripción</label>
-              <textarea name="descripcion" id="rapido_descripcion" class="form-control" rows="3" placeholder="Descripción o detalles adicionales (opcional)"></textarea>
+              <label for="observacion" class="form-label">Observación</label>
+              <textarea name="observacion" id="observacion" class="form-control" rows="3" placeholder="Descripción o detalles adicionales (opcional)"></textarea>
               <div class="invalid-feedback"></div>
             </div>
             <div class="col-12">
               <div class="form-check">
-                <input type="checkbox" name="activo" id="rapido_activo" class="form-check-input" checked>
-                <label class="form-check-label" for="rapido_activo">
+                <input type="checkbox" name="activo" id="activo" class="form-check-input" checked>
+                <label class="form-check-label" for="activo">
                   Objetivo Activo
                 </label>
               </div>

@@ -302,20 +302,13 @@ class Grupo(models.Model):
         return self.usuarios.filter(estado='ACTIVO', is_active=True)
 
     def tiene_tipo_objetivo(self, tipo):
-        """Verifica si el grupo tiene un tipo de objetivo específico"""
-        return tipo in (self.tipos_objetivo or [])
+        """Verifica si el grupo tiene un tipo de objetivo específico usando la relación TipoObjetivo."""
+        return self.tipos_objetivo_list.filter(nombre=tipo).exists()
 
     def save(self, *args, **kwargs):
         # Si no se especifica quién creó el grupo, usar el usuario actual
         if not self.creado_por and hasattr(self, '_current_user'):
             self.creado_por = self._current_user
-        
-        # Validar y asegurar que tipos_objetivo sea una lista
-        if self.tipos_objetivo is None:
-            self.tipos_objetivo = []
-        elif not isinstance(self.tipos_objetivo, list):
-            self.tipos_objetivo = []
-        
         super().save(*args, **kwargs)
 
 
