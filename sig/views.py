@@ -117,18 +117,18 @@ def sig_solicitudes(request):
     )
 
     # PARA MOSTRAR SOLICITUDES ASIGNADAS AL GRUPO DE COORDINACION.
+    # Solicitudes que llegaron a coordinación o que fueron digitalizadas por miembros del grupo SIG
     query_aprobadas = SolicitudRelevamiento.objects.filter(
-        # Digitalizadas por alguien del grupo SIG
-        Q(usuario_digitalizador__in=grupos_usuario.first().usuarios.all()) |
+        Q(asignaciones_digitalizador__usuario_asignado__in=grupos_usuario.first().usuarios.all()) |
         Q(estado='asignado_coordinacion', fecha_aprobacion_campo__isnull=False)
     ).filter(
         estado='asignado_coordinacion',
         fecha_aprobacion_campo__isnull=False
     ).select_related(
-        'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado', 'usuario_digitalizador'
+        'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
     ).prefetch_related(
         'colonia__distritos__departamento'
-    )
+    ).distinct()
 
     # Obtener solicitudes por estado
     estados = {
@@ -249,9 +249,9 @@ def detalle_solicitud(request, solicitud_id):
     auditorias_raw = solicitud.auditorias.all().select_related(
         'cambiado_por').order_by('-fecha')
     auditorias_procesadas = procesar_auditorias(auditorias_raw)
-    # Verificar si el usuario es líder del grupo asignado
+    # Verificar si el usuario es líder del grupo asignado (o superusuario)
     es_lider = False
-    if solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user:
+    if solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser):
         es_lider = True
 
     # Verificar qué acciones puede realizar (solo para líderes)
@@ -260,7 +260,7 @@ def detalle_solicitud(request, solicitud_id):
     puede_eliminar = False
     usuarios_grupo = []
 
-    if solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user:
+    if solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser):
         # Solo puede asignar en pendientes y rechazadas
         puede_asignar = solicitud.estado in [
             'pendiente_asignacion_sig', 'rechazado']
@@ -317,8 +317,8 @@ def asignar_usuario_solicitud(request, solicitud_id):
             'error': 'Solo se pueden asignar solicitudes en estados: Pendiente de asignación o Rechazado'
         }, status=400)
 
-    # Verificar que el usuario sea líder del grupo asignado
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar que el usuario sea líder del grupo asignado (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({
             'error': 'No es líder del grupo asignado'
         }, status=403)
@@ -342,15 +342,23 @@ def asignar_usuario_solicitud(request, solicitud_id):
         solicitud._auditoria_creada = True
         solicitud._cambiado_por = request.user
 
-        # Asignar TODOS los campos
-        solicitud.usuario_digitalizador = usuario
+        # Asignar usuario en la solicitud (usuario_asignado se mantiene) y guardar estado
         solicitud.usuario_asignado = usuario
         solicitud.asignado_por = request.user
         solicitud.fecha_asignacion = timezone.now()
-        # Cambiar el estado
         solicitud.estado = 'asignado_a_digitalizador'
-        # Guardar
         solicitud.save()
+
+        # Registrar asignación en app `sig` (historial específico)
+        try:
+            from sig.models import AsignacionDigitalizador
+            AsignacionDigitalizador.objects.create(
+                solicitud=solicitud,
+                registrado_por=request.user,
+                usuario_asignado=usuario
+            )
+        except Exception:
+            pass
 
         # Crear UN SOLO registro de auditoría combinado
         SolicitudRelevamientoAudit.objects.create(
@@ -390,8 +398,8 @@ def cambiar_usuario_solicitud(request, solicitud_id):
             'error': 'Solo se puede cambiar el digitalizador en estado "Asignado a digitalizador"'
         }, status=400)
 
-    # Verificar que el usuario sea líder del grupo asignado
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar que el usuario sea líder del grupo asignado (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({
             'error': 'No es líder del grupo asignado'
         }, status=403)
@@ -449,8 +457,8 @@ def eliminar_asignacion(request, solicitud_id):
             'error': 'Solo se puede eliminar asignación en estado "Asignado a digitalizador"'
         }, status=400)
 
-    # Verificar que el usuario sea líder del grupo asignado
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar que el usuario sea líder del grupo asignado (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({
             'error': 'No es líder del grupo asignado'
         }, status=403)
@@ -628,8 +636,8 @@ def aprobar_digitalizacion(request, solicitud_id):
         pk=solicitud_id
     )
 
-    # Verificar que el usuario sea líder del grupo SIG
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar que el usuario sea líder del grupo SIG (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({
             'success': False,
             'message': 'No tiene permisos para aprobar esta solicitud'
@@ -745,8 +753,8 @@ def rechazar_digitalizacion(request, solicitud_id):
         pk=solicitud_id
     )
 
-    # Verificar que el usuario sea líder del grupo SIG
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar que el usuario sea líder del grupo SIG (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({
             'success': False,
             'message': 'No tiene permisos para rechazar esta solicitud'
@@ -842,7 +850,7 @@ def devolver_para_correccion(request, solicitud_id):
 
     solicitud = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
-            'colonia', 'grupo_asignado', 'usuario_asignado', 'usuario_digitalizador'
+            'colonia', 'grupo_asignado', 'usuario_asignado'
         ),
         pk=solicitud_id
     )

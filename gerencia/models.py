@@ -156,14 +156,7 @@ class SolicitudRelevamiento(models.Model):
         related_name="solicitudes_actuales",
         verbose_name="Grupo asignado"
     )
-    usuario_digitalizador = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="solicitudes_digitalizadas",
-        verbose_name="Digitalizador asignado"
-    )
+
 
     usuario_analista = models.ForeignKey(
         User,
@@ -331,9 +324,12 @@ class SolicitudRelevamiento(models.Model):
         activas = total - rechazadas - finalizadas
 
         # Solicitudes por tipo
-        relevamientos = cls.objects.filter(tipo=cls.TIPO_RELEVAMIENTO).count()
-        actualizaciones = cls.objects.filter(
-            tipo=cls.TIPO_ACTUALIZACION).count()
+        # Contar como 'relevamientos' todas las solicitudes que tengan alguno de los
+        # indicadores de finalización: `relevamiento_terminado` o `actualizacion_terminado`.
+        relevamientos = cls.objects.filter(relevamiento_terminado=True).count()
+
+        # Mantener la métrica de actualizaciones por tipo para compatibilidad
+        actualizaciones = cls.objects.filter(tipo=cls.TIPO_ACTUALIZACION).count()
 
         return {
             'total': total,
@@ -814,14 +810,27 @@ class SolicitudRelevamiento(models.Model):
             raise ValidationError(
                 f"El usuario no pertenece al grupo {self.grupo_asignado}")
 
-        self.usuario_digitalizador = usuario
+        # Actualizar asignación en la solicitud (usuario_asignado sigue existiendo)
         self.usuario_asignado = usuario
         self.asignado_por = asignado_por
         self.ultima_asignacion_por = asignado_por
         self.fecha_asignacion = timezone.now()
         self.save()
 
-        # Registrar auditoría
+        # Registrar el evento en el nuevo modelo de sig (evitar import circular global)
+        try:
+            from sig.models import AsignacionDigitalizador
+            AsignacionDigitalizador.objects.create(
+                solicitud=self,
+                registrado_por=asignado_por,
+                usuario_asignado=usuario,
+                # fecha_asignacion se llena con auto_now_add
+            )
+        except Exception:
+            # Si por alguna razón no existe el modelo aun, continuar pero dejar auditoría
+            pass
+
+        # Registrar auditoría usando el mismo campo para trazabilidad histórica
         SolicitudRelevamientoAudit.objects.create(
             solicitud=self,
             campo='usuario_digitalizador',
@@ -942,7 +951,15 @@ class SolicitudRelevamiento(models.Model):
     def responsable_actual(self):
         """Obtener el responsable actual según el estado"""
         if "digitalizacion" in self.estado:
-            return self.usuario_digitalizador
+            # Intentar obtener la última asignación registrada en sig.AsignacionDigitalizador
+            try:
+                from sig.models import AsignacionDigitalizador
+                ultima = AsignacionDigitalizador.objects.filter(solicitud=self).select_related('usuario_asignado').order_by('-fecha_asignacion').first()
+                if ultima and ultima.usuario_asignado:
+                    return ultima.usuario_asignado
+            except Exception:
+                pass
+            return self.usuario_asignado
         elif "analisis" in self.estado or "analista" in self.estado:
             return self.usuario_analista
         elif "coordinacion" in self.estado:
@@ -954,7 +971,29 @@ class SolicitudRelevamiento(models.Model):
     @property
     def digitalizador_original(self):
         """Obtener el digitalizador original (para trazabilidad)"""
-        return self.usuario_digitalizador
+        try:
+            from sig.models import AsignacionDigitalizador
+            ultima = AsignacionDigitalizador.objects.filter(solicitud=self).select_related('usuario_asignado').order_by('-fecha_asignacion').first()
+            if ultima:
+                return ultima.usuario_asignado
+        except Exception:
+            pass
+        return None
+
+    @property
+    def usuario_digitalizador(self):
+        """Compatibilidad: obtener el usuario digitalizador más reciente registrado en `sig.AsignacionDigitalizador`.
+
+        Esto permite mantener plantillas y código que acceden a `solicitud.usuario_digitalizador`.
+        """
+        try:
+            from sig.models import AsignacionDigitalizador
+            ultima = AsignacionDigitalizador.objects.filter(solicitud=self).select_related('usuario_asignado').order_by('-fecha_asignacion').first()
+            if ultima:
+                return ultima.usuario_asignado
+        except Exception:
+            pass
+        return None
 
     @property
     def analista_original(self):

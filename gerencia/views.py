@@ -20,6 +20,7 @@ from core.models import Colonia, Departamento, Distrito
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit, Objetivo
 from gerencia.forms import CrearSolicitudRelevamientoForm, EditarSolicitudRelevamientoForm, ObjetivoForm
 from datetime import datetime
+from django.utils import timezone
 
 
 # MUESTRA LA VISTA DEL ADMINISTRADOR
@@ -326,13 +327,30 @@ def obtener_datos_solicitud(request, pk):
             'nombre_completo': f"{solicitud.usuario_asignado.first_name} {solicitud.usuario_asignado.last_name}".strip() or solicitud.usuario_asignado.username
         }
 
+    # Última asignación al digitalizador (guardada en app sig)
+    usuario_digitalizador_detalle = None
+    try:
+        from sig.models import AsignacionDigitalizador
+        ultima = AsignacionDigitalizador.objects.filter(solicitud=solicitud).select_related('usuario_asignado').order_by('-fecha_asignacion').first()
+        if ultima and ultima.usuario_asignado:
+            fecha_asig = timezone.localtime(ultima.fecha_asignacion) if ultima.fecha_asignacion else None
+            usuario_digitalizador_detalle = {
+                'id': ultima.usuario_asignado.id,
+                'username': ultima.usuario_asignado.username,
+                'nombre_completo': f"{ultima.usuario_asignado.first_name} {ultima.usuario_asignado.last_name}".strip() or ultima.usuario_asignado.username,
+                'fecha_asignacion': fecha_asig.strftime("%d/%m/%Y %H:%M") if fecha_asig else None
+            }
+    except Exception:
+        usuario_digitalizador_detalle = None
+
     # Obtener auditorías recientes (últimas 3)
     auditorias_recientes = solicitud.auditorias.all(
     ).select_related('cambiado_por')[:3]
     auditorias_data = []
     for auditoria in auditorias_recientes:
+        fecha_a = timezone.localtime(auditoria.fecha) if auditoria.fecha else None
         auditorias_data.append({
-            'fecha': auditoria.fecha.strftime("%d/%m/%Y %H:%M"),
+            'fecha': fecha_a.strftime("%d/%m/%Y %H:%M") if fecha_a else None,
             'cambiado_por': auditoria.cambiado_por.username if auditoria.cambiado_por else 'Sistema',
             'comentario': auditoria.comentario[:100] + '...' if auditoria.comentario and len(auditoria.comentario) > 100 else auditoria.comentario
         })
@@ -348,8 +366,8 @@ def obtener_datos_solicitud(request, pk):
             'estado': solicitud.estado,
             'estado_display': solicitud.get_estado_display(),
             'observaciones': solicitud.observaciones,
-            'fecha_creacion': solicitud.fecha_creacion.strftime("%d/%m/%Y %H:%M"),
-            'fecha_modificacion': solicitud.fecha_modificacion.strftime("%d/%m/%Y %H:%M"),
+            'fecha_creacion': timezone.localtime(solicitud.fecha_creacion).strftime("%d/%m/%Y %H:%M") if solicitud.fecha_creacion else None,
+            'fecha_modificacion': timezone.localtime(solicitud.fecha_modificacion).strftime("%d/%m/%Y %H:%M") if solicitud.fecha_modificacion else None,
             'creado_por': solicitud.creado_por.username if solicitud.creado_por else 'Desconocido',
             'motivo_rechazo': solicitud.motivo_rechazo,
         },
@@ -383,6 +401,7 @@ def obtener_datos_solicitud(request, pk):
         'auditorias_recientes': auditorias_data,
         'grupo_info': grupo_info_detalle,
         'usuario_info': usuario_info_detalle,
+        'usuario_digitalizador': usuario_digitalizador_detalle,
     }
 
     return JsonResponse(data)
@@ -455,7 +474,7 @@ def crear_solicitud_relevamiento(request, colonia_id):
 
                 if solicitud.estado == 'pendiente_asignacion_sig':
                     solicitud.usuario_asignado = None
-                    solicitud.usuario_digitalizador = None
+                    # El campo `usuario_digitalizador` ahora se registra en la app `sig` (AsignacionDigitalizador)
 
                 # GUARDAR ahora sí
                 solicitud.save()

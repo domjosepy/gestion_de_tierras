@@ -130,8 +130,8 @@
                                     <th class="text-center">#</th>
                                     <th>Datos Geográficos</th>
                                     <th>Estado</th>
-                                    <th>Fecha</th>
-                                    <th>Acciones</th>
+                                    <th class="text-center">Fecha</th>
+                                    <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -157,8 +157,8 @@
                                             {{ solicitud.get_estado_display }}
                                         </span>
                                     </td>
-                                    <td>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</td>
-                                    <td>
+                                    <td class="text-center">{{ solicitud.fecha_creacion|date:"d/m/Y" }}</td>
+                                    <td class="text-center">
                                         <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
                                            class="btn btn-sm btn-outline-info">
                                             <i class="fas fa-eye"></i>

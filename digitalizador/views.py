@@ -28,7 +28,7 @@ def digitalizador_dashboard(request):
     """
     # Obtener tareas donde el usuario es el digitalizador asignado
     tareas = SolicitudRelevamiento.objects.filter(
-        Q(usuario_digitalizador=request.user) | Q(
+        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
             usuario_asignado=request.user)
     ).filter(
         # Solo mostrar tareas que están en el flujo SIG
@@ -48,7 +48,7 @@ def digitalizador_dashboard(request):
     # OBTENER TAREAS ASIGNADAS A COORDINACIÓN QUE FUERON DIGITALIZADAS POR EL USUARIO
     # Esto muestra las tareas que el usuario digitalizó y que ahora están en coordinación
     tareas_coordinacion = SolicitudRelevamiento.objects.filter(
-        Q(usuario_digitalizador=request.user) | Q(
+        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
             usuario_asignado=request.user)
     ).filter(
         estado='asignado_coordinacion',
@@ -100,9 +100,9 @@ def detalle_tarea(request, tarea_id):
     """
     tarea = get_object_or_404(
         SolicitudRelevamiento.objects.select_related(
-            'colonia', 'creado_por', 'grupo_asignado', 'usuario_digitalizador'
+            'colonia', 'creado_por', 'grupo_asignado'
         ).prefetch_related('precat_archivos'),
-        Q(usuario_digitalizador=request.user) | Q(
+        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
             usuario_asignado=request.user),
         pk=tarea_id
     )
@@ -141,7 +141,7 @@ def iniciar_digitalizacion(request, tarea_id):
 
     tarea = get_object_or_404(
         SolicitudRelevamiento,
-        Q(usuario_digitalizador=request.user) | Q(
+        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
             usuario_asignado=request.user),
         pk=tarea_id
     )
@@ -202,7 +202,7 @@ def subir_precat(request, tarea_id):
     tarea = get_object_or_404(
         SolicitudRelevamiento,
         pk=tarea_id,
-        usuario_digitalizador=request.user
+        asignaciones_digitalizador__usuario_asignado=request.user
     )
 
     if tarea.estado != 'en_proceso_digitalizacion':
@@ -223,7 +223,13 @@ def subir_precat(request, tarea_id):
                         tipo_archivo=PrecatArchivo.TIPO_PRECAT,
                         archivo=form.cleaned_data['archivo_precat'],
                         observaciones=form.cleaned_data['observaciones'],
-                        subido_por=request.user
+                        subido_por=request.user,
+                        lotes_digitalizados=form.cleaned_data.get('lotes_digitalizados'),
+                        calles=form.cleaned_data.get('calles'),
+                        reservas=form.cleaned_data.get('reservas'),
+                        campos_comunales=form.cleaned_data.get('campos_comunales'),
+                        hectareas_aprox=form.cleaned_data.get('hectareas_aprox'),
+                        metros_aprox=form.cleaned_data.get('metros_aprox')
                     )
                     archivo_precat.save()
 
@@ -233,7 +239,13 @@ def subir_precat(request, tarea_id):
                         tipo_archivo=PrecatArchivo.TIPO_PLANOS,
                         archivo=form.cleaned_data['archivo_planos'],
                         observaciones=form.cleaned_data['observaciones'],
-                        subido_por=request.user
+                        subido_por=request.user,
+                        lotes_digitalizados=form.cleaned_data.get('lotes_digitalizados'),
+                        calles=form.cleaned_data.get('calles'),
+                        reservas=form.cleaned_data.get('reservas'),
+                        campos_comunales=form.cleaned_data.get('campos_comunales'),
+                        hectareas_aprox=form.cleaned_data.get('hectareas_aprox'),
+                        metros_aprox=form.cleaned_data.get('metros_aprox')
                     )
                     archivo_planos.save()
 
@@ -288,7 +300,7 @@ def descargar_precat(request, archivo_id):
             nombre__icontains='SIG',
             lider=request.user
         ).exists() or
-        archivo.solicitud.usuario_digitalizador == request.user
+        archivo.solicitud.asignaciones_digitalizador.filter(usuario_asignado=request.user).exists()
     )
 
     if not puede_descargar:
@@ -315,7 +327,7 @@ def listar_archivos_digitalizador(request):
     # Obtener archivos subidos por el usuario O donde es digitalizador
     archivos_precat = PrecatArchivo.objects.filter(
         models.Q(subido_por=request.user) |
-        models.Q(solicitud__usuario_digitalizador=request.user)
+        models.Q(solicitud__asignaciones_digitalizador__usuario_asignado=request.user)
     ).select_related(
         'solicitud',
         'solicitud__colonia'

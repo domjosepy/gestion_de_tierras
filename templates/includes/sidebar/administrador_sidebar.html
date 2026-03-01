@@ -112,54 +112,123 @@
         <i class="fas fa-globe"></i>
         <span>SIG</span>
       </a>
+
       <div id="collapseDashboardsSIG" class="collapse">
         <div class="collapse-inner">
           <a class="collapse-item" href="{% url 'sig:sig_dashboard' %}">
             <i class="fas fa-globe me-2"></i>SIG
           </a>
-          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">
-            <i class="fas fa-file-upload me-2"></i>Lista de Objetivos
-          </a>
-          <a class="collapse-item" href="{% url 'gerencia:lista_solicitudes_relevamiento' %}">
-            <i class="fas fa-globe me-2"></i>Solicitudes de Relevamiento
+        
+          <a class="collapse-item" href="{% url 'sig:solicitudes_relevamiento_sig' %}">
+            <i class="fas fa-file-upload me-2"></i>Solicitudes de Relevamiento
           </a>
           <hr>
-          <span class="collapse-header">Datos Geográficos</span>
-          <a class="collapse-item" href="{% url 'gerencia:listar_departamentos' %}">
-            <i class="fas fa-tasks me-2"></i>Departamentos
+          <span class="collapse-header">Archivos Digitalizador</span>
+          <a class="collapse-item" href="{% url 'sig:listar_archivos_precat' %}">
+            <i class="fas fa-globe me-2"></i>Precat
           </a>
-          <a class="collapse-item" href="{% url 'gerencia:listar_distritos' %}">
-            <i class="fas fa-tasks me-2"></i>Distritos
+        </div>
+      </div>
+    </li>
+    <!-- Subitem: Dashboards de módulos DIGITALIZADOR-->
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="{% url 'digitalizador:digitalizador_dashboard' %}" data-bs-toggle="collapse" data-bs-target="#collapseDashboardsDigitalizador" aria-expanded="false" aria-controls="collapseDashboardsDigitalizador" title="Dashboards de Módulos Digitalizador">
+        <i class="fas fa-file-upload"></i>
+        <span>Digitalizador</span>
+      </a>
+      <div id="collapseDashboardsDigitalizador" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'digitalizador:digitalizador_dashboard' %}">
+            <i class="fas fa-globe me-2"></i>Digitalizador
           </a>
-          <a class="collapse-item" href="{% url 'gerencia:listar_colonias' %}">
-            <i class="fas fa-clipboard-list me-2"></i>Colonias
+          <hr>
+          <span class="collapse-header">Archivos Digitalizador</span>
+          <a class="collapse-item" href="{% url 'digitalizador:listar_archivos_digitalizador' %}">
+            <i class="fas fa-globe me-2"></i>Precat
           </a>
         </div>
       </div>
     </li>
 
+      <!-- Subitem: Dashboards de módulos Coordinación-->
 
-
-    <li class="nav-item">
-      <a class="collapse-item" href="{% url 'sig:sig_dashboard' %}">
-            <i class="fas fa-globe me-2"></i>SIG
-          </a>
-          <a class="collapse-item" href="{% url 'digitalizador:digitalizador_dashboard' %}">
-            <i class="fas fa-file-upload me-2"></i>Digitalizador
-          </a>
+       <li class="nav-item">
+      <a class="nav-link collapsed" href="{% url 'coordinacion:coordinacion_dashboard' %}" data-bs-toggle="collapse" data-bs-target="#collapseDashboardsCoordinacion" aria-expanded="false" aria-controls="collapseDashboardsCoordinacion" title="Dashboards de Módulos Coordinación">
+        <i class="fas fa-tasks"></i>
+        <span>Coordinación</span>
+      </a>
+      <div id="collapseDashboardsCoordinacion" class="collapse">
+        <div class="collapse-inner">
           <a class="collapse-item" href="{% url 'coordinacion:coordinacion_dashboard' %}">
             <i class="fas fa-tasks me-2"></i>Coordinación
           </a>
-          <a class="collapse-item" href="{% url 'relevamiento:encuestador_dashboard' %}">
-            <i class="fas fa-clipboard-list me-2"></i>Relevamiento
+          <hr>
+          <span class="collapse-header">Solicitudes</span>
+          <a class="collapse-item" href="{% url 'coordinacion:solicitudes_pendientes' %}">
+            <i class="fas fa-inbox me-2"></i>Solicitudes Pendientes
           </a>
-      
-      <div id="collapseAnalisis" class="collapse">
-        <div class="collapse-inner">
-          <a class="collapse-item" href="#">Reportes</a>
+          <a class="collapse-item" href="{% url 'coordinacion:solicitudes_canceladas' %}">
+            <i class="fas fa-file-circle-xmark me-2"></i>Solicitudes Canceladas
+          </a>
         </div>
       </div>
     </li>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
+         data-bs-target="#collapseOrdenes" aria-expanded="false" aria-controls="collapseOrdenes"
+         title="Gestión de Órdenes">
+        <i class="fas fa-clipboard-list"></i>
+        <span>Gestión de Órdenes</span>
+      </a>
+      <div id="collapseOrdenes" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}">
+            <i class="fas fa-list me-2"></i>Todas las Órdenes
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=generada">
+            <i class="fas fa-file-signature me-2"></i>Generadas
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=asignada">
+            <i class="fas fa-user-check me-2"></i>Asignadas
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=en_proceso">
+            <i class="fas fa-spinner me-2"></i>En Proceso
+          </a>
+          <a class="collapse-item" href="{% url 'coordinacion:ordenes_trabajo' %}?estado=completada">
+            <i class="fas fa-check-circle me-2"></i>Completadas
+          </a>
+        </div>
+      </div>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" 
+         data-bs-target="#collapseRelevamiento" aria-expanded="false" aria-controls="collapseRelevamiento"
+         title="Relevamiento">
+        <i class="fas fa-clipboard-list"></i>
+        <span>Relevamiento</span>
+      </a>
+      <div id="collapseRelevamiento" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'relevamiento:coordinador_dashboard' %}">
+            <i class="fas fa-clipboard-list me-2"></i>Coordinador de Campo
+          </a>
+          <a class="collapse-item" href="{% url 'relevamiento:subcoordinador_dashboard' %}">
+            <i class="fas fa-clipboard-list me-2"></i>Subcoordinador de Campo
+          </a>
+          <a class="collapse-item" href="{% url 'relevamiento:encuestador_dashboard' %}">
+            <i class="fas fa-clipboard-list me-2"></i>Encuestador
+          </a>
+        </div>
+      </div>
+    </li>
+    <li class="nav-item">
+
+      <div id="collapseAnalisis" class="collapse">
+          <div class="collapse-inner">
+            <a class="collapse-item" href="#">Reportes</a>
+          </div>
+        </div>
+      </li>
 
     <li class="nav-item">
       <a class="nav-link" href="#" title="Configuración">

@@ -33,11 +33,43 @@ class PrecatArchivo(models.Model):
     archivo = models.FileField(
         upload_to='precat/%Y/%m/%d/',
         verbose_name='Archivo',
-        help_text='Formatos permitidos: .zip, .rar, .7z para Precat; .pdf para Planos'
+        help_text='Formatos permitidos: .zip, .rar, .7z para Precat; .pdf, .jpg, .jpeg, .png para Planos/Imágenes'
     )
     observaciones = models.TextField(
         blank=True,
         verbose_name='Observaciones del Digitalizador'
+    )
+    lotes_digitalizados = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Lotes digitalizados'
+    )
+    calles = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Calles'
+    )
+    reservas = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Reservas'
+    )
+    campos_comunales = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Campos comunales'
+    )
+    hectareas_aprox = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        blank=True,
+        null=True,
+        verbose_name='Hectáreas aproximadas'
+    )
+    metros_aprox = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='Metros aproximados'
     )
     subido_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -75,16 +107,22 @@ class PrecatArchivo(models.Model):
             # Validar extensión
             filename = self.archivo.name.lower()
             extension = os.path.splitext(filename)[1]
+            # Permitir imágenes (.jpg/.jpeg/.png) además de los formatos existentes.
+            archive_allowed = ['.zip', '.rar', '.7z']
+            pdf_allowed = ['.pdf']
+            image_allowed = ['.jpg', '.jpeg', '.png']
 
             if self.tipo_archivo == self.TIPO_PRECAT:
-                if extension not in ['.zip', '.rar', '.7z']:
+                allowed = archive_allowed + image_allowed
+                if extension not in allowed:
                     raise ValidationError({
-                        'archivo': 'Los archivos Precat deben ser .zip, .rar o .7z'
+                        'archivo': 'Los archivos Precat deben ser .zip, .rar, .7z o imágenes (.jpg, .jpeg, .png)'
                     })
             elif self.tipo_archivo == self.TIPO_PLANOS:
-                if extension != '.pdf':
+                allowed = pdf_allowed + image_allowed
+                if extension not in allowed:
                     raise ValidationError({
-                        'archivo': 'Los planos deben ser archivos PDF (.pdf)'
+                        'archivo': 'Los planos deben ser PDF (.pdf) o imágenes (.jpg, .jpeg, .png)'
                     })
 
             # Validar tamaño máximo (50MB)
@@ -121,6 +159,14 @@ class PrecatArchivo(models.Model):
     @property
     def tipo_icono(self):
         """Devuelve el ícono según el tipo de archivo"""
+        # Determinar por extensión si es imagen
+        try:
+            ext = os.path.splitext(self.archivo.name.lower())[1]
+        except Exception:
+            ext = ''
+
+        if ext in ['.jpg', '.jpeg', '.png']:
+            return 'fas fa-file-image'
         if self.tipo_archivo == self.TIPO_PRECAT:
             return 'fas fa-file-archive'
         elif self.tipo_archivo == self.TIPO_PLANOS:

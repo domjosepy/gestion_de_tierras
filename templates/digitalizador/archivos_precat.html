@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static tz %}
 
 {% block title %}Digitalizador{% endblock %}
 
@@ -58,7 +58,7 @@
                             <div class="text-xs fw-bold text-success text-uppercase mb-1">Último Archivo</div>
                             <div class="h6 mb-0">
                                 {% if archivos.first %}
-                                    {{ archivos.first.fecha_subida|date:"d/m/Y" }}
+                                    {{ archivos.first.fecha_subida|localtime|date:"d/m/Y" }}
                                 {% else %}
                                     Ninguno
                                 {% endif %}
@@ -127,6 +127,27 @@
                                             <span class="text-muted">Sin ubicación</span>
                                         {% endif %}
                                     {% endwith %}
+                                    <!-- Anotaciones / Metadatos -->
+                                    <div class="mt-2 small text-muted">
+                                        {% if archivo.lotes_digitalizados %}
+                                            <div>Lotes: {{ archivo.lotes_digitalizados }}</div>
+                                        {% endif %}
+                                        {% if archivo.calles %}
+                                            <div>Calles: {{ archivo.calles }}</div>
+                                        {% endif %}
+                                        {% if archivo.reservas %}
+                                            <div>Reservas: {{ archivo.reservas }}</div>
+                                        {% endif %}
+                                        {% if archivo.campos_comunales %}
+                                            <div>Campos comunales: {{ archivo.campos_comunales }}</div>
+                                        {% endif %}
+                                        {% if archivo.hectareas_aprox %}
+                                            <div>Hectáreas aprox.: {{ archivo.hectareas_aprox }} ha</div>
+                                        {% endif %}
+                                        {% if archivo.metros_aprox %}
+                                            <div>Metros aprox.: {{ archivo.metros_aprox }} m</div>
+                                        {% endif %}
+                                    </div>
                             </td>
                             <td>
                                  {% if archivo.observaciones %}
@@ -150,8 +171,8 @@
                             </td>
 
                             <td class="text-center">
-                                <small>{{ archivo.fecha_subida|date:"d/m/Y" }}</small>
-                                <br><small class="text-muted">{{ archivo.fecha_subida|date:"H:i" }}</small>
+                                <small>{{ archivo.fecha_subida|localtime|date:"d/m/Y" }}</small>
+                                <br><small class="text-muted">{{ archivo.fecha_subida|localtime|date:"H:i" }}</small>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark">
@@ -181,7 +202,7 @@
                                 <p class="text-muted">No has subido archivos aún</p>
                                 <a href="{% url 'digitalizador:digitalizador_dashboard' %}" 
                                    class="btn btn-primary">
-                                    <i class="fas fa-play me-2"></i>Iniciar Digitalización
+                                    <i class="fas fa-play me-2"></i>Comenzar Digitalización
                                 </a>
                             </td>
                         </tr>

@@ -42,7 +42,6 @@
                             <th class="text-center">Observación</th>
                             <th class="text-center">Fecha Solicitud</th>
                             <th class="text-center">Digitalizador</th>
-                            <th class="text-center">Analista</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -84,19 +83,22 @@
                                 <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
                             </td>
                             <td class="text-center">
-                                {% if solicitud.usuario_digitalizador %}
-                                    {{ solicitud.usuario_digitalizador.username }}
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
+                                {% with ud=solicitud.usuario_digitalizador %}
+                                    {% if ud %}
+                                        <div>{{ ud.username }}</div>
+                                        <small class="text-muted">
+                                            {% if solicitud.fecha_asignacion %}
+                                                {{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}
+                                            {% else %}
+                                                Sin fecha
+                                            {% endif %}
+                                        </small>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                {% endwith %}
                             </td>
-                            <td>
-                                {% if solicitud.usuario_analista %}
-                                    {{ solicitud.usuario_analista.get_full_name }}
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
+                           
                             <td>
                                 <div class="btn-group">
                                     <a href="{% url 'coordinacion:generar_orden' solicitud.id %}" 
@@ -154,8 +156,15 @@
                         <p><strong>Solicitante:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Digitalizador:</strong> 
-                            {{ solicitud.usuario_digitalizador.username|default:"—" }}
+                        <p><strong>Digitalizador:</strong>
+                            {% with ud=solicitud.usuario_digitalizador %}
+                                {% if ud %}
+                                    {{ ud.get_full_name|default:ud.username }}
+                                    <br><small class="text-muted">{% if solicitud.fecha_asignacion %}{{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}{% else %}Sin fecha{% endif %}</small>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            {% endwith %}
                         </p>
                         <p><strong>Analista:</strong> 
                             {{ solicitud.usuario_analista.username|default:"—" }}

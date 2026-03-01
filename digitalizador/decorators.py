@@ -1,6 +1,7 @@
 # digitalizador/decorators.py
 from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponseForbidden
+from sig.models import AsignacionDigitalizador
 from functools import wraps
 
 
@@ -18,9 +19,8 @@ def requiere_ser_digitalizador(view_func):
             return view_func(request, *args, **kwargs)
 
         # Verificar si está asignado a alguna tarea como digitalizador
-        from gerencia.models import SolicitudRelevamiento
-        es_digitalizador_asignado = SolicitudRelevamiento.objects.filter(
-            usuario_digitalizador=request.user
+        es_digitalizador_asignado = AsignacionDigitalizador.objects.filter(
+            usuario_asignado=request.user
         ).exists()
 
         # Verificar si pertenece a grupo SIG

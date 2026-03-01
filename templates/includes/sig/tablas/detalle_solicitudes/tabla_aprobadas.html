@@ -32,14 +32,24 @@
                     {% endwith %}
                 </td>
                 <td class="text-center">
-                    {% if solicitud.usuario_digitalizador %}
-                        <span class="badge bg-primary">
-                            <i class="fas fa-user me-1"></i>
-                            {{ solicitud.usuario_digitalizador.username }}
-                        </span>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
+                    {% with ud=solicitud.usuario_digitalizador %}
+                        {% if ud %}
+                            <span class="badge bg-primary">
+                                <i class="fas fa-user me-1"></i>
+                                {{ ud.username }}
+                            </span>
+                            <br>
+                            <small class="text-muted">
+                                {% if solicitud.fecha_asignacion %}
+                                    {{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}
+                                {% else %}
+                                    Sin fecha
+                                {% endif %}
+                            </small>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    {% endwith %}
                 </td>
                 <td class="text-center">
                     {% if solicitud.fecha_aprobacion_campo %}

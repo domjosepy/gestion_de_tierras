@@ -27,8 +27,15 @@
                             <p><strong>Creado por:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Digitalizador:</strong> 
-                                {{ solicitud.usuario_digitalizador.username|default:"—" }}
+                            <p><strong>Digitalizador:</strong>
+                                {% with ud=solicitud.usuario_digitalizador %}
+                                    {% if ud %}
+                                        {{ ud.get_full_name|default:ud.username }}
+                                        <br><small class="text-muted">{% if solicitud.fecha_asignacion %}{{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}{% else %}Sin fecha{% endif %}</small>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                {% endwith %}
                             </p>
                             <p><strong>Analista:</strong> 
                                 {{ solicitud.usuario_analista.username|default:"—" }}

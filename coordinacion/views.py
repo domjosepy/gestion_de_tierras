@@ -20,6 +20,7 @@ from administrador.models import User, Grupo
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from coordinacion.models import EquipoRelevamiento, OrdenTrabajo, RegistroCampo
 from relevamiento.models import Relevamiento
+from digitalizador.models import PrecatArchivo
 from coordinacion.decorators import coordinacion_required, lider_coordinacion_required
 from coordinacion.forms import (GenerarOrdenForm)
 from coordinacion.utils import contar_dias_habiles
@@ -242,9 +243,21 @@ def generar_orden_view(request, solicitud_id):
     else:
         form = GenerarOrdenForm(request=request)
 
+    # Obtener últimos archivos Precat/Planos para mostrar metadatos en la plantilla
+    try:
+        ultimo_precat = solicitud.precat_archivos.filter(tipo_archivo=PrecatArchivo.TIPO_PRECAT).order_by('-fecha_subida').first()
+    except Exception:
+        ultimo_precat = None
+    try:
+        ultimo_planos = solicitud.precat_archivos.filter(tipo_archivo=PrecatArchivo.TIPO_PLANOS).order_by('-fecha_subida').first()
+    except Exception:
+        ultimo_planos = None
+
     context = {
         'solicitud': solicitud,
         'form': form,
+        'ultimo_precat': ultimo_precat,
+        'ultimo_planos': ultimo_planos,
     }
     return render(request, 'includes/coordinacion/orden_trabajo/generar_orden.html', context)
 
@@ -405,8 +418,8 @@ def modificar_orden(request, orden_id):
     if orden.estado in ['completada', 'cancelada']:
         return JsonResponse({'success': False, 'message': 'No se puede modificar una orden completada o cancelada.'}, status=400)
 
-    # Verificar que el usuario es líder del grupo asignado
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar que el usuario es líder del grupo asignado (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({'success': False, 'message': 'No tiene permisos de líder para modificar esta orden.'}, status=403)
 
     try:
@@ -530,8 +543,8 @@ def cancelar_orden(request, orden_id):
     if orden.estado not in ['generada', 'asignada']:
         return JsonResponse({'error': 'Solo se pueden cancelar órdenes en estado Generada o Asignada.'}, status=400)
 
-    # Verificar permisos de líder
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar permisos de líder (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({'error': 'No tiene permisos de líder para cancelar esta orden.'}, status=403)
 
     try:
@@ -588,8 +601,8 @@ def reactivar_orden(request, orden_id):
     orden = get_object_or_404(OrdenTrabajo, id=orden_id, estado='cancelada')
     solicitud = orden.solicitud
 
-    # Verificar permisos de líder
-    if not (solicitud.grupo_asignado and solicitud.grupo_asignado.lider == request.user):
+    # Verificar permisos de líder (o superusuario)
+    if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
         return JsonResponse({'error': 'No tiene permisos de líder para reactivar esta orden.'}, status=403)
 
     # Verificar que no haya otra orden activa para la misma solicitud

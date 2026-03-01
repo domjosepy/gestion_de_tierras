@@ -10,17 +10,17 @@ class PrecatSubirForm(forms.Form):
     archivo_precat = forms.FileField(
         label='Archivo Precat Final',
         required=True,
-        validators=[FileExtensionValidator(['zip', 'rar'])],
-        help_text='Formato .zip o .rar (Máx. 200MB)'
+        validators=[FileExtensionValidator(['zip', 'rar', 'jpg', 'jpeg', 'png'])],
+        help_text='Formato .zip, .rar o imagen (.jpg/.jpeg/.png) (Máx. 200MB)'
     )
     archivo_planos = forms.FileField(
         label='Planos de Referencia',
         required=True,
-        validators=[FileExtensionValidator(['pdf'])],
-        help_text='Formato .pdf (Máx. 50MB por archivo)'
+        validators=[FileExtensionValidator(['pdf', 'jpg', 'jpeg', 'png'])],
+        help_text='Formato .pdf o imagen (.jpg/.jpeg/.png) (Máx. 50MB por archivo)'
     )
     observaciones = forms.CharField(
-        label='Observaciones / Descripción',
+        label='Observaciones',
         required=False,
         widget=forms.Textarea(attrs={
             'rows': 4,
@@ -28,8 +28,48 @@ class PrecatSubirForm(forms.Form):
         }),
         help_text='Descripción detallada del trabajo de digitalización'
     )
+    
+    # Campos de anotación solicitados
+    lotes_digitalizados = forms.IntegerField(
+        label='Lotes digitalizados',
+        required=True,
+        min_value=0,
+        help_text='Cantidad de lotes digitalizados'
+    )
+    calles = forms.IntegerField(
+        label='Calles',
+        required=False,
+        min_value=0,
+        help_text='Cantidad de calles (opcional)'
+    )
+    reservas = forms.IntegerField(
+        label='Reservas',
+        required=False,
+        min_value=0,
+        help_text='Cantidad de reservas (opcional)'
+    )
+    campos_comunales = forms.IntegerField(
+        label='Campos comunales',
+        required=False,
+        min_value=0,
+        help_text='Cantidad de campos comunales (opcional)'
+    )
+    hectareas_aprox = forms.DecimalField(
+        label='Hectáreas aproximadas',
+        required=False,
+        max_digits=10,
+        decimal_places=4,
+        min_value=0,
+        help_text='Superficie aproximada en hectáreas (opcional)'
+    )
+    metros_aprox = forms.IntegerField(
+        label='Metros aproximados',
+        required=False,
+        min_value=0,
+        help_text='Superficie aproximada en metros (opcional)'
+    )
 
-    def limpiar_archivo_precat(self):
+    def clean_archivo_precat(self):
         archivo = self.cleaned_data.get('archivo_precat')
         if archivo:
             # Validar tamaño máximo (200MB)
@@ -40,7 +80,7 @@ class PrecatSubirForm(forms.Form):
                 )
         return archivo
 
-    def limpiar_archivo_planos(self):
+    def clean_archivo_planos(self):
         archivo = self.cleaned_data.get('archivo_planos')
         if archivo:
             # Validar tamaño máximo (50MB)
