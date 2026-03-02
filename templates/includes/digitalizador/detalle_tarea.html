@@ -186,27 +186,76 @@
                     {% endif %}
                     <!-- Archivos Subidos -->
                     <div class="mt-4">
-                        <h6 class="text-muted mb-2">
-                            <i class="fas fa-file-archive me-2"></i>Archivos Subidos
-                        </h6>
                         {% if archivos_precat %}
+                        <h6 class="text-muted">
+                            <i class="fas fa-pen-alt ms-2"></i>
+                            Anotaciones del digitalizador
+                        </h6>
+                        <hr>
+                         {# Mostrar anotaciones del digitalizador si existen #}
+                            <div class="mt-2">
+                                
+                                <dl class="row">
+                                    {% if archivos_precat.lotes_digitalizados %}
+                                        <dt class="col-sm-4">Lotes digitalizados</dt>
+                                        <dd class="col-sm-8">{{ archivos_precat.lotes_digitalizados }}</dd>
+                                    {% endif %}
+                                    {% if archivos_precat.calles %}
+                                        <dt class="col-sm-4">Calles</dt>
+                                        <dd class="col-sm-8">{{ archivos_precat.calles }}</dd>
+                                    {% endif %}
+                                    {% if archivos_precat.reservas %}
+                                        <dt class="col-sm-4">Reservas</dt>
+                                        <dd class="col-sm-8">{{ archivos_precat.reservas }}</dd>
+                                    {% endif %}
+                                    {% if archivos_precat.campos_comunales %}
+                                        <dt class="col-sm-4">Campos comunales</dt>
+                                        <dd class="col-sm-8">{{ archivos_precat.campos_comunales }}</dd>
+                                    {% endif %}
+                                    {% if archivos_precat.hectareas_aprox %}
+                                        <dt class="col-sm-4">Hectáreas aprox.</dt>
+                                        <dd class="col-sm-8">{{ archivos_precat.hectareas_aprox }}</dd>
+                                    {% endif %}
+                                    {% if archivos_precat.metros_aprox %}
+                                        <dt class="col-sm-4">Metros aprox.</dt>
+                                        <dd class="col-sm-8">{{ archivos_precat.metros_aprox }}</dd>
+                                    {% endif %}
+                                    {% if not archivos_precat.lotes_digitalizados and not archivos_precat.calles and not archivos_precat.reservas and not archivos_precat.campos_comunales and not archivos_precat.hectareas_aprox and not archivos_precat.metros_aprox %}
+                                        <dt class="col-sm-12 text-muted">Sin anotaciones</dt>
+                                    {% endif %}
+                                </dl>
+                            </div>
+                            <h6 class="text-muted mb-2">
+                                <i class="fas fa-file-archive me-2"></i>Archivos Subidos
+                            </h6>
                             <hr>
-                            <div class="text-success">
+                            <div class="text-success mb-2">
                                 <i class="fas fa-check-circle me-2"></i>
                                 <strong>Precat subido:</strong><br>
                                 <small>{{ archivos_precat.get_nombre_archivo }} ({{ archivos_precat.get_tamanio_mb }} MB)</small>
+                                <div class="mt-2">
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'digitalizador:descargar_precat' archivos_precat.id %}">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                </div>
                             </div>
                             <hr>
                         {% endif %}
-                        
+
                         {% if archivos_planos %}
                             <div class="text-success">
                                 <i class="fas fa-file-pdf me-2"></i>
                                 <strong>Planos subidos:</strong><br>
                                 <small>{{ archivos_planos.get_nombre_archivo }} ({{ archivos_planos.get_tamanio_mb }} MB)</small>
+                                <div class="mt-2">
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'digitalizador:descargar_precat' archivos_planos.id %}">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                </div>
                             </div>
                             <hr>
                         {% endif %}
+
                         {% if not archivos_precat and not archivos_planos %}
                             <div class="text-danger">
                                 <i class="fas fa-file-import me-2"></i>

@@ -10,8 +10,8 @@ class PrecatSubirForm(forms.Form):
     archivo_precat = forms.FileField(
         label='Archivo Precat Final',
         required=True,
-        validators=[FileExtensionValidator(['zip', 'rar', 'jpg', 'jpeg', 'png'])],
-        help_text='Formato .zip, .rar o imagen (.jpg/.jpeg/.png) (Máx. 200MB)'
+        validators=[FileExtensionValidator(['zip', 'rar'])],
+        help_text='Formato .zip, .rar (Máx. 200MB)'
     )
     archivo_planos = forms.FileField(
         label='Planos de Referencia',
@@ -43,10 +43,10 @@ class PrecatSubirForm(forms.Form):
         help_text='Cantidad de calles (opcional)'
     )
     reservas = forms.IntegerField(
-        label='Reservas',
+        label='Reservas Naturales',
         required=False,
         min_value=0,
-        help_text='Cantidad de reservas (opcional)'
+        help_text='Cantidad de reservas naturales (opcional)'
     )
     campos_comunales = forms.IntegerField(
         label='Campos comunales',
@@ -56,18 +56,13 @@ class PrecatSubirForm(forms.Form):
     )
     hectareas_aprox = forms.DecimalField(
         label='Hectáreas aproximadas',
-        required=False,
+        required=True,
         max_digits=10,
         decimal_places=4,
         min_value=0,
         help_text='Superficie aproximada en hectáreas (opcional)'
     )
-    metros_aprox = forms.IntegerField(
-        label='Metros aproximados',
-        required=False,
-        min_value=0,
-        help_text='Superficie aproximada en metros (opcional)'
-    )
+
 
     def clean_archivo_precat(self):
         archivo = self.cleaned_data.get('archivo_precat')

@@ -6,10 +6,9 @@
         <thead class="table-light">
             <tr>
                 <th class="text-center">#</th>
-                <th class="text-center">Envío</th>
+                <th class="text-center">Fecha para revisión</th>
                 <th class="text-center">Datos Geográficos</th>
                 <th class="text-center">Observaciones</th>
-                <th class="text-center">Tiempo Total</th>
                 <th class="text-center">Acciones</th>
             </tr>
         </thead>
@@ -36,15 +35,6 @@
                         <small>{{ tarea.observaciones|truncatechars:200 }}</small>
                     {% else %}
                         <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td class="text-center">
-                    {% if tarea.tiempo_digitalizacion %}
-                        <small class="text-success">
-                            {{ tarea.tiempo_digitalizacion|format_timedelta }}
-                        </small>
-                    {% else %}
-                        <small class="text-muted">-</small>
                     {% endif %}
                 </td>
                 <td class="text-center align-middle">

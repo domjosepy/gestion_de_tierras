@@ -134,14 +134,17 @@
     
     <div class="card-body">
       <div class="table-responsive">
-        <table class="beautiful-table table-sm" id="dataTable">
+        <table class="beautiful-table " id="dataTable">
           <thead class="bg-light">
             <tr>
-              <th style="width: 8%;">Fecha</th>
-              <th style="width: 12%;">Ubicación</th>
-              <th style="width: 14%;">Ocupante</th>
-              <th style="width: 11%;">Estado</th>
-              <th style="width: 38%;">Observaciones</th>
+              <th style="width: 8%;" class="text-center">Fecha</th>
+              <th style="width: 12%;" class="text-center">Datos Geograficos</th>
+              <th style="width: 12%;" class="text-center">Manzana</th>
+              <th style="width: 12%;" class="text-center">Lote</th>
+              <th style="width: 14%;" class="text-center">Ocupante</th>
+              <th style="width: 11%;" class="text-center">Situación de ocupación</th>
+              <th style="width: 12%;" class="text-center">Firmo Solicitud</th>
+              <th style="width: 38%;" class="text-center">Observaciones</th>
               <th style="width: 17%;" class="text-center">Acciones</th>
             </tr>
           </thead>
@@ -291,29 +294,41 @@ function renderTable(data) {
         </td>
         <td>
           <div class="small">
-            <strong class="text-primary">M:</strong> ${item.manzana} |
-            <strong class="text-secondary">L:</strong> ${item.loteSirt}
-          </div>
-          <div class="text-muted" style="font-size: 0.75rem;">
-            ${item.colonia}
+            <span class="text-primary">${item.colonia}</span><br>
+            <strong class="text-primary">Depto:</strong> ${item.departamento} |
+            <strong class="text-secondary">Dist:</strong> ${item.distrito}
+            
           </div>
         </td>
-        <td>
+        <td class="text-center text-nowrap">
+            ${item.manzana}
+        </td>
+        <td class="text-center text-nowrap">
+            ${item.loteIndert || item.loteSirt || '-'}
+        </td>
+        <td class="text-center text-nowrap">
           <span class="small">
             ${truncateText(item.quien_es_el_ocupante || 'Sin información', 35)}
           </span>
         </td>
-        <td>
+        <td class="text-center text-nowrap">
           <div class="d-flex flex-column gap-1">
-            <span class="badge bg-info text-white" style="font-size: 0.7rem;">
-              <i class="fas fa-home"></i> ${item.condicionVivienda}
-            </span>
-            <span class="badge bg-success text-white" style="font-size: 0.7rem;">
-              <i class="fas fa-user"></i> ${item.condicionEncuestado}
+          <span>
+               ${item.condicionEncuestado}, ${item.condicionVivienda}
             </span>
           </div>
         </td>
-        <td>
+        <td class="text-center text-nowrap">
+          ${item.firmoSolicitud ? 
+            `<span class="badge bg-success">
+              <i class="fas fa-check"></i> Sí
+            </span>` : 
+            `<span class="badge bg-danger">
+              <i class="fas fa-times"></i> No
+            </span>`
+          }
+        </td>
+        <td class="text-center text-nowrap">
           <span class="small" ${needsTooltip ? `data-bs-toggle="tooltip" data-bs-placement="top" title="${fullObservaciones}"` : ''}>
             ${shortObservaciones}
           </span>

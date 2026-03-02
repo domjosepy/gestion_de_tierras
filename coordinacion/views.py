@@ -169,77 +169,100 @@ def generar_orden_view(request, solicitud_id):
         messages.info(request, "Esta solicitud ya tiene una orden activa.")
         return redirect('coordinacion:detalle_orden', orden_id=solicitud.ordenes_trabajo.get(activa=True).id)
 
+    # Obtener últimos archivos Precat/Planos para mostrar metadatos en la plantilla
+    try:
+        ultimo_precat = solicitud.precat_archivos.filter(tipo_archivo=PrecatArchivo.TIPO_PRECAT).order_by('-fecha_subida').first()
+    except Exception:
+        ultimo_precat = None
+    try:
+        ultimo_planos = solicitud.precat_archivos.filter(tipo_archivo=PrecatArchivo.TIPO_PLANOS).order_by('-fecha_subida').first()
+    except Exception:
+        ultimo_planos = None
+
     if request.method == 'POST':
         form = GenerarOrdenForm(request.POST, request=request)
         if form.is_valid():
-            with transaction.atomic():
-                OrdenTrabajo.objects.filter(
-                    solicitud=solicitud, activa=True).update(activa=False)
+            # Validación adicional: la meta no debe exceder los lotes digitalizados
+            lotes_disponibles = None
+            if ultimo_precat and getattr(ultimo_precat, 'lotes_digitalizados', None) is not None:
+                lotes_disponibles = ultimo_precat.lotes_digitalizados
+            elif ultimo_planos and getattr(ultimo_planos, 'lotes_digitalizados', None) is not None:
+                lotes_disponibles = ultimo_planos.lotes_digitalizados
 
-                # Crear orden
-                orden = form.save(commit=False)
-                orden.solicitud = solicitud
-                orden.creado_por = request.user
-                orden.activa = True
-                orden.save()
+            meta = form.cleaned_data.get('meta_encuestas')
+            if lotes_disponibles is not None and meta is not None and meta > lotes_disponibles:
+                form.add_error('meta_encuestas', f'La meta debe ser menor o igual a la cantidad de lotes digitalizados ({lotes_disponibles}).')
 
-                # 2. Actualizar solicitud
-                solicitud.estado = 'orden_trabajo_generada'
-                solicitud.numero_orden_trabajo = orden.numero_orden
-                solicitud.fecha_generacion_orden = timezone.now()
-                solicitud.usuario_generador_orden = request.user
-                solicitud.save()
-
-                # 3. Asignar equipo de campo a la solicitud
-                coordinador = form.cleaned_data.get('coordinador_campo')
-                subcoordinadores = form.cleaned_data.get('subcoordinadores')
-                encuestadores = form.cleaned_data.get('encuestadores')
-                choferes = form.cleaned_data.get('choferes')
-
-                # Asignar los campos a la solicitud
-                if coordinador:
-                    solicitud.coordinador_campo = coordinador
-                if subcoordinadores is not None:
-                    solicitud.subcoordinadores.set(subcoordinadores)
-                if choferes is not None:
-                    solicitud.choferes.set(choferes)
-                if encuestadores is not None:
-                    # Usamos el método existente asignar_relevadores que cambia estado a 'asignado_relevadores'
-                    solicitud.asignar_relevadores(
-                        encuestadores, request.user, "Asignado al generar orden")
-
-                # Guardar cambios en solicitud (el método asignar_relevadores ya hace save, pero por si acaso)
-                solicitud.save()
-
-                if coordinador or subcoordinadores or encuestadores or choferes:
-                    equipo = EquipoRelevamiento.objects.create(
-                        nombre=f"Equipo {orden.numero_orden}",
-                        tipo='completo',
-                        estado='planificado',
-                        coordinador_campo=coordinador or request.user,
-                        activo=True,
-                        max_encuestadores=4,
-                    )
-                    if subcoordinadores:
-                        equipo.subcoordinadores.set(subcoordinadores)
-                    if encuestadores:
-                        equipo.encuestadores.set(encuestadores)
-                    if choferes:
-                        equipo.choferes.set(choferes)
-                    # Asociar equipo a la orden
-                    orden.equipos_asignados.add(equipo)
-                    orden.estado = 'asignada'
-                    # Antes de crear la nueva orden
+            # Si hay errores agregados, evitamos crear la orden y dejamos que el template muestre los errores
+            if not form.errors:
+                with transaction.atomic():
                     OrdenTrabajo.objects.filter(
                         solicitud=solicitud, activa=True).update(activa=False)
+
+                    # Crear orden
+                    orden = form.save(commit=False)
+                    orden.solicitud = solicitud
+                    orden.creado_por = request.user
+                    orden.activa = True
                     orden.save()
 
-                # 5. Auditoría adicional (puede ser manejada por signals o manual)
-                # (Opcional: registrar en SolicitudRelevamientoAudit los cambios en los campos de equipo)
+                    # 2. Actualizar solicitud
+                    solicitud.estado = 'orden_trabajo_generada'
+                    solicitud.numero_orden_trabajo = orden.numero_orden
+                    solicitud.fecha_generacion_orden = timezone.now()
+                    solicitud.usuario_generador_orden = request.user
+                    solicitud.save()
 
-                messages.success(
-                    request, f'Orden {orden.numero_orden} generada exitosamente.')
-                return redirect('coordinacion:detalle_orden', orden_id=orden.id)
+                    # 3. Asignar equipo de campo a la solicitud
+                    coordinador = form.cleaned_data.get('coordinador_campo')
+                    subcoordinadores = form.cleaned_data.get('subcoordinadores')
+                    encuestadores = form.cleaned_data.get('encuestadores')
+                    choferes = form.cleaned_data.get('choferes')
+
+                    # Asignar los campos a la solicitud
+                    if coordinador:
+                        solicitud.coordinador_campo = coordinador
+                    if subcoordinadores is not None:
+                        solicitud.subcoordinadores.set(subcoordinadores)
+                    if choferes is not None:
+                        solicitud.choferes.set(choferes)
+                    if encuestadores is not None:
+                        # Usamos el método existente asignar_relevadores que cambia estado a 'asignado_relevadores'
+                        solicitud.asignar_relevadores(
+                            encuestadores, request.user, "Asignado al generar orden")
+
+                    # Guardar cambios en solicitud (el método asignar_relevadores ya hace save, pero por si acaso)
+                    solicitud.save()
+
+                    if coordinador or subcoordinadores or encuestadores or choferes:
+                        equipo = EquipoRelevamiento.objects.create(
+                            nombre=f"Equipo {orden.numero_orden}",
+                            tipo='completo',
+                            estado='planificado',
+                            coordinador_campo=coordinador or request.user,
+                            activo=True,
+                            max_encuestadores=4,
+                        )
+                        if subcoordinadores:
+                            equipo.subcoordinadores.set(subcoordinadores)
+                        if encuestadores:
+                            equipo.encuestadores.set(encuestadores)
+                        if choferes:
+                            equipo.choferes.set(choferes)
+                        # Asociar equipo a la orden
+                        orden.equipos_asignados.add(equipo)
+                        orden.estado = 'asignada'
+                        # Antes de crear la nueva orden
+                        OrdenTrabajo.objects.filter(
+                            solicitud=solicitud, activa=True).update(activa=False)
+                        orden.save()
+
+                    # 5. Auditoría adicional (puede ser manejada por signals o manual)
+                    # (Opcional: registrar en SolicitudRelevamientoAudit los cambios en los campos de equipo)
+
+                    messages.success(
+                        request, f'Orden {orden.numero_orden} generada exitosamente.')
+                    return redirect('coordinacion:detalle_orden', orden_id=orden.id)
     else:
         form = GenerarOrdenForm(request=request)
 
@@ -344,6 +367,14 @@ def detalle_orden(request, orden_id):
         colonia_condicion_presente = Relevamiento.objects.filter(colonia=colonia, condicion_vivienda='presente').count()
         colonia_condicion_servicio = Relevamiento.objects.filter(colonia=colonia, condicion_vivienda='servicio').count()
 
+    # Calcular porcentaje de progreso basado en relevamientos en la colonia
+    orden_progreso_percent = 0
+    try:
+        if orden.meta_encuestas and orden.meta_encuestas > 0:
+            orden_progreso_percent = int(round((colonia_relevamientos_count / orden.meta_encuestas) * 100))
+    except Exception:
+        orden_progreso_percent = 0
+
     context = {
         'orden': orden,
         'registros': registros,
@@ -356,6 +387,7 @@ def detalle_orden(request, orden_id):
         'colonia_solicitudes_count': colonia_solicitudes_count,
         'colonia_condicion_presente': colonia_condicion_presente,
         'colonia_condicion_servicio': colonia_condicion_servicio,
+        'orden_progreso_percent': orden_progreso_percent,
     }
 
     return render(request, 'includes/coordinacion/orden_trabajo/detalle_orden.html', context)
@@ -816,26 +848,16 @@ def asignar_personal_orden(request, orden_id):
             solicitud.subcoordinadores.set(subcoordinadores)
             solicitud.choferes.set(choferes)
 
-            # Asignar encuestadores directamente (sin usar asignar_relevadores)
-            solicitud.relevadores_asignados.set(encuestadores)
-
-            # Auditoría para encuestadores (similar a las otras)
-            SolicitudRelevamientoAudit.objects.create(
-                solicitud=solicitud,
-                campo='relevadores_asignados',
-                valor_anterior=', '.join(
-                    [u.username for u in solicitud.relevadores_asignados.all()]) or 'Ninguno',
-                valor_nuevo=', '.join(
-                    [u.username for u in encuestadores]) or 'Ninguno',
-                cambiado_por=request.user,
-                comentario=comentario or f"Asignación de encuestadores por {request.user.username}"
-            )
-
-            solicitud.save()
+            # Usar el helper centralizado para asignar relevadores; este método
+            # establecerá `usuario_asignado` preferentemente al `coordinador_campo`.
+            if encuestadores is not None:
+                solicitud.asignar_relevadores(encuestadores, request.user, motivo=comentario)
+            else:
+                solicitud.save()
 
             # Crear el equipo (igual que antes)
             equipo = EquipoRelevamiento.objects.create(
-                nombre=f"Equipo OT-{orden.numero_orden}",
+                nombre=f"Personal OT-{orden.numero_orden}",
                 tipo='completo',
                 estado='planificado',
                 coordinador_campo=coordinador,

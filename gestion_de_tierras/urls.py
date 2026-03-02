@@ -19,6 +19,8 @@ from django.urls import path, include
 
 from django.views.generic import RedirectView
 from administrador import views as admin_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 
 urlpatterns = [
@@ -42,3 +44,6 @@ urlpatterns = [
     path("relevamiento/", include("relevamiento.urls", namespace="encuestador")),
 
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

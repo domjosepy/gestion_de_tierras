@@ -4,11 +4,11 @@
         <thead class="table-light">
             <tr>
                 <th class="text-center">#</th>
-                <th class="text-center">Creacion</th>
+                <th class="text-center">Fecha Creación</th>
                 <th class="text-center">Datos Geográficos</th>
                 <th class="text-center">Observación</th>
-                <th class="text-center">Digitalizador</th>
-                <th class="text-center">Asignación</th>
+                <th class="text-center">Fecha Asignación</th>
+                <th class="text-center">Digitalizador Asignado</th>
                 <th class="text-center">Prioridad</th>
                 <th class="text-center">Acciones</th>
             </tr>
@@ -26,20 +26,11 @@
                         {% if distrito %}
                             <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
                             <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
-                        {% else %}
-                            <span class="text-muted">Sin ubicación</span>
                         {% endif %}
                     {% endwith %}
                 </td>
-                
                 <td class="text-center">
                     {{ solicitud.observaciones|default:"-"|truncatechars:30 }}
-                </td>
-                <td class="text-center">
-                    <span class="badge bg-primary">
-                        <i class="fas fa-user me-1"></i>
-                        {{ solicitud.usuario_asignado.username }}
-                    </span>
                 </td>
                 <td class="text-center">
                     {% if solicitud.fecha_asignacion %}
@@ -48,6 +39,12 @@
                     {% else %}
                         <span class="text-muted">No asignada</span>
                     {% endif %}
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-primary">
+                        <i class="fas fa-user me-1"></i>
+                        {{ solicitud.usuario_asignado.username }}
+                    </span>
                 </td>
                 <td class="text-center">
                     <span class="badge 

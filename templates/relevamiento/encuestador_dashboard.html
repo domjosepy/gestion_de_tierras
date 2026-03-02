@@ -206,10 +206,15 @@
                 </button>
               {% endif %}
               {% if item.relevamientos_count > 0 %}
-                <a href="#"
-                   class="btn btn-outline-secondary btn-sm">
-                  <i class="fas fa-eye"></i>
-                </a>
+                {% if orden.solicitud.colonia %}
+                  <a href="{% url 'relevamiento:mis_encuestas' %}?colonia={{ orden.solicitud.colonia.id }}"
+                     class="btn btn-outline-secondary btn-sm">
+                {% else %}
+                  <a href="{% url 'relevamiento:mis_encuestas' %}"
+                     class="btn btn-outline-secondary btn-sm">
+                {% endif %}
+                    <i class="fas fa-eye"></i>
+                  </a>
               {% endif %}
             </div>
 

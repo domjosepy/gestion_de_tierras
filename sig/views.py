@@ -2,18 +2,16 @@ from django.shortcuts import render
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, FileResponse, HttpResponseForbidden
+from django.http import JsonResponse, FileResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Count, Avg
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
-from administrador.models import User
+from administrador.models import User, Grupo
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
-from gerencia.signals import crear_auditoria_despues_guardar
 from gerencia.utils import procesar_auditorias
 from digitalizador.models import PrecatArchivo
-from django.db.models.signals import post_save
 
 
 from sig.decorators import requiere_ser_sig, requiere_ser_lider_sig
@@ -31,10 +29,11 @@ def sig_dashboard(request):
     """
     Dashboard para usuarios del grupo SIG
     """
-    grupos_usuario = request.user.grupos_pertenece.filter(
+    grupos_usuario = Grupo.objects.filter(
+        (Q(usuarios__id=request.user.id) | Q(lider=request.user)),
         nombre__icontains='SIG',
         activo=True
-    )
+    ).distinct()
 
     if not grupos_usuario.exists():
         messages.warning(request, "No pertenece a ningún grupo SIG activo.")
@@ -92,10 +91,11 @@ def sig_solicitudes(request):
     """
     Vista COMPLETA de solicitudes para usuarios SIG
     """
-    grupos_usuario = request.user.grupos_pertenece.filter(
+    grupos_usuario = Grupo.objects.filter(
+        (Q(usuarios__id=request.user.id) | Q(lider=request.user)),
         nombre__icontains='SIG',
         activo=True
-    )
+    ).distinct()
 
     if not grupos_usuario.exists():
         messages.warning(request, "No pertenece a ningún grupo SIG activo.")
@@ -131,13 +131,25 @@ def sig_solicitudes(request):
     ).distinct()
 
     # Obtener solicitudes por estado
+    # Para rechazadas, incluir solicitudes cuyo grupo asignado sea del usuario
+    # o que hayan sido digitalizadas por miembros del grupo (historial de asignaciones)
+    rechazadas_qs = SolicitudRelevamiento.objects.filter(estado='rechazado')
+    try:
+        miembros = grupos_usuario.first().usuarios.all()
+        rechazadas_qs = rechazadas_qs.filter(
+            Q(grupo_asignado__in=grupos_usuario) |
+            Q(asignaciones_digitalizador__usuario_asignado__in=miembros)
+        ).distinct()
+    except Exception:
+        rechazadas_qs = rechazadas_qs.filter(grupo_asignado__in=grupos_usuario)
+
     estados = {
         'pendientes': query.filter(estado='pendiente_asignacion_sig'),
         'asignadas': query.filter(estado='asignado_a_digitalizador'),
         'en_proceso': query.filter(estado='en_proceso_digitalizacion'),
         'pendiente_revision': query.filter(estado='pendiente_revision_sig'),
         'aprobadas': query_aprobadas,
-        'rechazadas': query.filter(estado='rechazado'),
+        'rechazadas': rechazadas_qs,
         'finalizadas': query.filter(estado='finalizado'),
     }
 
@@ -172,6 +184,33 @@ def sig_solicitudes(request):
                         'aprobar_revision', 'rechazar_revision']
                 else:
                     solicitud.acciones_revision = []
+
+            # Calcular tiempos para la tabla de revisión (inicio/fin/elapsed)
+            try:
+                inicio = solicitud.fecha_inicio_etapa
+                # si hay inicio y duración registrada, calcular fin
+                if inicio and solicitud.tiempo_digitalizacion:
+                    fin = inicio + solicitud.tiempo_digitalizacion
+                else:
+                    fin = None
+
+                # elegir tiempo a mostrar: tiempo_digitalizacion si existe, sino tiempo en la etapa actual
+                if solicitud.tiempo_digitalizacion:
+                    tiempo_mostrar = solicitud.tiempo_digitalizacion
+                else:
+                    # llamar al método que devuelve tiempo en la etapa actual
+                    try:
+                        tiempo_mostrar = solicitud.obtener_tiempo_etapa_actual()
+                    except Exception:
+                        tiempo_mostrar = None
+
+                solicitud.inicio_digitalizacion = inicio
+                solicitud.fin_digitalizacion = fin
+                solicitud.tiempo_digitalizacion_mostrar = tiempo_mostrar
+            except Exception:
+                solicitud.inicio_digitalizacion = None
+                solicitud.fin_digitalizacion = None
+                solicitud.tiempo_digitalizacion_mostrar = None
 
     # Si no es líder, filtrar según corresponda
     if not es_lider:
@@ -288,6 +327,21 @@ def detalle_solicitud(request, solicitud_id):
         'usuarios_grupo': usuarios_grupo,
         'es_responsable': solicitud.usuario_asignado == request.user,
     }
+
+    # Añadir últimos archivos Precat/Planos al contexto para mostrar en el detalle
+    try:
+        ultimo_precat = solicitud.precat_archivos.filter(tipo_archivo=PrecatArchivo.TIPO_PRECAT).order_by('-fecha_subida').first()
+    except Exception:
+        ultimo_precat = None
+    try:
+        ultimo_planos = solicitud.precat_archivos.filter(tipo_archivo=PrecatArchivo.TIPO_PLANOS).order_by('-fecha_subida').first()
+    except Exception:
+        ultimo_planos = None
+
+    context.update({
+        'ultimo_precat': ultimo_precat,
+        'ultimo_planos': ultimo_planos,
+    })
 
     return render(request, 'sig/detalle_solicitud.html', context)
 
@@ -638,10 +692,11 @@ def aprobar_digitalizacion(request, solicitud_id):
 
     # Verificar que el usuario sea líder del grupo SIG (o superusuario)
     if not (solicitud.grupo_asignado and (solicitud.grupo_asignado.lider == request.user or request.user.is_superuser)):
+        # Si la solicitud ya fue transferida a otro grupo, responder con éxito indicando el cambio
         return JsonResponse({
-            'success': False,
-            'message': 'No tiene permisos para aprobar esta solicitud'
-        }, status=403)
+            'success': True,
+            'message': 'La solicitud fue enviada a ' + solicitud.grupo_asignado.nombre + ' para su revisión.'
+        })
 
     # Validar estado
     estados_validos = ['en_proceso_digitalizacion', 'pendiente_revision_sig']
@@ -784,6 +839,9 @@ def rechazar_digitalizacion(request, solicitud_id):
             solicitud.motivo_rechazo = motivo_rechazo
             solicitud.cambiado_por = request.user
 
+            # Evitar reasignación automática de grupo: mantener el grupo que realizó el rechazo
+            solicitud._preservar_grupo = True
+
             # Agregar observaciones
             timestamp = timezone.now().strftime('%d/%m/%Y %H:%M')
             comentario_completo = f"Motivo rechazo: {motivo_rechazo}"
@@ -866,7 +924,7 @@ def devolver_para_correccion(request, solicitud_id):
     transiciones = {
         'pendiente_revision_sig': 'en_proceso_digitalizacion',
         'asignado_coordinacion': 'asignado_a_digitalizador',
-        'rechazado': 'pendiente_revision_sig'
+        'rechazado': 'asignado_a_digitalizador'
     }
 
     if solicitud.estado not in transiciones:
@@ -907,7 +965,7 @@ def devolver_para_correccion(request, solicitud_id):
 
             # Agregar observaciones
             timestamp = timezone.now().strftime('%d/%m/%Y %H:%M')
-            obs_text = f"CORRECCIÓN REQUERIDA ({timestamp}) por {request.user.get_full_name()}:\n{observacion}"
+            obs_text = f"CORRECCIÓN REQUERIDA ({timestamp}) por {request.user.username}:\n{observacion}"
 
             if solicitud.observaciones:
                 solicitud.observaciones += f"\n\n--- {obs_text}"
@@ -923,14 +981,14 @@ def devolver_para_correccion(request, solicitud_id):
                 valor_anterior=estado_anterior,
                 valor_nuevo=nuevo_estado,
                 cambiado_por=request.user,
-                comentario=f'Solicitud devuelta para corrección por {request.user.get_full_name()}. Permanece asignada a {solicitud.usuario_asignado.get_full_name()}. {observacion}'
+                comentario=f'Solicitud devuelta para corrección por {request.user.username}. Permanece asignada a {solicitud.usuario_asignado.username}. {observacion}'
             )
 
             # Mensaje personalizado según origen
             mensajes = {
-                'pendiente_revision_sig': f'Solicitud devuelta a en proceso de digitalización. Asignada a {solicitud.usuario_asignado.get_full_name()}.',
-                'asignado_coordinacion': f'Solicitud devuelta desde Coordinación. Asignada a {solicitud.usuario_asignado.get_full_name()}.',
-                'rechazado': f'Solicitud devuelta a pendiente de revisión SIG. Asignada a {solicitud.usuario_asignado.get_full_name()}.'
+                'pendiente_revision_sig': f'Solicitud devuelta a en proceso de digitalización. Asignada a {solicitud.usuario_asignado.username}.',
+                'asignado_coordinacion': f'Solicitud devuelta desde Coordinación. Asignada a {solicitud.usuario_asignado.username}.',
+                'rechazado': f'Solicitud devuelta a pendiente de revisión SIG. Asignada a {solicitud.usuario_asignado.username}.'
             }
 
             return JsonResponse({
@@ -938,7 +996,7 @@ def devolver_para_correccion(request, solicitud_id):
                 'message': mensajes.get(estado_anterior, 'Solicitud devuelta correctamente.'),
                 'estado': solicitud.get_estado_display(),
                 'nuevo_estado': nuevo_estado,
-                'usuario_asignado': solicitud.usuario_asignado.get_full_name()
+                'usuario_asignado': solicitud.usuario_asignado.username
             })
 
     except Exception as e:

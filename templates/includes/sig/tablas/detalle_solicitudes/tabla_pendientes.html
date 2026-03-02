@@ -5,9 +5,9 @@
             <thead class="table-light">
                 <tr>
                     <th class="text-center">#</th>
+                    <th class="text-center">Fecha Creación</th>
                     <th class="text-center">Datos Geográficos</th>
                     <th class="text-center">Observación</th>
-                    <th class="text-center">Creacion</th>
                     <th class="text-center">Prioridad</th>
                     <th class="text-center">Acciones</th> 
                 </tr>
@@ -16,13 +16,15 @@
                 {% for solicitud in solicitudes_pendientes %}
                     <tr>
                         <td class="text-center">{{ forloop.counter }}</td>
+                        <td class="text-center">
+                            <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
+                            <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                        </td>
                         <td>
                             {% with distrito=solicitud.colonia.distritos.first %}
                                 {% if distrito %}
                                     <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
                                     <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
-                                {% else %}
-                                    <span class="text-muted">Sin ubicación</span>
                                 {% endif %}
                             {% endwith %}
                         </td>
@@ -30,10 +32,6 @@
                             <span>
                                 {{ solicitud.observaciones }}
                             </span>
-                        </td>
-                        <td class="text-center">
-                            <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
-                            <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
                         </td>
                         <td class="text-center">
                                 <span class="badge 

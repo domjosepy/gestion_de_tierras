@@ -5,11 +5,11 @@
         <thead class="table-light">
             <tr>
                 <th class="text-center">#</th>
-                <th class="text-center">Creación</th>
+                <th class="text-center">Fecha Creación</th>
                 <th class="text-center">Datos Geográficos</th>
-                <th class="text-center">Motivo Rechazo</th>
-                <th class="text-center">Digitalizador</th>
                 <th class="text-center">Fecha Rechazo</th>
+                <th class="text-center">Motivo Rechazo</th>
+                <th class="text-center">Digitalizador Asignado</th>
                 <th class="text-center">Prioridad</th>
                 <th class="text-center">Estado</th>
                 <th class="text-center">Acciones</th>
@@ -34,6 +34,14 @@
                     {% endwith %}
                 </td>
                 <td class="text-center">
+                    {% if solicitud.fecha_modificacion %}
+                        <small>{{ solicitud.fecha_modificacion|date:"d/m/Y" }}</small>
+                        <br><small class="text-muted">{{ solicitud.fecha_modificacion|date:"H:i" }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
                     <small class="text-danger">
                         {{ solicitud.motivo_rechazo|default:"-"|truncatechars:50 }}
                     </small>
@@ -48,14 +56,7 @@
                         <span class="text-muted">-</span>
                     {% endif %}
                 </td>
-                <td class="text-center">
-                    {% if solicitud.fecha_modificacion %}
-                        <small>{{ solicitud.fecha_modificacion|date:"d/m/Y" }}</small>
-                        <br><small class="text-muted">{{ solicitud.fecha_modificacion|date:"H:i" }}</small>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
+ 
                 <td class="text-center">
                     <span class="badge 
                         {% if solicitud.prioridad == 'alta' %}bg-danger
@@ -70,13 +71,6 @@
                     </span>
                 </td>
                 <td class="text-center">
-                    <a href="{% url 'sig:detalle_solicitud' solicitud.id %}" 
-                       class="btn btn-sm btn-info me-1" 
-                       title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    
-                    <!-- Botón para devolver (solo líder) - ABRE EL MODAL -->
                     {% if es_lider %}
                         <button class="btn btn-sm btn-warning"
                                 data-bs-toggle="modal" 

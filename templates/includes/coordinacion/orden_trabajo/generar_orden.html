@@ -143,35 +143,35 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Metadatos de digitalización (lotes, superficie) -->
+                        <!-- Información de digitalización (lotes, superficie) -->
                         <div class="mb-3">
                             <div class="d-flex align-items-center">
                                 <div class="bg-light rounded-circle p-2 me-2">
                                     <i class="fas fa-layer-group text-secondary"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block">Metadatos de digitalización</small>
-                                                {% if ultimo_precat %}
-                                                    {% if ultimo_precat.lotes_digitalizados %}
-                                                        <div>Lotes digitalizados: <strong>{{ ultimo_precat.lotes_digitalizados }}</strong></div>
-                                                    {% endif %}
-                                                    {% if ultimo_precat.hectareas_aprox %}
-                                                        <div>Superficie aprox.: <strong>{{ ultimo_precat.hectareas_aprox }} ha</strong></div>
-                                                    {% elif ultimo_precat.metros_aprox %}
-                                                        <div>Superficie aprox.: <strong>{{ ultimo_precat.metros_aprox }} m</strong></div>
-                                                    {% endif %}
-                                                {% elif ultimo_planos %}
-                                                    {% if ultimo_planos.lotes_digitalizados %}
-                                                        <div>Lotes digitalizados: <strong>{{ ultimo_planos.lotes_digitalizados }}</strong></div>
-                                                    {% endif %}
-                                                    {% if ultimo_planos.hectareas_aprox %}
-                                                        <div>Superficie aprox.: <strong>{{ ultimo_planos.hectareas_aprox }} ha</strong></div>
-                                                    {% elif ultimo_planos.metros_aprox %}
-                                                        <div>Superficie aprox.: <strong>{{ ultimo_planos.metros_aprox }} m</strong></div>
-                                                    {% endif %}
-                                                {% else %}
-                                                    <span class="text-muted">No hay metadatos registrados</span>
-                                                {% endif %}
+                                    <small class="text-muted d-block">Información de digitalización</small>
+                                    {% if ultimo_precat %}
+                                        {% if ultimo_precat.lotes_digitalizados %}
+                                            <div>Lotes digitalizados: <strong>{{ ultimo_precat.lotes_digitalizados }}</strong></div>
+                                        {% endif %}
+                                        {% if ultimo_precat.hectareas_aprox %}
+                                            <div>Superficie aprox.: <strong>{{ ultimo_precat.hectareas_aprox }} ha</strong></div>
+                                        {% elif ultimo_precat.metros_aprox %}
+                                            <div>Superficie aprox.: <strong>{{ ultimo_precat.metros_aprox }} m</strong></div>
+                                        {% endif %}
+                                    {% elif ultimo_planos %}
+                                        {% if ultimo_planos.lotes_digitalizados %}
+                                            <div>Lotes digitalizados: <strong>{{ ultimo_planos.lotes_digitalizados }}</strong></div>
+                                        {% endif %}
+                                        {% if ultimo_planos.hectareas_aprox %}
+                                            <div>Superficie aprox.: <strong>{{ ultimo_planos.hectareas_aprox }} ha</strong></div>
+                                        {% elif ultimo_planos.metros_aprox %}
+                                            <div>Superficie aprox.: <strong>{{ ultimo_planos.metros_aprox }} m</strong></div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">No hay información de digitalización registrada</span>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

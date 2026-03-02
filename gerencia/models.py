@@ -391,9 +391,15 @@ class SolicitudRelevamiento(models.Model):
         # Guardar relevadores en ManyToMany
         self.relevadores_asignados.set(relevadores)
 
-        # Asignar el primero como usuario principal
-        if relevadores:
-            self.usuario_asignado = relevadores[0]
+        # Preferir asignar como usuario principal al coordinador de campo
+        # cuando esté presente; si no, usar el primer relevador como fallback
+        if getattr(self, 'coordinador_campo', None):
+            self.usuario_asignado = self.coordinador_campo
+        elif relevadores:
+            try:
+                self.usuario_asignado = relevadores[0]
+            except Exception:
+                self.usuario_asignado = None
 
         self.asignado_por = asignado_por
         self.ultima_asignacion_por = asignado_por
@@ -551,8 +557,9 @@ class SolicitudRelevamiento(models.Model):
             if not self.prioridad:
                 self.prioridad = "baja"
 
-            # Asignar grupo inicial
-            self._asignar_grupo_automaticamente()
+            # Asignar grupo inicial (permitir preservar el grupo si la instancia marca _preservar_grupo)
+            if not getattr(self, '_preservar_grupo', False):
+                self._asignar_grupo_automaticamente()
         else:
             # Obtener el estado anterior
             try:
@@ -569,8 +576,9 @@ class SolicitudRelevamiento(models.Model):
                 self._procesar_cambio_estado(
                     estado_anterior, self.estado, ahora)
 
-                # Reasignar grupo si el estado cambió
-                self._asignar_grupo_automaticamente()
+                # Reasignar grupo si el estado cambió (salvo que se indique preservar el grupo)
+                if not getattr(self, '_preservar_grupo', False):
+                    self._asignar_grupo_automaticamente()
 
         # Guardar primero
         super().save(*args, **kwargs)

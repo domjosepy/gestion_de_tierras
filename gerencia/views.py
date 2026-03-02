@@ -107,10 +107,14 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
 @login_required
 def lista_solicitudes_relevamiento(request):
     """
-    Lista todas las solicitudes de relevamiento con información de departamento y distrito
+    Lista todas las solicitudes de relevamiento
     """
     # Optimizar las consultas CON información de grupos
-    solicitudes = SolicitudRelevamiento.objects.exclude(grupo_asignado__nombre='ANALISIS').select_related(
+    # Mostrar todas las solicitudes, pero seguir excluyendo las del grupo 'ANALISIS'
+    # salvo que estén en estado 'rechazado' (queremos que las rechazos siempre sean visibles).
+    solicitudes = SolicitudRelevamiento.objects.exclude(
+        Q(grupo_asignado__nombre='') 
+    ).select_related(
         "colonia",
         "creado_por",
         "grupo_asignado",

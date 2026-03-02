@@ -5,12 +5,11 @@
             <thead class="table-light">
                 <tr>
                     <th class="text-center">#</th>
-                    <th class="text-center">Creación</th>
+                    <th class="text-center">Fecha Creación</th>
                     <th class="text-center">Datos Geográficos</th>
                     <th class="text-center">Observación</th>
                     <th class="text-center">Prioridad</th>
-                    <th class="text-center">Asignación</th>
-                    <th class="text-center">Tiempo</th>
+                    <th class="text-center">Fecha Asignación</th>
                     <th class="text-center">Acciones</th>
                 </tr>
             </thead>
@@ -52,30 +51,15 @@
                             <span class="text-muted">No asignada</span>
                         {% endif %}
                     </td>
-
-                    <td class="text-center">
-                        <small class="{% if tarea.es_urgente %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                            {{ tarea.obtener_tiempo_transcurrido|format_timedelta }}
-                            {% if tarea.es_urgente %}
-                                <i class="fas fa-exclamation-triangle ms-1 text-danger"></i>
-                            {% endif %}
-                        </small>
-                    </td>
-                    <td class="text-center">
-                        <a href="{% url 'digitalizador:detalle_tarea' tarea.id %}" 
-                        class="btn btn-sm btn-info me-1" 
-                        title="Ver detalles">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        
-                        <button class="btn btn-sm btn-warning btn-iniciar-digitalizacion" 
+                    <td class="text-center">                        
+                        <button class="btn btn-sm btn-outline-warning btn-iniciar-digitalizacion" 
                                 data-bs-toggle="modal"
                                 data-bs-target="#modalIniciar"
                                 data-tarea-id="{{ tarea.id }}"
                                 data-colonia-nombre="{{ tarea.colonia.nombre }}"
                                 title="Iniciar digitalización">
-                            <i class="fas fa-play"></i>
-                        </button>
+                            <i class="fas fa-play me-2"></i>Iniciar digitalización
+                        </button> 
                     </td>
                 </tr>
                 {% endfor %}

@@ -212,7 +212,7 @@ class Relevamiento(models.Model):
 
     # 3 - DATOS DE LA OCUPACIÓN
     TIPO_LOTE_CHOICES = [("agricola", "Agrícola"),
-                         ("quinta", "Quinta"), ("urbana", "Urbana")]
+                         ("quinta", "Quinta"), ("urbano", "Urbano")]
 
     tipo_lote = models.CharField(
         max_length=20, choices=TIPO_LOTE_CHOICES, blank=True)

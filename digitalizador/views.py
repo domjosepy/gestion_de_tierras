@@ -12,7 +12,7 @@ from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from gerencia.utils import procesar_auditorias
 from django.db.models import Q
 from .decorators import requiere_ser_digitalizador
-from .froms import PrecatSubirForm
+from .forms import PrecatSubirForm
 from .models import PrecatArchivo
 from administrador.models import User
 from django.db import models

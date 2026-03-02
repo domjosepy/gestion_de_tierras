@@ -177,7 +177,7 @@ def formulario_desde_orden(request, orden_id):
             relevamiento.encuestador = request.user
             relevamiento.save()
             form.save_m2m()
-            messages.success(request, f'Relevamiento #{relevamiento.pk} creado correctamente.')
+            messages.success(request, f'Relevamiento creado correctamente.')
             return redirect(
                 reverse('relevamiento:resumen_relevamiento', kwargs={'pk': relevamiento.pk})
             )
@@ -268,10 +268,21 @@ def resumen_relevamiento(request, pk):
 def mis_encuestas(request):
     """Vista para gestionar y filtrar encuestas/relevamientos del encuestador."""
    
-    # Obtener todos los relevamientos del usuario actual
-    relevamientos = Relevamiento.objects.filter(
-        encuestador=request.user
-    ).select_related(
+    # Filtrado opcional por query param 'colonia'
+    colonia_q = request.GET.get('colonia')
+
+    # Base queryset: relevamientos del usuario actual
+    relevamientos_qs = Relevamiento.objects.filter(encuestador=request.user)
+
+    if colonia_q:
+        # Intentar interpretar como ID; si falla, filtrar por nombre (icontains)
+        try:
+            colonia_id = int(colonia_q)
+            relevamientos_qs = relevamientos_qs.filter(colonia__id=colonia_id)
+        except (ValueError, TypeError):
+            relevamientos_qs = relevamientos_qs.filter(colonia__nombre__icontains=colonia_q)
+
+    relevamientos = relevamientos_qs.select_related(
         'colonia',
         'distrito',
         'departamento',
@@ -287,13 +298,17 @@ def mis_encuestas(request):
             'departamento': rel.departamento.nombre if rel.departamento else '',
             'distrito': rel.distrito.nombre if rel.distrito else '',
             'colonia': rel.colonia.nombre if rel.colonia else '',
+            'colonia_id': rel.colonia.id if rel.colonia else '',
             'manzana': rel.manzana or 'Sin datos',
+            'loteIndert': rel.lote_indert or 'Sin datos',
             'loteSirt': rel.lote_sirt or 'Sin datos',
             'condicionVivienda': rel.get_condicion_vivienda_display() if rel.condicion_vivienda else 'Sin datos',
             'condicionEncuestado': rel.get_condicion_encuestado_display() if rel.condicion_encuestado else 'Sin datos',
             'quien_es_el_ocupante': rel.quien_es_el_ocupante or 'Sin información',
             'observaciones': rel.observacion_encuesta or 'Sin observaciones',
             'formularioHabilitado': rel.orden_trabajo.formulario_habilitado if rel.orden_trabajo else False,
+            'firmo_solicitud': bool(rel.firmo_solicitud),
+            'firmoSolicitud': bool(rel.firmo_solicitud),
         })
     
     context = {
@@ -449,9 +464,14 @@ def coordinador_campo_dashboard(request):
         equipos = orden.equipos_asignados.all()
         subcoordinadores_count = 0
         encuestadores_count = 0
+        subcoordinadores_list = []
+        encuestadores_list = []
         for equipo in equipos:
             subcoordinadores_count += equipo.subcoordinadores.count()
             encuestadores_count += equipo.encuestadores.count()
+            # recopilar nombres (manteniendo orden y evitando duplicados más abajo)
+            subcoordinadores_list.extend(list(equipo.subcoordinadores.all()))
+            encuestadores_list.extend(list(equipo.encuestadores.all()))
         
         # Contar relevamientos de esta orden
         relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
@@ -461,6 +481,8 @@ def coordinador_campo_dashboard(request):
             'datos_geo': datos_geo,
             'subcoordinadores_count': subcoordinadores_count,
             'encuestadores_count': encuestadores_count,
+            'subcoordinadores_list': list(dict.fromkeys(subcoordinadores_list)),
+            'encuestadores_list': list(dict.fromkeys(encuestadores_list)),
             'relevamientos_count': relevamientos_count,
         })
 
