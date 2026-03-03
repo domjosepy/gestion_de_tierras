@@ -369,11 +369,20 @@
 
                 <div class="card-body">
                     <!-- Mensaje condicional (sin un card-body anidado) -->
-                    {% if orden.solicitud.estado != 'en_ejecucion_campo' %}
+                    {% if orden.solicitud.estado != 'en_ejecucion_campo' and orden.estado != 'completada' %}
                         <div class="alert alert-info mb-4 text-center" role="alert">
                             <i class="fas fa-info-circle me-1"></i>
                             Los registros de campo estarán disponibles una vez que la orden esté en ejecución en campo.
                         </div>
+                    {% endif %}
+                    {% if orden.estado == 'completada' %}
+                        <div class="alert alert-success mb-4 text-center" role="alert">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Relevamiento terminado. Gestione su producción desde la sección de 
+                            <a href="{% url 'coordinacion:control_relevamiento_panel' %}" class="btn btn-info">
+                                <i class="fas fa-chart-line me-1"></i> Control de Relevamiento
+                            </a>
+                        </div> 
                     {% endif %}
 
                     <!-- Tarjetas de resumen -->

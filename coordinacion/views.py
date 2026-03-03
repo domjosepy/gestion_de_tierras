@@ -886,3 +886,186 @@ def asignar_personal_orden(request, orden_id):
         else:
             messages.error(request, f'Error al asignar: {str(e)}')
             return redirect('coordinacion:coordinacion_dashboard')
+
+
+# ------------------ GESTIÓN DE CONTROL DE RELEVAMIENTO ------------------ #
+
+@login_required
+@coordinacion_required
+def control_relevamiento_panel(request):
+    """
+    Panel principal que lista colonias con órdenes completadas.
+    Muestra botón para cargar mermas de cada colonia.
+    """
+    # Obtener órdenes completadas con su información de colonia
+    ordenes_completadas = OrdenTrabajo.objects.filter(
+        estado='completada'
+    ).select_related(
+        'solicitud',
+        'solicitud__colonia'
+    ).prefetch_related(
+        'solicitud__colonia__distritos__departamento'
+    ).order_by('-fecha_fin_real')
+
+    # Agrupar por colonia para evitar duplicados
+    colonias_dict = {}
+    for orden in ordenes_completadas:
+        if orden.solicitud and orden.solicitud.colonia:
+            colonia = orden.solicitud.colonia
+            if colonia.id not in colonias_dict:
+                # Obtener datos geográficos
+                primer_distrito = colonia.distritos.first()
+                departamento = primer_distrito.departamento if primer_distrito else None
+                
+                colonias_dict[colonia.id] = {
+                    'colonia': colonia,
+                    'distrito': primer_distrito,
+                    'departamento': departamento,
+                    'ordenes_completadas': 1,
+                    'ultima_fecha_fin': orden.fecha_fin_real,
+                }
+            else:
+                colonias_dict[colonia.id]['ordenes_completadas'] += 1
+                # Actualizar fecha si es más reciente
+                if orden.fecha_fin_real and (
+                    not colonias_dict[colonia.id]['ultima_fecha_fin'] or 
+                    orden.fecha_fin_real > colonias_dict[colonia.id]['ultima_fecha_fin']
+                ):
+                    colonias_dict[colonia.id]['ultima_fecha_fin'] = orden.fecha_fin_real
+
+    colonias_data = list(colonias_dict.values())
+
+    context = {
+        'colonias_data': colonias_data,
+        'total_colonias': len(colonias_data),
+    }
+    return render(request, 'coordinacion/control_relevamiento/control_relevamiento.html', context)
+
+
+@login_required
+@coordinacion_required
+def control_relevamiento_obtener_mermas(request, colonia_id):
+    """
+    Endpoint AJAX que devuelve las mermas (registros problemáticos) de una colonia.
+    Filtra relevamientos donde:
+    - condicion_vivienda == "ausente" (AUSENTE)
+    - estado_entrevista == "rechazo" (RECHAZADO)
+    - estado_entrevista == "en_conflicto" (EN CONFLICTO)
+    
+    Retorna JSON con KPIs y tabla de mermas.
+    """
+    if not request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Solo peticiones AJAX'}, status=400)
+
+    try:
+        from core.models import Colonia
+        colonia = get_object_or_404(Colonia, pk=colonia_id)
+        
+        # Obtener todas las órdenes completadas de esta colonia
+        ordenes_completadas = OrdenTrabajo.objects.filter(
+            solicitud__colonia=colonia,
+            estado='completada'
+        ).select_related('solicitud')
+
+        if not ordenes_completadas.exists():
+            return JsonResponse({
+                'error': 'No hay órdenes completadas para esta colonia'
+            }, status=404)
+
+        # Obtener IDs de las órdenes
+        orden_ids = list(ordenes_completadas.values_list('id', flat=True))
+
+        # Filtrar relevamientos problemáticos (mermas)
+        mermas = Relevamiento.objects.filter(
+            colonia=colonia,
+            orden_trabajo_id__in=orden_ids
+        ).filter(
+            Q(condicion_vivienda='ausente') |
+            Q(estado_entrevista='rechazo') |
+            Q(estado_entrevista='en_conflicto')
+        ).select_related(
+            'encuestador',
+            'orden_trabajo'
+        ).order_by('manzana', 'lote_sirt')
+
+        # Calcular KPIs
+        # Total de lotes digitalizados (desde el último Precat)
+        lotes_digitalizados_total = 0
+        for orden in ordenes_completadas:
+            ultimo_precat = PrecatArchivo.objects.filter(
+                solicitud=orden.solicitud
+            ).order_by('-fecha_subida').first()
+            
+            if ultimo_precat and ultimo_precat.lotes_digitalizados:
+                lotes_digitalizados_total += ultimo_precat.lotes_digitalizados
+
+        # Meta total de encuestas
+        meta_total = ordenes_completadas.aggregate(
+            total_meta=Sum('meta_encuestas')
+        )['total_meta'] or 0
+
+        # Total de relevamientos realizados en esta colonia
+        total_relevamientos = Relevamiento.objects.filter(
+            colonia=colonia,
+            orden_trabajo_id__in=orden_ids
+        ).count()
+
+        # Contar mermas
+        total_mermas = mermas.count()
+
+        # Relevamientos exitosos
+        relevamientos_exitosos = total_relevamientos - total_mermas
+
+        # Serializar mermas para JSON
+        mermas_data = []
+        for merma in mermas:
+            # Determinar el estado legible
+            estado_display = ''
+            if merma.condicion_vivienda == 'ausente':
+                estado_display = 'Ausente'
+            elif merma.estado_entrevista == 'rechazo':
+                estado_display = 'Rechazado'
+            elif merma.estado_entrevista == 'en_conflicto':
+                estado_display = 'En Conflicto'
+            
+            # Obtener nombre del encuestador con fallback a username
+            nombre_encuestador = 'Sin asignar'
+            if merma.encuestador:
+                nombre_completo = merma.encuestador.get_full_name()
+                nombre_encuestador = nombre_completo if nombre_completo.strip() else merma.encuestador.username
+            
+            mermas_data.append({
+                'id': merma.id,
+                'manzana': merma.manzana or 'Sin datos',
+                'lote': merma.lote_sirt or merma.lote_indert or 'Sin datos',
+                'ocupante': merma.quien_es_el_ocupante or 'Sin información',
+                'estado': estado_display,
+                'observaciones': merma.observacion_encuesta or 'No se observaron detalles',
+                'encuestador': nombre_encuestador,
+                'fecha': merma.creado_en.strftime('%d/%m/%Y') if merma.creado_en else '',
+            })
+
+        # Preparar respuesta
+        response_data = {
+            'success': True,
+            'colonia': {
+                'nombre': colonia.nombre,
+                'id': colonia.id,
+            },
+            'kpis': {
+                'lotes_digitalizados': lotes_digitalizados_total,
+                'meta_relevamiento': meta_total,
+                'total_relevamientos': total_relevamientos,
+                'relevamientos_exitosos': relevamientos_exitosos,
+                'total_mermas': total_mermas,
+                'porcentaje_exito': round((relevamientos_exitosos / total_relevamientos * 100), 1) if total_relevamientos > 0 else 0,
+            },
+            'mermas': mermas_data,
+        }
+
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error al obtener mermas: {str(e)}'
+        }, status=500)

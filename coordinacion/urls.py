@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (dashboard_coordinacion, solicitudes_pendientes, solicitudes_canceladas, reactivar_orden,
                     generar_orden_view, ordenes_trabajo, detalle_orden, asignar_equipos_orden,
                     modificar_orden, cancelar_orden, reportes_coordinacion,
-                    asignar_personal_orden)
+                    asignar_personal_orden, control_relevamiento_panel, control_relevamiento_obtener_mermas)
 
 app_name = 'coordinacion'
 
@@ -37,5 +37,10 @@ urlpatterns = [
 
     path('orden/<int:orden_id>/asignar-personal/',
          asignar_personal_orden, name='asignar_personal_orden'),
+
+    # Control de Relevamiento (Gestión de Mermas)
+    path('control-relevamiento/', control_relevamiento_panel, name='control_relevamiento_panel'),
+    path('control-relevamiento/mermas/<int:colonia_id>/', 
+         control_relevamiento_obtener_mermas, name='control_relevamiento_obtener_mermas'),
 
 ]

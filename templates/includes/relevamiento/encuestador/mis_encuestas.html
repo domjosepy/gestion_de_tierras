@@ -285,7 +285,7 @@ function renderTable(data) {
   const rows = data.map(item => {
     const fullObservaciones = item.observaciones || 'Sin observaciones';
     const shortObservaciones = truncateText(fullObservaciones);
-    const needsTooltip = fullObservaciones.length > 60;
+    const needsTooltip = fullObservaciones.length > 30 && fullObservaciones !== shortObservaciones;
     
     return `
       <tr>
@@ -328,7 +328,7 @@ function renderTable(data) {
             </span>`
           }
         </td>
-        <td class="text-center text-nowrap">
+        <td>
           <span class="small" ${needsTooltip ? `data-bs-toggle="tooltip" data-bs-placement="top" title="${fullObservaciones}"` : ''}>
             ${shortObservaciones}
           </span>

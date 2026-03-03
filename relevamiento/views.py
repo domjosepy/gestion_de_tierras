@@ -55,6 +55,524 @@ def _datos_geograficos_desde_orden(orden):
 
 
 # ─────────────────────────────────────────────
+# DASHBOARD COORDINADOR DE CAMPO
+# ─────────────────────────────────────────────
+
+@login_required
+@coordinador_campo_required
+def coordinador_campo_dashboard(request):
+    """
+    Dashboard para coordinadores de campo: muestra todas las órdenes donde
+    el usuario está asignado como coordinador de campo.
+    """
+    
+    # Filtrar órdenes donde el usuario es coordinador_campo en la solicitud
+    ordenes = (
+        OrdenTrabajo.objects
+        .exclude(estado__in=['cancelada'])
+        .filter(solicitud__coordinador_campo=request.user)
+        .select_related(
+            'solicitud',
+            'solicitud__colonia',
+            'solicitud__coordinador_campo',
+        )
+        .prefetch_related(
+            'equipos_asignados',
+            'equipos_asignados__subcoordinadores',
+            'equipos_asignados__encuestadores',
+        )
+        .order_by('-fecha_creacion')
+    )
+
+    # Preparar contexto enriquecido para cada orden
+    ordenes_context = []
+    for orden in ordenes:
+        # Obtener datos geográficos
+        datos_geo = _datos_geograficos_desde_orden(orden)
+        
+        # Contar personal asignado
+        equipos = orden.equipos_asignados.all()
+        subcoordinadores_count = 0
+        encuestadores_count = 0
+        subcoordinadores_list = []
+        encuestadores_list = []
+        for equipo in equipos:
+            subcoordinadores_count += equipo.subcoordinadores.count()
+            encuestadores_count += equipo.encuestadores.count()
+            # recopilar nombres (manteniendo orden y evitando duplicados más abajo)
+            subcoordinadores_list.extend(list(equipo.subcoordinadores.all()))
+            encuestadores_list.extend(list(equipo.encuestadores.all()))
+        
+        # Contar relevamientos de esta orden
+        relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
+        
+        ordenes_context.append({
+            'orden': orden,
+            'datos_geo': datos_geo,
+            'subcoordinadores_count': subcoordinadores_count,
+            'encuestadores_count': encuestadores_count,
+            'subcoordinadores_list': list(dict.fromkeys(subcoordinadores_list)),
+            'encuestadores_list': list(dict.fromkeys(encuestadores_list)),
+            'relevamientos_count': relevamientos_count,
+        })
+
+    context = {
+        'ordenes_context': ordenes_context,
+        'total_ordenes': ordenes.count(),
+    }
+    return render(request, 'relevamiento/coordinador_dashboard.html', context)
+
+@login_required
+@coordinador_campo_required
+def habilitar_formulario_relevamiento(request, orden_id):
+    """
+    Habilita o deshabilita el formulario de relevamiento para una orden.
+    Solo el coordinador de campo asignado puede hacerlo.
+    """
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+    
+    # Verificar que el usuario es el coordinador de campo de esta orden
+    if orden.solicitud.coordinador_campo != request.user and not request.user.is_superuser:
+        messages.error(request, 'No tiene permisos para modificar esta orden.')
+        return redirect('relevamiento:coordinador_dashboard')
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Toggle del estado
+                orden.formulario_habilitado = not orden.formulario_habilitado
+                orden.save()
+
+                solicitud = orden.solicitud
+
+                if orden.formulario_habilitado:
+                    # Habilitado -> pasar solicitud a ejecución en campo y orden a en_proceso
+                    previo = solicitud.estado if solicitud else None
+                    if solicitud:
+                        solicitud.estado = 'en_ejecucion_campo'
+                        solicitud.save()
+                    orden.estado = 'en_proceso'
+                    orden.save()
+
+                    # Auditoría
+                    try:
+                        SolicitudRelevamientoAudit.objects.create(
+                            solicitud=solicitud,
+                            campo='formulario_habilitado',
+                            valor_anterior=previo or '',
+                            valor_nuevo='en_ejecucion_campo',
+                            cambiado_por=request.user,
+                            comentario=f'Formulario habilitado por {request.user.username}'
+                        )
+                    except Exception:
+                        pass
+
+                    messages.success(request, 'Formulario habilitado. Solicitud en ejecución de campo y orden en proceso.')
+                else:
+                    # Deshabilitado -> pasar solicitud a pendiente_cierre
+                    previo = solicitud.estado if solicitud else None
+                    if solicitud:
+                        solicitud.estado = 'pendiente_cierre'
+                        solicitud.save()
+
+
+                    # Auditoría
+                    try:
+                        SolicitudRelevamientoAudit.objects.create(
+                            solicitud=solicitud,
+                            campo='formulario_habilitado',
+                            valor_anterior=previo or '',
+                            valor_nuevo='pendiente_cierre',
+                            cambiado_por=request.user,
+                            comentario=f'Formulario deshabilitado por {request.user.username}'
+                        )
+                    except Exception:
+                        pass
+
+                    messages.success(request, 'Formulario deshabilitado. Solicitud marcada como pendiente de cierre.')
+
+            return redirect('relevamiento:coordinador_dashboard')
+        except Exception as e:
+            messages.error(request, f'Error al cambiar estado del formulario: {str(e)}')
+            return redirect('relevamiento:coordinador_dashboard')
+    
+    return redirect('relevamiento:coordinador_dashboard')
+
+
+@login_required
+@coordinador_campo_required
+def finalizar_orden_campo(request, orden_id):
+    """
+    Finaliza una orden de trabajo y reasigna la solicitud al grupo de análisis.
+    Solo el coordinador de campo puede hacerlo.
+    """
+
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+    solicitud = orden.solicitud
+    
+    # Verificar que el usuario es el coordinador de campo
+    if solicitud.coordinador_campo != request.user and not request.user.is_superuser:
+        messages.error(request, 'No tiene permisos para finalizar esta orden.')
+        return redirect('relevamiento:coordinador_dashboard')
+    
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Cambiar estado de la orden a completada
+                orden.estado = 'completada'
+                orden.fecha_fin_real = timezone.now().date()
+                orden.formulario_habilitado = False  # Deshabilitar formulario al finalizar
+                orden.save()
+                
+                # Asignar solicitud al grupo de análisis
+                try:
+                    grupo_analisis = Grupo.objects.filter(
+                        nombre__icontains='ANALISIS',
+                        activo=True
+                    ).first()
+
+                    if grupo_analisis:
+                        solicitud.estado = 'finalizado'
+
+                        # Marcar la solicitud según su tipo como terminada
+                        if solicitud.tipo == SolicitudRelevamiento.TIPO_RELEVAMIENTO:
+                            solicitud.relevamiento_terminado = True
+                            # luego mantener al coordinador de campo como el usuario asignado 
+                            # para que pueda hacer seguimiento desde la solicitud
+                            solicitud.usuario_asignado = solicitud.coordinador_campo
+                            
+                        elif solicitud.tipo == SolicitudRelevamiento.TIPO_ACTUALIZACION:
+                            solicitud.actualizacion_terminado = True
+                            solicitud.usuario_asignado = None
+                        solicitud.grupo_asignado = grupo_analisis
+                        solicitud.save()
+                        # Si existen otras solicitudes para la misma colonia creadas
+                        # posteriormente a esta solicitud, marcarlas como actualización
+                        try:
+                            otras = SolicitudRelevamiento.objects.filter(
+                                colonia=solicitud.colonia
+                            ).exclude(pk=solicitud.pk).filter(fecha_creacion__gte=solicitud.fecha_creacion)
+
+                            for otra in otras:
+                                tipo_anterior = otra.tipo
+                                if tipo_anterior != SolicitudRelevamiento.TIPO_ACTUALIZACION:
+                                    otra.tipo = SolicitudRelevamiento.TIPO_ACTUALIZACION
+                                    otra.save()
+                                    # Registrar auditoría por el cambio de tipo
+                                    try:
+                                        SolicitudRelevamientoAudit.objects.create(
+                                            solicitud=otra,
+                                            campo='tipo',
+                                            valor_anterior=tipo_anterior,
+                                            valor_nuevo=SolicitudRelevamiento.TIPO_ACTUALIZACION,
+                                            cambiado_por=request.user,
+                                            comentario=f"Tipo marcado como 'actualizacion' al finalizar orden {orden.numero_orden}"
+                                        )
+                                    except Exception:
+                                        # No interrumpimos el flujo por fallo en auditoría
+                                        pass
+                        except Exception as e:
+                            messages.warning(request, f'No se pudo actualizar tipo de otras solicitudes: {str(e)}')
+                        
+                        # Registrar auditoría
+                        SolicitudRelevamientoAudit.objects.create(
+                            solicitud=solicitud,
+                            campo='finalizacion_campo',
+                            valor_anterior='en_ejecucion_campo',
+                            valor_nuevo='finalizado',
+                            cambiado_por=request.user,
+                            comentario=f'Orden finalizada por coordinador de campo: {request.user.username}'
+                        )
+                        
+                        messages.info(
+                            request,
+                            f'Orden {orden.numero_orden} finalizada.'
+                        )
+                        
+                    else:
+                        messages.warning(
+                            request,
+                            'Orden finalizada, pero no se encontró el grupo de Análisis para reasignación.'
+                        )
+                except Exception as e:
+                    messages.error(request, f'Error al reasignar a análisis: {str(e)}')
+                    
+        except Exception as e:
+            messages.error(request, f'Error al finalizar la orden: {str(e)}')
+    
+    return redirect('relevamiento:coordinador_dashboard')
+
+
+@login_required
+@coordinador_campo_required
+def detalle_relevamiento_coordinador(request, orden_id):
+    """
+    Vista detallada de relevamiento para coordinador de campo.
+    Muestra resumen por encuestador y subcoordinador.
+    """
+    orden = get_object_or_404(
+        OrdenTrabajo.objects.select_related(
+            'solicitud__colonia',
+            'coordinador_responsable'
+        ).prefetch_related(
+            'equipos_asignados__subcoordinadores',
+            'equipos_asignados__encuestadores'
+        ),
+        id=orden_id
+    )
+    
+    # Datos geográficos
+    datos_geo = _datos_geograficos_desde_orden(orden)
+    
+    # Personal asignado
+    subcoordinadores = []
+    encuestadores = []
+    for equipo in orden.equipos_asignados.all():
+        subcoordinadores.extend(equipo.subcoordinadores.all())
+        encuestadores.extend(equipo.encuestadores.all())
+    
+    # Eliminar duplicados manteniendo orden
+    subcoordinadores = list(dict.fromkeys(subcoordinadores))
+    encuestadores = list(dict.fromkeys(encuestadores))
+    
+    # Resumen por encuestador
+    encuestadores_stats = []
+    for encuestador in encuestadores:
+        # Contar encuestas en esta colonia por este encuestador
+        total_encuestas = Relevamiento.objects.filter(
+            encuestador=encuestador,
+            colonia=datos_geo['colonia']
+        ).count()
+        
+        # Contar fotos registradas por este encuestador en esta orden
+        total_fotos = Documento.objects.filter(
+            relevamiento__encuestador=encuestador,
+            relevamiento__orden_trabajo=orden,
+            tipo__in=['recibo', 'vivienda', 'documento', 'lote']
+        ).count()
+        
+        encuestadores_stats.append({
+            'encuestador': encuestador,
+            'total_encuestas': total_encuestas,
+            'total_fotos': total_fotos,
+        })
+    
+    # Resumen por subcoordinador
+    subcoordinadores_stats = []
+    for subcoordinador in subcoordinadores:
+        # Contar archivos subidos por este subcoordinador en esta orden
+        total_archivos = ArchivoSubcoordinador.objects.filter(
+            subido_por=subcoordinador,
+            orden_trabajo=orden
+        ).count()
+        
+        subcoordinadores_stats.append({
+            'subcoordinador': subcoordinador,
+            'total_archivos': total_archivos,
+        })
+    
+    # Cuenta las solicitudes firmadas para esta colonia (si existe la colonia)
+    total_solicitudes = Relevamiento.objects.filter(
+        colonia=datos_geo['colonia']
+    ).count() if datos_geo['colonia'] else 0
+    #cuenta las solicitudes discriminadas por usuario
+    solicitudes_por_usuario = Relevamiento.objects.filter(
+        colonia=datos_geo['colonia']
+    ).values('encuestador').annotate(total=Count('id')) if datos_geo['colonia'] else []
+
+    context = {
+        'orden': orden,
+        'datos_geo': datos_geo,
+        'subcoordinadores': subcoordinadores,
+        'encuestadores': encuestadores,
+        'encuestadores_stats': encuestadores_stats,
+        'subcoordinadores_stats': subcoordinadores_stats,
+        'total_solicitudes': total_solicitudes,
+        'solicitudes_por_usuario': solicitudes_por_usuario,
+    }
+    
+    return render(request, 'includes/relevamiento/coordinador/detalle_relevamiento.html', context)
+
+# ─────────────────────────────────────────────
+# DASHBOARD SUBCOORDINADOR
+# ─────────────────────────────────────────────
+@login_required
+def subcoordinador_dashboard(request):
+    """
+    Dashboard para subcoordinadores: muestra las colonias asignadas
+    a través de las órdenes donde el usuario figura como subcoordinador.
+    """
+    # Obtener órdenes donde el usuario es subcoordinador
+    ordenes = (
+        OrdenTrabajo.objects
+        .filter(equipos_asignados__subcoordinadores=request.user)
+        .select_related('solicitud__colonia')
+        .prefetch_related('solicitud__colonia__distritos')
+        .order_by('-fecha_creacion')
+    )
+
+    colonias_map = {}
+    total_relevamientos = 0
+    total_archivos = 0
+    ordenes_completadas = 0
+    ordenes_en_proceso = 0
+    
+    for orden in ordenes:
+        colonia = orden.solicitud.colonia if orden.solicitud else None
+        if not colonia:
+            continue
+        
+        # Contar relevamientos de esta orden
+        relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
+        total_relevamientos += relevamientos_count
+        
+        # Contar archivos subidos para esta orden
+        from .models import ArchivoSubcoordinador
+        archivos_count = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).count()
+        total_archivos += archivos_count
+        
+        # Obtener el archivo más reciente
+        archivo_reciente = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).first()
+        
+        # Contar estados de órdenes
+        if orden.estado == 'completada':
+            ordenes_completadas += 1
+        elif orden.estado in ('en_proceso', 'asignada'):
+            ordenes_en_proceso += 1
+        
+        # Usar la primera orden encontrada para la colonia
+        if colonia.id not in colonias_map:
+            colonias_map[colonia.id] = {
+                'id': colonia.id,
+                'nombre': colonia.nombre,
+                'codigo': getattr(colonia, 'codigo', ''),
+                'distrito': colonia.distritos.first() if colonia.distritos.exists() else None,
+                'ultima_carga': archivo_reciente.fecha_subida if archivo_reciente else None,
+                'archivo_url': archivo_reciente.archivo.url if archivo_reciente else None,
+                'numero_orden': getattr(orden, 'numero_orden', ''),
+                'fecha_inicio_planeada': getattr(orden, 'fecha_inicio_planeada', None),
+                'fecha_fin_planeada': getattr(orden, 'fecha_fin_planeada', None),
+                # Archivos precat subidos por digitalizador (si la solicitud existe)
+                'precat_files': [] if not orden.solicitud else [
+                    {
+                        'id': a.id,
+                        'nombre': getattr(a, 'archivo', None) and getattr(a, 'archivo').name.split('/')[-1] or getattr(a, 'observaciones', '')[:40],
+                        'fecha_subida': a.fecha_subida,
+                        'tipo': a.tipo_archivo,
+                    }
+                    for a in orden.solicitud.precat_archivos.all().order_by('-fecha_subida')
+                ],
+                'estado_orden': orden.estado,
+                'relevamientos_count': relevamientos_count,
+                'archivos_count': archivos_count,
+                # habilitar_subida se controla por la orden (formulario_habilitado)
+                'habilitar_subida': bool(orden.formulario_habilitado),
+            }
+
+    colonias = list(colonias_map.values())
+
+    return render(request, 'relevamiento/subcoordinador_dashboard.html', {
+        'colonias': colonias,
+        'total_ordenes': ordenes.count(),
+        'ordenes_en_proceso': ordenes_en_proceso,
+        'ordenes_completadas': ordenes_completadas,
+        'total_relevamientos': total_relevamientos,
+    })
+
+
+@login_required
+@require_POST
+def subcoordinador_upload(request):
+    """Recibe archivos comprimidos desde el subcoordinador y los guarda en MEDIA_ROOT/vivser_relevamiento/.
+    Nombre: <departamento>_<distrito>_<colonia>_<fecha>.<extension>
+    Extensiones permitidas: .zip, .rar, .7z, .tar, .tar.gz, .gz
+    """
+    
+    file = request.FILES.get('archivo')
+    colonia_id = request.POST.get('colonia_id')
+    if not file or not colonia_id:
+        return JsonResponse({'success': False, 'message': 'Faltan datos'}, status=400)
+
+    # Extensiones permitidas
+    extensiones_validas = ('.zip', '.rar', '.7z', '.tar', '.tar.gz', '.gz')
+    filename_lower = file.name.lower()
+    if not any(filename_lower.endswith(ext) for ext in extensiones_validas):
+        return JsonResponse({'success': False, 'message': 'Solo se permiten archivos comprimidos (.zip, .rar, .7z, .tar, .tar.gz, .gz)'}, status=400)
+
+    # Buscar la orden más reciente del subcoordinador para esa colonia
+    orden = OrdenTrabajo.objects.filter(
+        solicitud__colonia_id=colonia_id,
+        equipos_asignados__subcoordinadores=request.user
+    ).order_by('-fecha_creacion').first()
+
+    if not orden:
+        return JsonResponse({'success': False, 'message': 'No se encontró orden asociada o no tiene permisos'}, status=403)
+
+    # Obtener datos geográficos
+    colonia = orden.solicitud.colonia if orden.solicitud else None
+    distrito = colonia.distritos.first() if colonia and colonia.distritos.exists() else None
+    departamento = distrito.departamento if distrito else None
+    
+    # Construir nombre del archivo: departamento_distrito_colonia_fecha
+    fecha_str = tz.now().strftime('%Y%m%d_%H%M%S')
+    departamento_str = departamento.nombre.replace(' ', '_') if departamento else 'sin_depto'
+    distrito_str = distrito.nombre.replace(' ', '_') if distrito else 'sin_distrito'
+    colonia_str = colonia.nombre.replace(' ', '_') if colonia else f'colonia{colonia_id}'
+
+    # Extraer extensión del archivo original
+    original_ext = ''
+    if file.name.lower().endswith('.tar.gz'):
+        original_ext = '.tar.gz'
+    else:
+        original_ext = os.path.splitext(file.name)[1]
+
+    # Construir nombre completo del archivo
+    filename = f"{departamento_str}_{distrito_str}_{colonia_str}_{fecha_str}{original_ext}"
+    # Sanitizar nombre: permitir solo letras, números, guiones, guiones bajos, puntos
+    filename = re.sub(r'[^A-Za-z0-9_.\-]', '', filename)
+    # Asegurar longitud máxima razonable (255 - para compatibilidad con FS/DB)
+    if len(filename) > 250:
+        name, ext = os.path.splitext(filename)
+        filename = name[:250 - len(ext)] + ext
+    
+    # Guardar en la base de datos usando el modelo ArchivoSubcoordinador
+    try:
+        # Forzar que el archivo guarde con el nombre construido
+        file.name = filename
+        archivo_obj = ArchivoSubcoordinador(
+            orden_trabajo=orden,
+            archivo=file,
+            nombre_archivo=filename,
+            subido_por=request.user
+        )
+        archivo_obj.save()
+        
+        # También actualizar relevamientos existentes si los hay
+        relevamientos = Relevamiento.objects.filter(orden_trabajo=orden)
+        if relevamientos.exists():
+            for rel in relevamientos:
+                rel.archivo_subcoordinador = archivo_obj.archivo
+                rel.fecha_subida_archivo = archivo_obj.fecha_subida
+                rel.save(update_fields=['archivo_subcoordinador', 'fecha_subida_archivo'])
+            mensaje = f'Archivo subido correctamente y vinculado a {relevamientos.count()} relevamiento(s)'
+        else:
+            mensaje = 'Archivo subido correctamente. Listo para vincular a relevamientos.'
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'message': f'Error al guardar archivo: {str(e)}'
+        }, status=500)
+
+    return JsonResponse({
+        'success': True, 
+        'message': mensaje,
+        'filename': filename,
+        'fecha_subida': archivo_obj.fecha_subida.strftime('%d/%m/%Y %H:%M')
+    })
+
+
+# ─────────────────────────────────────────────
 # DASHBOARD ENCUESTADOR
 # ─────────────────────────────────────────────
 
@@ -81,11 +599,23 @@ def encuestador_dashboard(request):
 
     # Contar relevamientos propios por orden y calcular propiedades usadas en la plantilla
     relevamientos_por_orden = {}
+    relevamientos_totales_por_orden = {}
+    
     for orden in ordenes:
+        # Relevamientos personales del encuestador
         relevamientos_por_orden[orden.pk] = Relevamiento.objects.filter(
             orden_trabajo=orden,
             encuestador=request.user,
         ).count()
+        
+        # Relevamientos totales de la colonia (todos los encuestadores)
+        colonia = orden.solicitud.colonia if orden.solicitud else None
+        if colonia:
+            relevamientos_totales_por_orden[orden.pk] = Relevamiento.objects.filter(
+                colonia=colonia
+            ).count()
+        else:
+            relevamientos_totales_por_orden[orden.pk] = 0
 
     # Mapeo simple para badge/icon según estado
     estado_map = {
@@ -99,14 +629,17 @@ def encuestador_dashboard(request):
     ordenes_context = []
     for orden in ordenes:
         m = estado_map.get(orden.estado, {'badge': 'secondary', 'icon': 'fa-circle'})
-        cnt = relevamientos_por_orden.get(orden.pk, 0)
+        cnt_personal = relevamientos_por_orden.get(orden.pk, 0)
+        cnt_total = relevamientos_totales_por_orden.get(orden.pk, 0)
         meta = getattr(orden, 'meta_encuestas', 0) or 0
-        progreso_percent = int(0 if meta == 0 else (cnt / meta) * 100)
+        # Calcular progreso basado en el total de la colonia
+        progreso_percent = int(0 if meta == 0 else (cnt_total / meta) * 100)
         ordenes_context.append({
             'orden': orden,
             'estado_badge': m['badge'],
             'estado_icon': m['icon'],
-            'relevamientos_count': cnt,
+            'relevamientos_count': cnt_personal,  # Encuestas personales
+            'relevamientos_total': cnt_total,  # Encuestas totales de la colonia
             'meta_encuestas': meta,
             'progreso_percent': progreso_percent,
             'allow_new': orden.estado in ('asignada', 'en_proceso', 'generada') and orden.formulario_habilitado,
@@ -423,519 +956,5 @@ def agregar_fotos(request, pk):
     }
     return render(request, 'relevamiento/agregar_fotos.html', context)
 
-
-# ─────────────────────────────────────────────
-# DASHBOARD COORDINADOR DE CAMPO
-# ─────────────────────────────────────────────
-
-@login_required
-@coordinador_campo_required
-def coordinador_campo_dashboard(request):
-    """
-    Dashboard para coordinadores de campo: muestra todas las órdenes donde
-    el usuario está asignado como coordinador de campo.
-    """
-    
-    # Filtrar órdenes donde el usuario es coordinador_campo en la solicitud
-    ordenes = (
-        OrdenTrabajo.objects
-        .exclude(estado__in=['cancelada'])
-        .filter(solicitud__coordinador_campo=request.user)
-        .select_related(
-            'solicitud',
-            'solicitud__colonia',
-            'solicitud__coordinador_campo',
-        )
-        .prefetch_related(
-            'equipos_asignados',
-            'equipos_asignados__subcoordinadores',
-            'equipos_asignados__encuestadores',
-        )
-        .order_by('-fecha_creacion')
-    )
-
-    # Preparar contexto enriquecido para cada orden
-    ordenes_context = []
-    for orden in ordenes:
-        # Obtener datos geográficos
-        datos_geo = _datos_geograficos_desde_orden(orden)
-        
-        # Contar personal asignado
-        equipos = orden.equipos_asignados.all()
-        subcoordinadores_count = 0
-        encuestadores_count = 0
-        subcoordinadores_list = []
-        encuestadores_list = []
-        for equipo in equipos:
-            subcoordinadores_count += equipo.subcoordinadores.count()
-            encuestadores_count += equipo.encuestadores.count()
-            # recopilar nombres (manteniendo orden y evitando duplicados más abajo)
-            subcoordinadores_list.extend(list(equipo.subcoordinadores.all()))
-            encuestadores_list.extend(list(equipo.encuestadores.all()))
-        
-        # Contar relevamientos de esta orden
-        relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
-        
-        ordenes_context.append({
-            'orden': orden,
-            'datos_geo': datos_geo,
-            'subcoordinadores_count': subcoordinadores_count,
-            'encuestadores_count': encuestadores_count,
-            'subcoordinadores_list': list(dict.fromkeys(subcoordinadores_list)),
-            'encuestadores_list': list(dict.fromkeys(encuestadores_list)),
-            'relevamientos_count': relevamientos_count,
-        })
-
-    context = {
-        'ordenes_context': ordenes_context,
-        'total_ordenes': ordenes.count(),
-    }
-    return render(request, 'relevamiento/coordinador_dashboard.html', context)
-
-
-@login_required
-def subcoordinador_dashboard(request):
-    """
-    Dashboard para subcoordinadores: muestra las colonias asignadas
-    a través de las órdenes donde el usuario figura como subcoordinador.
-    """
-    # Obtener órdenes donde el usuario es subcoordinador
-    ordenes = (
-        OrdenTrabajo.objects
-        .filter(equipos_asignados__subcoordinadores=request.user)
-        .select_related('solicitud__colonia')
-        .prefetch_related('solicitud__colonia__distritos')
-        .order_by('-fecha_creacion')
-    )
-
-    colonias_map = {}
-    total_relevamientos = 0
-    total_archivos = 0
-    ordenes_completadas = 0
-    ordenes_en_proceso = 0
-    
-    for orden in ordenes:
-        colonia = orden.solicitud.colonia if orden.solicitud else None
-        if not colonia:
-            continue
-        
-        # Contar relevamientos de esta orden
-        relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
-        total_relevamientos += relevamientos_count
-        
-        # Contar archivos subidos para esta orden
-        from .models import ArchivoSubcoordinador
-        archivos_count = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).count()
-        total_archivos += archivos_count
-        
-        # Obtener el archivo más reciente
-        archivo_reciente = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).first()
-        
-        # Contar estados de órdenes
-        if orden.estado == 'completada':
-            ordenes_completadas += 1
-        elif orden.estado in ('en_proceso', 'asignada'):
-            ordenes_en_proceso += 1
-        
-        # Usar la primera orden encontrada para la colonia
-        if colonia.id not in colonias_map:
-            colonias_map[colonia.id] = {
-                'id': colonia.id,
-                'nombre': colonia.nombre,
-                'codigo': getattr(colonia, 'codigo', ''),
-                'distrito': colonia.distritos.first() if colonia.distritos.exists() else None,
-                'ultima_carga': archivo_reciente.fecha_subida if archivo_reciente else None,
-                'archivo_url': archivo_reciente.archivo.url if archivo_reciente else None,
-                'numero_orden': getattr(orden, 'numero_orden', ''),
-                'fecha_inicio_planeada': getattr(orden, 'fecha_inicio_planeada', None),
-                'fecha_fin_planeada': getattr(orden, 'fecha_fin_planeada', None),
-                # Archivos precat subidos por digitalizador (si la solicitud existe)
-                'precat_files': [] if not orden.solicitud else [
-                    {
-                        'id': a.id,
-                        'nombre': getattr(a, 'archivo', None) and getattr(a, 'archivo').name.split('/')[-1] or getattr(a, 'observaciones', '')[:40],
-                        'fecha_subida': a.fecha_subida,
-                        'tipo': a.tipo_archivo,
-                    }
-                    for a in orden.solicitud.precat_archivos.all().order_by('-fecha_subida')
-                ],
-                'estado_orden': orden.estado,
-                'relevamientos_count': relevamientos_count,
-                'archivos_count': archivos_count,
-                # habilitar_subida se controla por la orden (formulario_habilitado)
-                'habilitar_subida': bool(orden.formulario_habilitado),
-            }
-
-    colonias = list(colonias_map.values())
-
-    return render(request, 'relevamiento/subcoordinador_dashboard.html', {
-        'colonias': colonias,
-        'total_ordenes': ordenes.count(),
-        'ordenes_en_proceso': ordenes_en_proceso,
-        'ordenes_completadas': ordenes_completadas,
-        'total_relevamientos': total_relevamientos,
-    })
-
-
-@login_required
-@require_POST
-def subcoordinador_upload(request):
-    """Recibe archivos comprimidos desde el subcoordinador y los guarda en MEDIA_ROOT/vivser_relevamiento/.
-    Nombre: <departamento>_<distrito>_<colonia>_<fecha>.<extension>
-    Extensiones permitidas: .zip, .rar, .7z, .tar, .tar.gz, .gz
-    """
-    
-    file = request.FILES.get('archivo')
-    colonia_id = request.POST.get('colonia_id')
-    if not file or not colonia_id:
-        return JsonResponse({'success': False, 'message': 'Faltan datos'}, status=400)
-
-    # Extensiones permitidas
-    extensiones_validas = ('.zip', '.rar', '.7z', '.tar', '.tar.gz', '.gz')
-    filename_lower = file.name.lower()
-    if not any(filename_lower.endswith(ext) for ext in extensiones_validas):
-        return JsonResponse({'success': False, 'message': 'Solo se permiten archivos comprimidos (.zip, .rar, .7z, .tar, .tar.gz, .gz)'}, status=400)
-
-    # Buscar la orden más reciente del subcoordinador para esa colonia
-    orden = OrdenTrabajo.objects.filter(
-        solicitud__colonia_id=colonia_id,
-        equipos_asignados__subcoordinadores=request.user
-    ).order_by('-fecha_creacion').first()
-
-    if not orden:
-        return JsonResponse({'success': False, 'message': 'No se encontró orden asociada o no tiene permisos'}, status=403)
-
-    # Obtener datos geográficos
-    colonia = orden.solicitud.colonia if orden.solicitud else None
-    distrito = colonia.distritos.first() if colonia and colonia.distritos.exists() else None
-    departamento = distrito.departamento if distrito else None
-    
-    # Construir nombre del archivo: departamento_distrito_colonia_fecha
-    fecha_str = tz.now().strftime('%Y%m%d_%H%M%S')
-    departamento_str = departamento.nombre.replace(' ', '_') if departamento else 'sin_depto'
-    distrito_str = distrito.nombre.replace(' ', '_') if distrito else 'sin_distrito'
-    colonia_str = colonia.nombre.replace(' ', '_') if colonia else f'colonia{colonia_id}'
-
-    # Extraer extensión del archivo original
-    original_ext = ''
-    if file.name.lower().endswith('.tar.gz'):
-        original_ext = '.tar.gz'
-    else:
-        original_ext = os.path.splitext(file.name)[1]
-
-    # Construir nombre completo del archivo
-    filename = f"{departamento_str}_{distrito_str}_{colonia_str}_{fecha_str}{original_ext}"
-    # Sanitizar nombre: permitir solo letras, números, guiones, guiones bajos, puntos
-    filename = re.sub(r'[^A-Za-z0-9_.\-]', '', filename)
-    # Asegurar longitud máxima razonable (255 - para compatibilidad con FS/DB)
-    if len(filename) > 250:
-        name, ext = os.path.splitext(filename)
-        filename = name[:250 - len(ext)] + ext
-    
-    # Guardar en la base de datos usando el modelo ArchivoSubcoordinador
-    try:
-        # Forzar que el archivo guarde con el nombre construido
-        file.name = filename
-        archivo_obj = ArchivoSubcoordinador(
-            orden_trabajo=orden,
-            archivo=file,
-            nombre_archivo=filename,
-            subido_por=request.user
-        )
-        archivo_obj.save()
-        
-        # También actualizar relevamientos existentes si los hay
-        relevamientos = Relevamiento.objects.filter(orden_trabajo=orden)
-        if relevamientos.exists():
-            for rel in relevamientos:
-                rel.archivo_subcoordinador = archivo_obj.archivo
-                rel.fecha_subida_archivo = archivo_obj.fecha_subida
-                rel.save(update_fields=['archivo_subcoordinador', 'fecha_subida_archivo'])
-            mensaje = f'Archivo subido correctamente y vinculado a {relevamientos.count()} relevamiento(s)'
-        else:
-            mensaje = 'Archivo subido correctamente. Listo para vincular a relevamientos.'
-            
-    except Exception as e:
-        return JsonResponse({
-            'success': False, 
-            'message': f'Error al guardar archivo: {str(e)}'
-        }, status=500)
-
-    return JsonResponse({
-        'success': True, 
-        'message': mensaje,
-        'filename': filename,
-        'fecha_subida': archivo_obj.fecha_subida.strftime('%d/%m/%Y %H:%M')
-    })
-
-
-@login_required
-@coordinador_campo_required
-def habilitar_formulario_relevamiento(request, orden_id):
-    """
-    Habilita o deshabilita el formulario de relevamiento para una orden.
-    Solo el coordinador de campo asignado puede hacerlo.
-    """
-    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
-    
-    # Verificar que el usuario es el coordinador de campo de esta orden
-    if orden.solicitud.coordinador_campo != request.user and not request.user.is_superuser:
-        messages.error(request, 'No tiene permisos para modificar esta orden.')
-        return redirect('relevamiento:coordinador_dashboard')
-    
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                # Toggle del estado
-                orden.formulario_habilitado = not orden.formulario_habilitado
-                orden.save()
-
-                solicitud = orden.solicitud
-
-                if orden.formulario_habilitado:
-                    # Habilitado -> pasar solicitud a ejecución en campo y orden a en_proceso
-                    previo = solicitud.estado if solicitud else None
-                    if solicitud:
-                        solicitud.estado = 'en_ejecucion_campo'
-                        solicitud.save()
-                    orden.estado = 'en_proceso'
-                    orden.save()
-
-                    # Auditoría
-                    try:
-                        SolicitudRelevamientoAudit.objects.create(
-                            solicitud=solicitud,
-                            campo='formulario_habilitado',
-                            valor_anterior=previo or '',
-                            valor_nuevo='en_ejecucion_campo',
-                            cambiado_por=request.user,
-                            comentario=f'Formulario habilitado por {request.user.username}'
-                        )
-                    except Exception:
-                        pass
-
-                    messages.success(request, 'Formulario habilitado. Solicitud en ejecución de campo y orden en proceso.')
-                else:
-                    # Deshabilitado -> pasar solicitud a pendiente_cierre
-                    previo = solicitud.estado if solicitud else None
-                    if solicitud:
-                        solicitud.estado = 'pendiente_cierre'
-                        solicitud.save()
-
-
-                    # Auditoría
-                    try:
-                        SolicitudRelevamientoAudit.objects.create(
-                            solicitud=solicitud,
-                            campo='formulario_habilitado',
-                            valor_anterior=previo or '',
-                            valor_nuevo='pendiente_cierre',
-                            cambiado_por=request.user,
-                            comentario=f'Formulario deshabilitado por {request.user.username}'
-                        )
-                    except Exception:
-                        pass
-
-                    messages.success(request, 'Formulario deshabilitado. Solicitud marcada como pendiente de cierre.')
-
-            return redirect('relevamiento:coordinador_dashboard')
-        except Exception as e:
-            messages.error(request, f'Error al cambiar estado del formulario: {str(e)}')
-            return redirect('relevamiento:coordinador_dashboard')
-    
-    return redirect('relevamiento:coordinador_dashboard')
-
-
-@login_required
-@coordinador_campo_required
-def finalizar_orden_campo(request, orden_id):
-    """
-    Finaliza una orden de trabajo y reasigna la solicitud al grupo de análisis.
-    Solo el coordinador de campo puede hacerlo.
-    """
-
-    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
-    solicitud = orden.solicitud
-    
-    # Verificar que el usuario es el coordinador de campo
-    if solicitud.coordinador_campo != request.user and not request.user.is_superuser:
-        messages.error(request, 'No tiene permisos para finalizar esta orden.')
-        return redirect('relevamiento:coordinador_dashboard')
-    
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                # Cambiar estado de la orden a completada
-                orden.estado = 'completada'
-                orden.fecha_fin_real = timezone.now().date()
-                orden.formulario_habilitado = False  # Deshabilitar formulario al finalizar
-                orden.save()
-                
-                # Asignar solicitud al grupo de análisis
-                try:
-                    grupo_analisis = Grupo.objects.filter(
-                        nombre__icontains='ANALISIS',
-                        activo=True
-                    ).first()
-                    # PARA MEJOR ESCLARECIMIENTO DEL FLUJO, UNA VEZ QUE LA COLONIA SE TERMINA
-                    # 1. EL ESTADO PASA A FINALIZADO: EN ESTE ESTADO SE ENCUENTRA LA SOLICITUD 
-                    # CUANDO EL COORDINADOR DE CAMPO FINALIZA LA ORDEN DE TRABAJO, PERO ANTES 
-                    # DE REASIGNARLA AL GRUPO DE ANALISIS. EN ESTE ESTADO, LA SOLICITUD NO PUEDE SER 
-                    # REABIERTO POR EL COORDINADOR DE CAMPO, NI ASIGNADA A UN NUEVO EQUIPO DE CAMPO. 
-                    # SOLO EL GRUPO DE ANALISIS PUEDE VER LAS SOLICITUDES EN ESTADO FINALIZADO 
-                    # Y ASIGNARLAS A UN ANALISTA PARA SU PROCESAMIENTO.
-                    if grupo_analisis:
-                        solicitud.estado = 'finalizado'
-
-                        # Marcar la solicitud según su tipo como terminada
-                        if solicitud.tipo == SolicitudRelevamiento.TIPO_RELEVAMIENTO:
-                            solicitud.relevamiento_terminado = True
-                            
-                        elif solicitud.tipo == SolicitudRelevamiento.TIPO_ACTUALIZACION:
-                            solicitud.actualizacion_terminado = True
-                        solicitud.grupo_asignado = grupo_analisis
-                        solicitud.usuario_asignado = None
-                        solicitud.save()
-                        # Si existen otras solicitudes para la misma colonia creadas
-                        # posteriormente a esta solicitud, marcarlas como actualización
-                        try:
-                            otras = SolicitudRelevamiento.objects.filter(
-                                colonia=solicitud.colonia
-                            ).exclude(pk=solicitud.pk).filter(fecha_creacion__gte=solicitud.fecha_creacion)
-
-                            for otra in otras:
-                                tipo_anterior = otra.tipo
-                                if tipo_anterior != SolicitudRelevamiento.TIPO_ACTUALIZACION:
-                                    otra.tipo = SolicitudRelevamiento.TIPO_ACTUALIZACION
-                                    otra.save()
-                                    # Registrar auditoría por el cambio de tipo
-                                    try:
-                                        SolicitudRelevamientoAudit.objects.create(
-                                            solicitud=otra,
-                                            campo='tipo',
-                                            valor_anterior=tipo_anterior,
-                                            valor_nuevo=SolicitudRelevamiento.TIPO_ACTUALIZACION,
-                                            cambiado_por=request.user,
-                                            comentario=f"Tipo marcado como 'actualizacion' al finalizar orden {orden.numero_orden}"
-                                        )
-                                    except Exception:
-                                        # No interrumpimos el flujo por fallo en auditoría
-                                        pass
-                        except Exception as e:
-                            messages.warning(request, f'No se pudo actualizar tipo de otras solicitudes: {str(e)}')
-                        
-                        # Registrar auditoría
-                        SolicitudRelevamientoAudit.objects.create(
-                            solicitud=solicitud,
-                            campo='finalizacion_campo',
-                            valor_anterior='en_ejecucion_campo',
-                            valor_nuevo='finalizado',
-                            cambiado_por=request.user,
-                            comentario=f'Orden finalizada por coordinador de campo: {request.user.username}'
-                        )
-                        
-                        messages.info(
-                            request,
-                            f'Orden {orden.numero_orden} finalizada.'
-                        )
-                        
-                    else:
-                        messages.warning(
-                            request,
-                            'Orden finalizada, pero no se encontró el grupo de Análisis para reasignación.'
-                        )
-                except Exception as e:
-                    messages.error(request, f'Error al reasignar a análisis: {str(e)}')
-                    
-        except Exception as e:
-            messages.error(request, f'Error al finalizar la orden: {str(e)}')
-    
-    return redirect('relevamiento:coordinador_dashboard')
-
-
-@login_required
-@coordinador_campo_required
-def detalle_relevamiento_coordinador(request, orden_id):
-    """
-    Vista detallada de relevamiento para coordinador de campo.
-    Muestra resumen por encuestador y subcoordinador.
-    """
-    orden = get_object_or_404(
-        OrdenTrabajo.objects.select_related(
-            'solicitud__colonia',
-            'coordinador_responsable'
-        ).prefetch_related(
-            'equipos_asignados__subcoordinadores',
-            'equipos_asignados__encuestadores'
-        ),
-        id=orden_id
-    )
-    
-    # Datos geográficos
-    datos_geo = _datos_geograficos_desde_orden(orden)
-    
-    # Personal asignado
-    subcoordinadores = []
-    encuestadores = []
-    for equipo in orden.equipos_asignados.all():
-        subcoordinadores.extend(equipo.subcoordinadores.all())
-        encuestadores.extend(equipo.encuestadores.all())
-    
-    # Eliminar duplicados manteniendo orden
-    subcoordinadores = list(dict.fromkeys(subcoordinadores))
-    encuestadores = list(dict.fromkeys(encuestadores))
-    
-    # Resumen por encuestador
-    encuestadores_stats = []
-    for encuestador in encuestadores:
-        # Contar encuestas en esta colonia por este encuestador
-        total_encuestas = Relevamiento.objects.filter(
-            encuestador=encuestador,
-            colonia=datos_geo['colonia']
-        ).count()
-        
-        # Contar fotos registradas por este encuestador en esta orden
-        total_fotos = Documento.objects.filter(
-            relevamiento__encuestador=encuestador,
-            relevamiento__orden_trabajo=orden,
-            tipo__in=['recibo', 'vivienda', 'documento', 'lote']
-        ).count()
-        
-        encuestadores_stats.append({
-            'encuestador': encuestador,
-            'total_encuestas': total_encuestas,
-            'total_fotos': total_fotos,
-        })
-    
-    # Resumen por subcoordinador
-    subcoordinadores_stats = []
-    for subcoordinador in subcoordinadores:
-        # Contar archivos subidos por este subcoordinador en esta orden
-        total_archivos = ArchivoSubcoordinador.objects.filter(
-            subido_por=subcoordinador,
-            orden_trabajo=orden
-        ).count()
-        
-        subcoordinadores_stats.append({
-            'subcoordinador': subcoordinador,
-            'total_archivos': total_archivos,
-        })
-    
-    # Total de solicitudes en la colonia
-    total_solicitudes = SolicitudRelevamiento.objects.filter(
-        colonia=datos_geo['colonia']
-    ).count() if datos_geo['colonia'] else 0
-    
-    context = {
-        'orden': orden,
-        'datos_geo': datos_geo,
-        'subcoordinadores': subcoordinadores,
-        'encuestadores': encuestadores,
-        'encuestadores_stats': encuestadores_stats,
-        'subcoordinadores_stats': subcoordinadores_stats,
-        'total_solicitudes': total_solicitudes,
-    }
-    
-    return render(request, 'includes/relevamiento/coordinador/detalle_relevamiento.html', context)
 
 

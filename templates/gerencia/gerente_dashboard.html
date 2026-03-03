@@ -148,7 +148,7 @@
                   <td class="text-center small">{{ s.estado_orden|default:"-" }}</td>
                   <td class="text-center">
                     <button class="btn btn-sm btn-info me-1" 
-                      onclick="verDetalleSolicitud({{ s.id }})"
+                      onclick="verDetalleRelevamientoFinalizado({{ s.id }})"
                       title="Ver detalles">
                     <i class="fas fa-eye"></i>
                     </button>
@@ -166,7 +166,9 @@
     </div>
   </div>
 </div>
-{% include 'includes/gerencia/modal/solicitudes_relevamiento/detalle_solicitud_relev_modal.html' %}
+
+<!-- Incluir el modal en tu template -->
+{% include 'includes/gerencia/modal/solicitudes_relevamiento/detalle_relev_finalizado_modal.html' %}
 
 
 {% endblock %}

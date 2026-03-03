@@ -169,11 +169,11 @@
               {% if orden.meta_encuestas > 0 %}
                 <div class="mb-3">
                   <div class="d-flex justify-content-between mb-1">
-                    <small class="text-muted">Progreso encuestas</small>
-                    <small class="fw-semibold">{{ item.relevamientos_count }}/{{ item.meta_encuestas }}</small>
+                    <small class="text-muted">Progreso total de la colonia</small>
+                    <small class="fw-semibold">{{ item.relevamientos_total }}/{{ orden.meta_encuestas }}</small>
                   </div>
                   <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-success  progress-bar-striped progress-bar-animated" role="progressbar"
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar"
                          style="width: {{ item.progreso_percent }}%;"
                          aria-valuenow="{{ item.progreso_percent }}"
                          aria-valuemin="0" aria-valuemax="100">
@@ -182,13 +182,26 @@
                 </div>
               {% endif %}
 
-              <!-- Encuestas propias en esta orden -->
-              <div class="d-flex align-items-center gap-2">
-                <i class="fas fa-clipboard-check text-success"></i>
-                <small class="text-muted">
-                  Mis encuestas en esta orden:
-                  <strong class="text-success">{{ item.relevamientos_count }}</strong>
-                </small>
+              <!-- Estadísticas de encuestas -->
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-users text-primary"></i>
+                    <div>
+                      <small class="text-muted d-block">Total colonia</small>
+                      <strong class="text-primary">{{ item.relevamientos_total }}</strong>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-user-check text-success"></i>
+                    <div>
+                      <small class="text-muted d-block">Mis encuestas</small>
+                      <strong class="text-success">{{ item.relevamientos_count }}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
 
             </div>

@@ -1,0 +1,574 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Control de Relevamiento{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid fade-in">
+    <!-- Spinner de carga -->
+    <div class="spinner-overlay" id="loadingSpinner">
+        <div class="text-center">
+            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <div class="text-light mt-3 fw-bold">Cargando datos...</div>
+        </div>
+    </div>
+
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-2 text-primary fw-bold">
+                <i class="fas fa-chart-line me-2"></i>Gestión de Control de Relevamiento
+            </h1>
+            <p class="mb-0 text-muted">Identificación y gestión de mermas en colonias completadas</p>
+        </div>
+        <div>
+            <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver al inicio
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-start-primary border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                Total Colonias
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-primary">{{ total_colonias }}</div>
+                        </div>
+                        <div class="text-primary">
+                            <i class="fas fa-map-marked-alt fa-2x opacity-30"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-start-success border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                Órdenes Completadas
+                            </div>
+                            <div class="h5 mb-0 fw-bold text-success" id="ordenesCompletadasCount">
+                                {% for colonia_data in colonias_data %}
+                                    {% if forloop.first %}{{ colonia_data.ordenes_completadas }}{% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle fa-2x opacity-30"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-start-info border-start-3 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                Estado del Sistema
+                            </div>
+                            <div class="h6 mb-0 fw-bold text-info">
+                                <i class="fas fa-circle text-success me-1"></i>Operativo
+                            </div>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-server fa-2x opacity-30"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Colonias -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-white">
+                <i class="fas fa-table me-2"></i>Colonias con Órdenes Completadas
+            </h6>
+            <span class="badge bg-light text-dark">{{ total_colonias }} registro(s)</span>
+        </div>
+        <div class="card-body">
+            {% if colonias_data %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm beautiful-table" id="coloniasTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th style="width: 5%;">#</th>
+                            <th style="width: 25%;">Colonia</th>
+                            <th style="width: 20%;">Distrito</th>
+                            <th style="width: 20%;">Departamento</th>
+                            <th style="width: 12%;" class="text-center">Órdenes</th>
+                            <th style="width: 13%;">Última Completada</th>
+                            <th style="width: 15%;" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in colonias_data %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <span class="fw-semibold text-primary">{{ data.colonia.nombre }}</span>
+                            </td>
+                            <td>
+                                <span class="text-muted">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ data.distrito.nombre|default:"Sin distrito" }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-muted">
+                                    <i class="fas fa-globe-americas me-1"></i>
+                                    {{ data.departamento.nombre|default:"Sin departamento" }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-success">{{ data.ordenes_completadas }}</span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {% if data.ultima_fecha_fin %}
+                                        <i class="fas fa-calendar-check me-1"></i>
+                                        {{ data.ultima_fecha_fin|date:"d/m/Y" }}
+                                    {% else %}
+                                        Sin fecha
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td class="text-center">
+                                <button 
+                                    class="btn btn-primary btn-sm obtener-datos-btn" 
+                                    data-colonia-id="{{ data.colonia.id }}"
+                                    data-colonia-nombre="{{ data.colonia.nombre }}"
+                                    title="Cargar datos de mermas">
+                                    <i class="fas fa-sync me-1"></i>Obtener Datos
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay colonias con órdenes completadas</h5>
+                <p class="text-muted">
+                    Las colonias aparecerán aquí cuando sus órdenes de trabajo sean marcadas como completadas.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sección de Detalle (Dashboard de Mermas) - Se carga dinámicamente -->
+    <div id="detalleSection" style="display: none;">
+        <!-- KPIs -->
+        <div class="row mb-4" id="kpisContainer">
+            <!-- Se llenarán dinámicamente con JavaScript -->
+        </div>
+
+        <!-- Tabla de Mermas -->
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-white">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Registros Problemáticos - <span id="coloniaNombre"></span>
+                </h6>
+                <div class="d-flex-group gap-2">
+                    <button class="btn btn-sm btn-light" id="exportarExcelBtn">
+                        <i class="fas fa-file-excel text-success"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light" id="imprimirBtn">
+                        <i class="fas fa-print text-info"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light" id="cerrarDetalleBtn">
+                        <i class="fas fa-times text-danger"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm beautiful-table" id="mermasTable">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="text-center" style="width: 5%;">#</th>
+                                <th class="text-center" style="width: 5%;">Manzana</th>
+                                <th class="text-center" style="width: 5%;">Lote</th>
+                                <th class="text-center" style="width: 20%;">Ocupante</th>
+                                <th class="text-center" style="width: 5%;">Entrevista</th>
+                                <th class="text-center" style="width: 30%;">Observacion encuesta</th>
+                                <th class="text-center" style="width: 10%;">Encuestador</th>
+                                <th class="text-center" style="width: 10%;">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mermasTableBody">
+                            <!-- Se llenará dinámicamente con JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyMermasState" class="text-center py-5" style="display: none;">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h5 class="text-success">¡Excelente trabajo!</h5>
+                    <p class="text-muted">
+                        No se encontraron registros problemáticos en esta colonia.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM cargado - Iniciando script ===');
+    
+    const spinner = document.getElementById('loadingSpinner');
+    const detalleSection = document.getElementById('detalleSection');
+    const kpisContainer = document.getElementById('kpisContainer');
+    const mermasTableBody = document.getElementById('mermasTableBody');
+    const coloniaNombreSpan = document.getElementById('coloniaNombre');
+    const cerrarDetalleBtn = document.getElementById('cerrarDetalleBtn');
+    const emptyMermasState = document.getElementById('emptyMermasState');
+    const mermasTable = document.getElementById('mermasTable');
+    
+    // Variable global para almacenar datos actuales
+    let datosActuales = {
+        colonia: '',
+        kpis: {},
+        mermas: []
+    };
+
+    console.log('Elementos del DOM:', {
+        spinner: !!spinner,
+        detalleSection: !!detalleSection,
+        kpisContainer: !!kpisContainer,
+        mermasTableBody: !!mermasTableBody,
+        coloniaNombreSpan: !!coloniaNombreSpan,
+        cerrarDetalleBtn: !!cerrarDetalleBtn,
+        emptyMermasState: !!emptyMermasState,
+        mermasTable: !!mermasTable
+    });
+
+    // Event listener para botones "Obtener Datos"
+    document.querySelectorAll('.obtener-datos-btn').forEach(btn => {
+        console.log('Botón encontrado:', btn);
+        btn.addEventListener('click', function() {
+            console.log('Click detectado en botón');
+            const coloniaId = this.dataset.coloniaId;
+            const coloniaNombre = this.dataset.coloniaNombre;
+            console.log('Colonia ID:', coloniaId, 'Nombre:', coloniaNombre);
+            obtenerMermas(coloniaId, coloniaNombre);
+        });
+    });
+
+    // Event listener para cerrar detalle
+    cerrarDetalleBtn.addEventListener('click', function() {
+        detalleSection.style.display = 'none';
+        // Scroll suave hacia arriba
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Event listener para exportar a Excel
+    document.getElementById('exportarExcelBtn').addEventListener('click', function() {
+        exportarExcel();
+    });
+
+    // Event listener para imprimir
+    document.getElementById('imprimirBtn').addEventListener('click', function() {
+        window.print();
+    });
+
+    function obtenerMermas(coloniaId, coloniaNombre) {
+        console.log('=== Iniciando obtenerMermas ===');
+        console.log('Colonia ID:', coloniaId);
+        console.log('Colonia Nombre:', coloniaNombre);
+        
+        // Mostrar spinner
+        spinner.classList.add('show');
+        console.log('Spinner mostrado');
+
+        // Construir URL
+        const url = `/coordinacion/control-relevamiento/mermas/${coloniaId}/`;
+        console.log('URL a consultar:', url);
+
+        // Realizar petición AJAX
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            console.log('Respuesta recibida. Status:', response.status);
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Datos parseados:', data);
+            if (data.success) {
+                // Guardar datos actuales para exportación
+                datosActuales = {
+                    colonia: data.colonia.nombre,
+                    kpis: data.kpis,
+                    mermas: data.mermas
+                };
+                
+                // Actualizar nombre de colonia
+                coloniaNombreSpan.textContent = data.colonia.nombre;
+
+                // Renderizar KPIs
+                renderKPIs(data.kpis);
+
+                // Renderizar tabla de mermas
+                renderMermas(data.mermas);
+
+                // Mostrar sección de detalle
+                detalleSection.style.display = 'block';
+
+                // Scroll suave hacia la sección de detalle
+                setTimeout(() => {
+                    detalleSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            } else {
+                console.error('Error en data.success:', data.error);
+                alert('Error: ' + (data.error || 'No se pudieron obtener los datos'));
+            }
+        })
+        .catch(error => {
+            console.error('Error en fetch:', error);
+            alert('Error al cargar los datos: ' + error.message + '. Por favor, intente nuevamente.');
+        })
+        .finally(() => {
+            console.log('Ocultando spinner');
+            // Ocultar spinner
+            spinner.classList.remove('show');
+        });
+    }
+
+    function renderKPIs(kpis) {
+        const porcentajeExito = kpis.porcentaje_exito || 0;
+        const colorExito = porcentajeExito >= 80 ? 'success' : porcentajeExito >= 60 ? 'warning' : 'danger';
+
+        kpisContainer.innerHTML = `
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-start-primary border-start-3 shadow h-100 kpi-card">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                    Lotes Digitalizados
+                                </div>
+                                <div class="h5 mb-0 fw-bold text-primary">${kpis.lotes_digitalizados}</div>
+                            </div>
+                            <div class="text-primary">
+                                <i class="fas fa-map fa-2x opacity-30"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-start-info border-start-3 shadow h-100 kpi-card">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-xs fw-bold text-info text-uppercase mb-1">
+                                    Meta de Relevamiento
+                                </div>
+                                <div class="h5 mb-0 fw-bold text-info">${kpis.meta_relevamiento}</div>
+                            </div>
+                            <div class="text-info">
+                                <i class="fas fa-bullseye fa-2x opacity-30"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-start-success border-start-3 shadow h-100 kpi-card">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-xs fw-bold text-success text-uppercase mb-1">
+                                    Relevamientos Exitosos
+                                </div>
+                                <div class="h5 mb-0 fw-bold text-success">${kpis.relevamientos_exitosos}</div>
+                                <small class="text-muted">de ${kpis.total_relevamientos} total</small>
+                            </div>
+                            <div class="text-success">
+                                <i class="fas fa-check-circle fa-2x opacity-30"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6 mb-3">
+                <div class="card border-start-${colorExito} border-start-3 shadow h-100 kpi-card">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-xs fw-bold text-${colorExito} text-uppercase mb-1">
+                                    Tasa de Éxito
+                                </div>
+                                <div class="h5 mb-0 fw-bold text-${colorExito}">${porcentajeExito}%</div>
+                                <small class="text-danger fw-semibold">${kpis.total_mermas} mermas</small>
+                            </div>
+                            <div class="text-${colorExito}">
+                                <i class="fas fa-chart-pie fa-2x opacity-30"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderMermas(mermas) {
+        if (mermas.length === 0) {
+            mermasTable.style.display = 'none';
+            emptyMermasState.style.display = 'block';
+            return;
+        }
+
+        mermasTable.style.display = 'table';
+        emptyMermasState.style.display = 'none';
+
+        let html = '';
+        mermas.forEach((merma, index) => {
+            // Determinar color del badge según estado
+            let badgeColor = '';
+            let badgeIcon = '';
+            switch(merma.estado) {
+                case 'Ausente':
+                    badgeColor = 'warning';
+                    badgeIcon = 'fa-user-slash';
+                    break;
+                case 'Rechazado':
+                    badgeColor = 'danger';
+                    badgeIcon = 'fa-times-circle';
+                    break;
+                case 'En Conflicto':
+                    badgeColor = 'secondary';
+                    badgeIcon = 'fa-exclamation-triangle';
+                    break;
+                default:
+                    badgeColor = 'dark';
+                    badgeIcon = 'fa-question';
+            }
+
+            html += `
+                <tr>
+                    <td class="text-center">${index + 1}</td>
+                    <td class="text-center"><span class="fw-semibold">${merma.manzana}</span></td>
+                    <td class="text-center"><span class="text-muted">${merma.lote}</span></td>
+                    <td>${merma.ocupante}</td>
+                    <td class="text-center">
+                        <span class="badge bg-${badgeColor} merma-badge">
+                            <i class="fas ${badgeIcon} me-1"></i>${merma.estado}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            ${merma.observaciones}
+                        </small>
+                    </td>
+                    <td class="text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>${merma.encuestador}
+                        </small>
+                    </td>
+                    <td class="text-center">
+                        <small class="text-muted">${merma.fecha}</small>
+                    </td>
+                </tr>
+            `;
+        });
+
+        mermasTableBody.innerHTML = html;
+    }
+    
+    function exportarExcel() {
+        if (datosActuales.mermas.length === 0) {
+            alert('No hay datos para exportar');
+            return;
+        }
+        
+        // Crear contenido CSV
+        let csvContent = '\ufeff'; // BOM para UTF-8
+        
+        // Agregar información de la colonia
+        csvContent += `Control de Relevamiento - ${datosActuales.colonia}\n`;
+        csvContent += `Fecha de exportación: ${new Date().toLocaleDateString('es-PY')}\n\n`;
+        
+        // Agregar KPIs
+        csvContent += 'INDICADORES\n';
+        csvContent += `Lotes Digitalizados,${datosActuales.kpis.lotes_digitalizados}\n`;
+        csvContent += `Meta de Relevamiento,${datosActuales.kpis.meta_relevamiento}\n`;
+        csvContent += `Total Relevamientos,${datosActuales.kpis.total_relevamientos}\n`;
+        csvContent += `Relevamientos Exitosos,${datosActuales.kpis.relevamientos_exitosos}\n`;
+        csvContent += `Total Mermas,${datosActuales.kpis.total_mermas}\n`;
+        csvContent += `Tasa de Éxito,${datosActuales.kpis.porcentaje_exito}%\n\n`;
+        
+        // Agregar encabezados de la tabla
+        csvContent += 'REGISTROS PROBLEMÁTICOS\n';
+        csvContent += '#,Manzana,Lote,Ocupante,Entrevista,Encuestador,Fecha\n';
+        
+        // Agregar datos de las mermas
+        datosActuales.mermas.forEach((merma, index) => {
+            const row = [
+                index + 1,
+                `"${merma.manzana}"`,
+                `"${merma.lote}"`,
+                `"${merma.ocupante}"`,
+                `"${merma.estado}"`,
+                `"${merma.encuestador}"`,
+                `"${merma.fecha}"`
+            ];
+            csvContent += row.join(',') + '\n';
+        });
+        
+        // Crear blob y descargar
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const fechaActual = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Control_Relevamiento_${datosActuales.colonia.replace(/\s+/g, '_')}_${fechaActual}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', nombreArchivo);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log('Archivo CSV exportado:', nombreArchivo);
+    }
+    
+    console.log('=== Script completamente cargado ===');
+});
+</script>
+{% endblock %}

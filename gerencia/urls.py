@@ -10,7 +10,7 @@ from gerencia.views import (
     eliminar_solicitud_relevamiento, detalle_solicitud,
     asignar_grupo, cambiar_estado, api_info_colonia,
     lista_objetivos, crear_objetivo, obtener_objetivo, editar_objetivo, eliminar_objetivo, actualizar_avance_objetivo,
-    tipos_objetivo_por_grupo
+    tipos_objetivo_por_grupo, obtener_datos_relevamiento_finalizado
 )
 
 app_name = "gerencia"
@@ -69,6 +69,9 @@ urlpatterns = [
     # ------------------------------------
     path('solicitudes-relevamiento/datos/<int:pk>/',
          obtener_datos_solicitud, name='obtener_datos_solicitud'),
+    # Endpoint para obtener datos de relevamiento finalizado
+    path('solicitudes-relevamiento/finalizado/<int:pk>/',
+         obtener_datos_relevamiento_finalizado, name='obtener_datos_relevamiento_finalizado'),
     # 6. API para obtener info de colonia
     path('solicitudes-relevamiento/api-info-colonia/<int:colonia_id>/',
          api_info_colonia, name='api_info_colonia'),
