@@ -186,6 +186,7 @@ function verDetalleRelevamientoFinalizado(solicitudId) {
                                             <i class="fas fa-calendar-plus me-1"></i>Fecha de Creación
                                         </small>
                                         <strong class="text-info">${data.solicitud.fecha_creacion || 'N/A'}</strong>
+
                                     </div>
                                 </div>
                                 
@@ -347,20 +348,6 @@ function verDetalleRelevamientoFinalizado(solicitudId) {
                                                     <small class="text-muted d-block">Grupo</small>
                                                     <strong>${data.grupo_info.nombre}</strong>
                                                     ${data.grupo_info.lider ? `<br><small class="text-muted">Líder: ${data.grupo_info.lider}</small>` : ''}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ` : ''}
-                                    ${data.usuario_info ? `
-                                        <div class="col-md-6 mb-3">
-                                            <div class="d-flex align-items-center">
-                                                <div class="p-2 me-2">
-                                                    <i class="fas fa-user fa-2x text-primary"></i>
-                                                </div>
-                                                <div>
-                                                    <small class="text-muted d-block">Coordinador Asignado</small>
-                                                    <strong>${data.usuario_info.nombre_completo || data.usuario_info.username}</strong>
-                                                    ${data.usuario_info.email ? `<br><small class="text-muted">${data.usuario_info.email}</small>` : ''}
                                                 </div>
                                             </div>
                                         </div>

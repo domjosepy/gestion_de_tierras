@@ -331,9 +331,9 @@
                         </div>
                     {% endwith %}
                     <div class="col-12 d-flex mt-3">
-                        <div class="col-12 d-flex mt-3 justify-content-end">
+                        <div class="col-12 d-flex mt-3 justify-content-between">
                             {% if orden.estado == 'generada' %}
-                                <a href="#" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalAsignarPersonal{{ orden.id }}">
+                                <a href="#" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalAsignarPersonal{{ orden.id }}">
                                     <i class="fa-solid fa-arrows-down-to-people me-1"></i> Asignar equipo de campo
                                 </a>
                             {% endif %}

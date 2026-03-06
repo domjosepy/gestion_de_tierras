@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Encuesta - {{ datos_geo.colonia.nombre }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4 fade-in encuestador-form">
@@ -37,10 +37,9 @@
     <!-- CABECERA -->
     <!-- ============================================================ -->
     <div class="card mb-4">
-      <div class="card-header position-relative">
+      <div class="card-header-brown">
         <i class="fas fa-clipboard-list"></i>
-        <h2 class="mb-0">{{ title }}</h2>
-
+        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO - Colonia: {{ datos_geo.colonia.nombre }}</h2>
       </div>
     </div>
 
@@ -48,9 +47,9 @@
     <!-- SECCIÓN 1: DATOS GEOGRÁFICOS -->
     <!-- ============================================================ -->
     <div class="card mb-4">
-      <div class="card-header">
+      <div class="card-header-brown">
         <i class="fas fa-map-marker-alt"></i>
-        <h2 class="mb-0">Datos Geográficos</h2>
+        <h2 class="mb-0">1. Datos Geográficos</h2>
       </div>
       <div class="card-body">
 
@@ -73,7 +72,7 @@
               <i class="fas fa-map-marked-alt me-1 text-muted"></i>Departamento
             </label>
             <div class="read-only-field">
-              {{ datos_geo.departamento.nombre|default:'—' }}
+              {{ datos_geo.departamento.nombre }}
             </div>
           </div>
           <div class="col-md-4">
@@ -81,7 +80,7 @@
               <i class="fas fa-map me-1 text-muted"></i>Distrito
             </label>
             <div class="read-only-field">
-              {{ datos_geo.distrito.nombre|default:'—' }}
+              {{ datos_geo.distrito.nombre }}
             </div>
           </div>
           <div class="col-md-4">
@@ -89,7 +88,7 @@
               <i class="fas fa-tractor me-1 text-muted"></i>Colonia
             </label>
             <div class="read-only-field">
-              {{ datos_geo.colonia.nombre|default:'—' }}
+              {{ datos_geo.colonia.nombre}}
             </div>
           </div>
         </div>
@@ -137,46 +136,12 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- SECCIÓN 2: INFORMACIÓN DE LA ENCUESTA -->
+    <!-- SECCIÓN 2: DATOS DEL LOTE -->
     <!-- ============================================================ -->
     <div class="card mb-4">
-      <div class="card-header">
-        <i class="fas fa-file-alt"></i>
-        <h2 class="mb-0">Información de la Encuesta</h2>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{{ form.formulario.label }}</label>
-            {{ form.formulario }}
-            {% if form.formulario.errors %}<div class="text-danger small mt-1">{{ form.formulario.errors }}</div>{% endif %}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
-            {{ form.estado_entrevista }}
-            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{{ form.firmo_solicitud.label }}</label>
-            {{ form.firmo_solicitud }}
-            {% if form.firmo_solicitud.errors %}<div class="text-danger small mt-1">{{ form.firmo_solicitud.errors }}</div>{% endif %}
-          </div>
-          <div class="col-12">
-            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
-            {{ form.observacion_encuesta }}
-            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- SECCIÓN 3: DATOS DEL LOTE -->
-    <!-- ============================================================ -->
-    <div class="card mb-4">
-      <div class="card-header card-header-brown">
+      <div class="card-header-brown-light">
         <i class="fas fa-ruler-combined"></i>
-        <h2 class="mb-0">Datos del Lote</h2>
+        <h2 class="mb-0">2. Datos del Lote</h2>
       </div>
       <div class="card-body">
         <div class="row g-3">
@@ -186,14 +151,19 @@
             {% if form.nro_titulo.errors %}<div class="text-danger small mt-1">{{ form.nro_titulo.errors }}</div>{% endif %}
           </div>
           <div class="col-md-4">
-            <label class="form-label fw-semibold">{{ form.tipo_lote.label }}</label>
-            {{ form.tipo_lote }}
-            {% if form.tipo_lote.errors %}<div class="text-danger small mt-1">{{ form.tipo_lote.errors }}</div>{% endif %}
-          </div>
-          <div class="col-md-4">
             <label class="form-label fw-semibold">{{ form.condicion_vivienda.label }}</label>
             {{ form.condicion_vivienda }}
             {% if form.condicion_vivienda.errors %}<div class="text-danger small mt-1">{{ form.condicion_vivienda.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.condicion_encuestado.label }}</label>
+            {{ form.condicion_encuestado }}
+            {% if form.condicion_encuestado.errors %}<div class="text-danger small mt-1">{{ form.condicion_encuestado.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.tipo_lote.label }}</label>
+            {{ form.tipo_lote }}
+            {% if form.tipo_lote.errors %}<div class="text-danger small mt-1">{{ form.tipo_lote.errors }}</div>{% endif %}
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">{{ form.superficie_ha.label }}</label>
@@ -228,29 +198,35 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- SECCIÓN 4: DATOS DEL OCUPANTE -->
+    <!-- SECCIÓN 2: DATOS DEL OCUPANTE -->
     <!-- ============================================================ -->
     <div class="card mb-4">
-      <div class="card-header card-header-brown">
+      <div class="card-header-brown-light">
         <i class="fas fa-user"></i>
-        <h2 class="mb-0">Datos del Ocupante</h2>
+        <h2 class="mb-0">3. Datos del Ocupante</h2>
       </div>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label fw-semibold">{{ form.condicion_encuestado.label }}</label>
-            {{ form.condicion_encuestado }}
-            {% if form.condicion_encuestado.errors %}<div class="text-danger small mt-1">{{ form.condicion_encuestado.errors }}</div>{% endif %}
+            <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }}</label>
+            {{ form.quien_es_el_ocupante }}
+            {% if form.quien_es_el_ocupante.errors %}<div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>{% endif %}
           </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.cedula_ocupante.label }}</label>
+            {{ form.cedula_ocupante }}
+            {% if form.cedula_ocupante.errors %}<div class="text-danger small mt-1">{{ form.cedula_ocupante.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.sexo_ocupante.label }}</label>
+            {{ form.sexo_ocupante }}
+            {% if form.sexo_ocupante.errors %}<div class="text-danger small mt-1">{{ form.sexo_ocupante.errors }}</div>{% endif %}
+          </div>
+          <!-- Segunda fila 
           <div class="col-md-4">
             <label class="form-label fw-semibold">{{ form.vive_en_lote.label }}</label>
             {{ form.vive_en_lote }}
             {% if form.vive_en_lote.errors %}<div class="text-danger small mt-1">{{ form.vive_en_lote.errors }}</div>{% endif %}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }}</label>
-            {{ form.quien_es_el_ocupante }}
-            {% if form.quien_es_el_ocupante.errors %}<div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>{% endif %}
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">{{ form.parentesco.label }}</label>
@@ -266,18 +242,19 @@
             <label class="form-label fw-semibold">{{ form.residencia_lote.label }}</label>
             {{ form.residencia_lote }}
             {% if form.residencia_lote.errors %}<div class="text-danger small mt-1">{{ form.residencia_lote.errors }}</div>{% endif %}
-          </div>
+          </div>-->
         </div>
       </div>
     </div>
 
     <!-- ============================================================ -->
-    <!-- SECCIÓN 5: DATOS PRODUCTIVOS -->
+    <!-- SECCIÓN 3: DATOS PRODUCTIVOS -->
     <!-- ============================================================ -->
+     
     <div class="card mb-4">
       <div class="card-header card-header-brown-light">
         <i class="fas fa-tractor"></i>
-        <h2 class="mb-0">Datos Productivos</h2>
+        <h2 class="mb-0">4. Datos Productivos</h2>
       </div>
       <div class="card-body">
         <div class="row g-3">
@@ -316,7 +293,7 @@
     <div class="card mb-4">
       <div class="card-header card-header-brown-light">
         <i class="fas fa-tools"></i>
-        <h2 class="mb-0">Mejoras e Infraestructura</h2>
+        <h2 class="mb-0">5. Mejoras e Infraestructura</h2>
       </div>
       <div class="card-body">
         <div class="inner-subsection mb-3">
@@ -358,27 +335,64 @@
     <!-- ============================================================ -->
     <!-- SECCIÓN 7: MODIFICACIONES POST-TITULACIÓN -->
     <!-- ============================================================ -->
+     <!-- Solo se muestra si el formulario es de tipo "Relevamiento" -->
+    {% if form.is_relevamiento %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <i class="fas fa-history"></i>
+          <h2 class="mb-0">6. Modificaciones Post-titulación</h2>
+        </div>
+        <div class="card-body">
+          <div class="inner-subsection">
+            <label class="form-label fw-semibold mb-2">
+              <i class="fas fa-check-square me-1 text-primary"></i>{{ form.modificaciones_post.label }}
+            </label>
+            <div class="row row-cols-2 row-cols-md-3 g-2">
+              {% for choice in form.modificaciones_post %}
+                <div class="col">
+                  <div class="form-check">
+                    {{ choice.tag }}
+                    <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            {% if form.modificaciones_post.errors %}<div class="text-danger small mt-1">{{ form.modificaciones_post.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 4: INFORMACIÓN DE LA ENCUESTA -->
+    <!-- ============================================================ -->
     <div class="card mb-4">
-      <div class="card-header">
-        <i class="fas fa-history"></i>
-        <h2 class="mb-0">Modificaciones Post-titulación</h2>
+      <div class="card-header-success">
+        <i class="fas fa-file-alt"></i>
+        <h2 class="mb-0">Información de la Encuesta</h2>
       </div>
       <div class="card-body">
-        <div class="inner-subsection">
-          <label class="form-label fw-semibold mb-2">
-            <i class="fas fa-check-square me-1 text-primary"></i>{{ form.modificaciones_post.label }}
-          </label>
-          <div class="row row-cols-2 row-cols-md-3 g-2">
-            {% for choice in form.modificaciones_post %}
-              <div class="col">
-                <div class="form-check">
-                  {{ choice.tag }}
-                  <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
-                </div>
-              </div>
-            {% endfor %}
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.formulario.label }}</label>
+            {{ form.formulario }}
+            {% if form.formulario.errors %}<div class="text-danger small mt-1">{{ form.formulario.errors }}</div>{% endif %}
           </div>
-          {% if form.modificaciones_post.errors %}<div class="text-danger small mt-1">{{ form.modificaciones_post.errors }}</div>{% endif %}
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
+            {{ form.estado_entrevista }}
+            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.firmo_solicitud.label }}</label>
+            {{ form.firmo_solicitud }}
+            {% if form.firmo_solicitud.errors %}<div class="text-danger small mt-1">{{ form.firmo_solicitud.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
+            {{ form.observacion_encuesta }}
+            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
+          </div>
         </div>
       </div>
     </div>

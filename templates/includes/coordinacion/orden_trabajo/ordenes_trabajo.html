@@ -21,17 +21,17 @@
     </div>
 
     <!-- Tarjetas de estadísticas -->
-    <div class="row mb-4">
+    <div class="row mb-4 justify-content-center">
         <div class="col-xl-2 col-md-4 mb-3">
             <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.total }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-primary">{{ estadisticas.total|default:"0" }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-list fa-2x text-gray-300"></i>
+                            <i class="fas fa-list fa-2x text-primary"></i>
                         </div>
                     </div>
                 </div>
@@ -43,10 +43,10 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Generadas</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.generadas }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-secondary">{{ estadisticas.generadas|default:"0" }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-file fa-2x text-gray-300"></i>
+                            <i class="fas fa-file fa-2x text-secondary"></i>
                         </div>
                     </div>
                 </div>
@@ -58,10 +58,10 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Asignadas</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.asignadas }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-info">{{ estadisticas.asignadas|default:"0" }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                            <i class="fas fa-user-check fa-2x text-info"></i>
                         </div>
                     </div>
                 </div>
@@ -73,10 +73,10 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">En Proceso</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.en_proceso }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-warning">{{ estadisticas.en_proceso|default:"0" }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-spinner fa-2x text-gray-300"></i>
+                            <i class="fas fa-spinner fa-2x text-warning"></i>
                         </div>
                     </div>
                 </div>
@@ -88,10 +88,10 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Completadas</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ estadisticas.completadas }}</div>
+                            <div class="h5 mb-0 font-weight-bold text-success">{{ estadisticas.completadas|default:"0" }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
                         </div>
                     </div>
                 </div>
@@ -144,7 +144,7 @@
                                 <th class="text-center">Solicitud</th>
                                 <th class="text-center">Fechas planeadas</th>
                                 <th class="text-center">Estado</th>
-                                <th class="text-center">Coordinador</th>
+                                <th class="text-center">Coordinador de campo</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -179,6 +179,8 @@
                                     {{ orden.fecha_fin_planeada|date:"d/m/Y" }}</span>
                                 </td>
                                 <td class="text-center">
+                                    <span class="status-dot" data-estado="{{ orden.activa|yesno:'true,false' }}" 
+                                    title='{{ orden.activa|yesno:"Activo,Inactivo" }}'></span>
                                     {% if orden.estado == 'generada' %}
                                         <span class="badge bg-secondary m-2">Generada</span>
                                     {% elif orden.estado == 'asignada' %}
@@ -190,12 +192,12 @@
                                     {% else %}
                                         <span class="badge bg-dark m-2">{{ orden.get_estado_display }}</span>
                                     {% endif %} 
-                                        <span class="status-dot me-4" data-estado="{{ orden.activa|yesno:'true,false' }}"></span>
+                                        
                                 </td>
                                 <td class="text-center">
-                                    {% if orden.coordinador_responsable %}
+                                    {% if orden.solicitud and orden.solicitud.coordinador_campo %}
                                         <i class="fas fa-user-tie text-muted me-1"></i>
-                                        {{ orden.coordinador_responsable.get_full_name|default:orden.coordinador_responsable.username }}
+                                        {{ orden.solicitud.coordinador_campo.get_full_name|default:orden.solicitud.coordinador_campo.username }}
                                     {% else %}
                                         <span class="text-muted">—</span>
                                     {% endif %}
@@ -221,14 +223,14 @@
     </div>
 </div>
 
-    <!-- Modal para asignar personal (reutilizado para modificar asignación) -->
+    <!-- Modal para asignar personal -->
     {% include 'includes/coordinacion/modal/modificar_orden_modal.html' with orden=orden coordinadores=coordinadores subcoordinadores=subcoordinadores encuestadores=encuestadores choferes=choferes %}
 
 {% endblock %}
 
 {% block scripts %}
 {{ block.super }}
-<!-- Opcional: algún script para tooltips o DataTables si se desea mejorar la tabla -->
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Habilitar tooltips de Bootstrap (si se usan)

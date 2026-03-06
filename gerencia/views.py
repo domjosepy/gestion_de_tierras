@@ -45,26 +45,62 @@ class GerenciaView(LoginRequiredMixin, TemplateView):
         # Agregar objetivos activos recientes
         try:
             anio_actual = datetime.now().year
+            # Procesar vencimientos automáticos antes de mostrar objetivos
+            Objetivo.procesar_vencimientos_automaticos()
+            
             objetivos_activos = Objetivo.objects.filter(anio=anio_actual, activo=True).select_related('grupo', 'tipo_objetivo').order_by('grupo__nombre')[:8]
 
-            context['objetivos_activos'] = [
-                {
+            objetivos_list = []
+            for o in objetivos_activos:
+                # Calcular avance en vivo para tipos conocidos (encuestas/colonias)
+                tipo_lower = (o.tipo_objetivo.nombre or '').lower()
+                anio = anio_actual
+                avance_actual_dynamic = o.avance_actual
+
+                # Objetivos de encuestas: contar relevamientos completos del año
+                if any(k in tipo_lower for k in ['encuesta', 'solicitud', 'formulario', 'entrevista']):
+                    try:
+                        avance_actual_dynamic = Relevamiento.objects.filter(
+                            estado_entrevista='completa',
+                            creado_en__year=anio
+                        ).count()
+                    except Exception:
+                        avance_actual_dynamic = o.avance_actual
+
+                # Objetivos de colonias relevadas: contar solicitudes marcadas como terminadas
+                elif any(k in tipo_lower for k in ['colonia', 'relevada']):
+                    try:
+                        avance_actual_dynamic = SolicitudRelevamiento.objects.filter(
+                            relevamiento_terminado=True,
+                            fecha_modificacion__year=anio
+                        ).count()
+                    except Exception:
+                        avance_actual_dynamic = o.avance_actual
+
+                # Verificar cumplimiento si el avance cambió
+                if avance_actual_dynamic != o.avance_actual:
+                    o.avance_actual = avance_actual_dynamic
+                    o.verificar_cumplimiento()
+
+                objetivos_list.append({
                     'id': o.id,
                     'grupo_nombre': o.grupo.nombre,
                     'tipo_nombre': o.tipo_objetivo.nombre,
                     'meta': o.meta,
-                    'avance_actual': o.avance_actual,
-                    'porcentaje_avance': o.porcentaje_avance,
+                    'avance_actual': avance_actual_dynamic,
+                    'porcentaje_avance': (round((avance_actual_dynamic / o.meta) * 100, 1) if o.meta else 0),
                     'fecha_fin': o.fecha_fin,
-                }
-                for o in objetivos_activos
-            ]
+                    'objetivo_cumplido': o.objetivo_cumplido,
+                    'fecha_cumplimiento': o.fecha_cumplimiento,
+                })
+
+            context['objetivos_activos'] = objetivos_list
         except Exception:
             context['objetivos_activos'] = []
 
-        # Agregar solicitudes cuyo/ cuya Orden de Trabajo esté completada
+        # Agregar solicitudes Orden de Trabajo esté completada
         try:
-            ordenes_qs = OrdenTrabajo.objects.select_related('solicitud__colonia', 'coordinador_responsable').filter(estado='completada', activa=True).order_by('-fecha_creacion')[:8]
+            ordenes_qs = OrdenTrabajo.objects.select_related('solicitud__colonia', 'coordinador_responsable').filter(estado='completada', activa=False).order_by('-fecha_creacion')[:8]
 
             solicitudes_dashboard = []
             for orden in ordenes_qs:
@@ -710,6 +746,9 @@ def lista_objetivos(request):
     except (ValueError, TypeError):
         anio_seleccionado = anio_actual
     
+    # Procesar vencimientos automáticos antes de mostrar objetivos
+    Objetivo.procesar_vencimientos_automaticos()
+    
     # Obtener todos los objetivos activos del año
     objetivos = Objetivo.objects.filter(anio=anio_seleccionado, activo=True).select_related('creado_por', 'grupo', 'tipo_objetivo')
     # Obtener objetivos inactivos del mismo año para la tabla separada
@@ -746,6 +785,37 @@ def lista_objetivos(request):
     
     # Obtener todos los tipos de objetivo activos
     tipos_objetivo_disponibles = TipoObjetivo.objects.filter(activo=True).select_related('grupo').order_by('grupo__nombre', 'nombre')
+    # Calcular avances dinámicos para tipos conocidos y verificar cumplimiento
+    try:
+        for o in objetivos:
+            try:
+                tipo_lower = (o.tipo_objetivo.nombre or '').lower()
+                anio = anio_seleccionado
+                avance_anterior = o.avance_actual
+
+                # Objetivos relacionados a encuestas/entrevistas
+                if any(k in tipo_lower for k in ['encuesta', 'solicitud', 'formulario', 'entrevista']):
+                    o.avance_actual = Relevamiento.objects.filter(
+                        estado_entrevista='completa',
+                        creado_en__year=anio
+                    ).count()
+
+                # Objetivos relacionados a colonias relevadas
+                elif any(k in tipo_lower for k in ['colonia', 'relevada']):
+                    o.avance_actual = SolicitudRelevamiento.objects.filter(
+                        relevamiento_terminado=True,
+                        fecha_modificacion__year=anio
+                    ).count()
+                
+                # Verificar cumplimiento si el avance cambió
+                if o.avance_actual != avance_anterior:
+                    o.verificar_cumplimiento()
+                    
+            except Exception:
+                # Mantener valor original si ocurre cualquier error
+                continue
+    except Exception:
+        pass
     
     context = {
         'objetivos': objetivos,

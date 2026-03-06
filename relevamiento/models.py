@@ -3,6 +3,9 @@ from django.contrib.postgres.fields import ArrayField
 import os
 import re
 from datetime import datetime
+from django.db import transaction
+from django.db.models import Max
+from django.apps import apps
 
 # ============================
 # FUNCIONES DE UTILIDAD PARA UPLOAD_TO
@@ -197,7 +200,7 @@ class Relevamiento(models.Model):
     manzana = models.CharField(max_length=50, blank=True)
     lote_indert = models.CharField(max_length=50, blank=True)
     lote_sirt = models.CharField(max_length=50, blank=True)
-    formulario = models.IntegerField(null=True, blank=True)
+    formulario = models.IntegerField(null=True, blank=True, auto_created=True)
     observacion_encuesta = models.TextField(blank=True)
 
     uso_lote = ArrayField(
@@ -244,6 +247,8 @@ class Relevamiento(models.Model):
     residencia_manzana = models.CharField(max_length=50, blank=True)
     residencia_lote = models.CharField(max_length=50, blank=True)
     quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
+    cedula_ocupante = models.IntegerField(blank=True, null=True)
+    sexo_ocupante = models.CharField(max_length=1, choices=[("M", "Masculino"), ("F", "Femenino")], blank=True)
     parentesco = models.CharField(max_length=200, blank=True)
 
     # 4 - USO DE LA TIERRA Y MEJORAS
@@ -319,6 +324,27 @@ class Relevamiento(models.Model):
 
     def __str__(self):
         return f"Relevamiento #{self.pk} - {self.colonia or 'sin colonia'}"
+
+    def save(self, *args, **kwargs):
+        """
+        Auto-asigna el campo `formulario` de forma incremental por `orden_trabajo`.
+        Se usa bloqueo transaccional sobre la fila de `OrdenTrabajo` para evitar
+        condiciones de carrera cuando se crean relevamientos concurrentes.
+        """
+        # Solo asignar si no está definido y existe orden_trabajo
+        if (self.formulario is None or self.formulario == '') and getattr(self, 'orden_trabajo_id', None):
+            with transaction.atomic():
+                # Bloquear la fila de OrdenTrabajo para esta orden
+                OrdenTrabajo = apps.get_model('coordinacion', 'OrdenTrabajo')
+                OrdenTrabajo.objects.select_for_update().get(pk=self.orden_trabajo_id)
+
+                # Calcular el máximo formulario actual y asignar siguiente número
+                last = Relevamiento.objects.filter(
+                    orden_trabajo_id=self.orden_trabajo_id
+                ).aggregate(m=Max('formulario'))['m']
+                self.formulario = 1 if last is None else (last + 1)
+
+        super().save(*args, **kwargs)
 
 
 class Documento(models.Model):

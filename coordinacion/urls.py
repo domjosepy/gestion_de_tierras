@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (dashboard_coordinacion, solicitudes_pendientes, solicitudes_canceladas, reactivar_orden,
-                    generar_orden_view, ordenes_trabajo, detalle_orden, asignar_equipos_orden,
+                    generar_orden_view, ordenes_trabajo, detalle_orden,
                     modificar_orden, cancelar_orden, reportes_coordinacion,
                     asignar_personal_orden, control_relevamiento_panel, control_relevamiento_obtener_mermas)
 
@@ -23,8 +23,7 @@ urlpatterns = [
     # Órdenes de trabajo
     path('ordenes/', ordenes_trabajo, name='ordenes_trabajo'),
     path('orden/<int:orden_id>/', detalle_orden, name='detalle_orden'),
-    path('orden/<int:orden_id>/asignar-equipos/',
-         asignar_equipos_orden, name='asignar_equipos'),
+
 
 
     path('orden/<int:orden_id>/modificar/',

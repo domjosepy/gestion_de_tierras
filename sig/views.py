@@ -50,6 +50,17 @@ def sig_dashboard(request):
         grupo_asignado__in=grupos_usuario
     )
 
+    # Usuarios del grupo para contar solicitudes aprobadas/digitalizadas por el equipo
+    usuarios_para_finalizadas = grupos_usuario.first().usuarios.all()
+
+    # Contar finalizadas como aquellas con fecha de aprobación (por el grupo o por sus miembros)
+    finalizadas_count = SolicitudRelevamiento.objects.filter(
+        fecha_aprobacion_campo__isnull=False
+    ).filter(
+        Q(grupo_asignado__in=grupos_usuario) |
+        Q(asignaciones_digitalizador__usuario_asignado__in=usuarios_para_finalizadas)
+    ).distinct().count()
+
     # Estadísticas básicas
 
     estadisticas = {
@@ -58,7 +69,7 @@ def sig_dashboard(request):
         'en_proceso': query.filter(estado='en_proceso_digitalizacion').count(),
         'pendiente_revision': query.filter(estado='pendiente_revision_sig').count(),
         'rechazadas': query.filter(estado='rechazado').count(),
-        'finalizadas': query.filter(estado='finalizado').count(),
+        'finalizadas': finalizadas_count,
     }
 
     # Si es líder, mostrar usuarios del grupo
@@ -116,23 +127,20 @@ def sig_solicitudes(request):
         'colonia__distritos__departamento'
     )
 
-    # PARA MOSTRAR SOLICITUDES ASIGNADAS AL GRUPO DE COORDINACION.
-    # Solicitudes que llegaron a coordinación o que fueron digitalizadas por miembros del grupo SIG
+    # Mostrar las solicitudes aprobadas por fecha de aprobación (cualquier estado).
+    # Además incluir solicitudes digitalizadas por miembros del grupo.
+    usuarios_grupo = grupos_usuario.first().usuarios.all()
     query_aprobadas = SolicitudRelevamiento.objects.filter(
-        Q(asignaciones_digitalizador__usuario_asignado__in=grupos_usuario.first().usuarios.all()) |
-        Q(estado='asignado_coordinacion', fecha_aprobacion_campo__isnull=False)
-    ).filter(
-        estado='asignado_coordinacion',
         fecha_aprobacion_campo__isnull=False
+    ).filter(
+        Q(grupo_asignado__in=grupos_usuario) |
+        Q(asignaciones_digitalizador__usuario_asignado__in=usuarios_grupo)
     ).select_related(
         'colonia', 'creado_por', 'grupo_asignado', 'usuario_asignado'
     ).prefetch_related(
         'colonia__distritos__departamento'
     ).distinct()
 
-    # Obtener solicitudes por estado
-    # Para rechazadas, incluir solicitudes cuyo grupo asignado sea del usuario
-    # o que hayan sido digitalizadas por miembros del grupo (historial de asignaciones)
     rechazadas_qs = SolicitudRelevamiento.objects.filter(estado='rechazado')
     try:
         miembros = grupos_usuario.first().usuarios.all()
@@ -150,7 +158,7 @@ def sig_solicitudes(request):
         'pendiente_revision': query.filter(estado='pendiente_revision_sig'),
         'aprobadas': query_aprobadas,
         'rechazadas': rechazadas_qs,
-        'finalizadas': query.filter(estado='finalizado'),
+        'finalizadas': query.filter(fecha_aprobacion_campo__isnull=False),
     }
 
     # Agregar propiedades para controlar botones

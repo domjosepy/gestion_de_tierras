@@ -27,10 +27,12 @@ def digitalizador_dashboard(request):
     Dashboard para técnicos digitalizadores
     """
     # Obtener tareas donde el usuario es el digitalizador asignado
-    tareas = SolicitudRelevamiento.objects.filter(
+    base_tareas_qs = SolicitudRelevamiento.objects.filter(
         Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
             usuario_asignado=request.user)
-    ).filter(
+    ).distinct()
+
+    tareas = base_tareas_qs.filter(
         # Solo mostrar tareas que están en el flujo SIG
         estado__in=[
             'asignado_a_digitalizador',
@@ -45,19 +47,15 @@ def digitalizador_dashboard(request):
         'precat_archivos'
     ).order_by('-fecha_modificacion')
 
-    # OBTENER TAREAS ASIGNADAS A COORDINACIÓN QUE FUERON DIGITALIZADAS POR EL USUARIO
-    # Esto muestra las tareas que el usuario digitalizó y que ahora están en coordinación
+    # Tareas aprobadas (todas las solicitudes que cuentan con fecha de aprobación)
+    # Mostrar globalmente las solicitudes aprobadas para la pestaña 'Aprobadas'
     tareas_coordinacion = SolicitudRelevamiento.objects.filter(
-        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
-            usuario_asignado=request.user)
-    ).filter(
-        estado='asignado_coordinacion',
         fecha_aprobacion_campo__isnull=False
     ).select_related(
-        'colonia', 'grupo_asignado', 'creado_por', 'grupo_asignado__lider'
+        'colonia', 'grupo_asignado', 'creado_por', 'usuario_asignado'
     ).prefetch_related(
         'precat_archivos'
-    ).order_by('-fecha_modificacion')
+    ).order_by('-fecha_aprobacion_campo').distinct()
 
     # Estadísticas por estado
     estadisticas = {
@@ -98,14 +96,14 @@ def detalle_tarea(request, tarea_id):
     """
     Detalle de una tarea específica para digitalización
     """
-    tarea = get_object_or_404(
-        SolicitudRelevamiento.objects.select_related(
-            'colonia', 'creado_por', 'grupo_asignado'
-        ).prefetch_related('precat_archivos'),
-        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
-            usuario_asignado=request.user),
+    qs = SolicitudRelevamiento.objects.select_related(
+        'colonia', 'creado_por', 'grupo_asignado'
+    ).prefetch_related('precat_archivos').filter(
         pk=tarea_id
-    )
+    ).filter(
+        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(usuario_asignado=request.user)
+    ).distinct()
+    tarea = get_object_or_404(qs)
 
     # Obtener archivos ya subidos
     archivos_precat = tarea.precat_archivos.filter(
@@ -139,12 +137,10 @@ def iniciar_digitalizacion(request, tarea_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-    tarea = get_object_or_404(
-        SolicitudRelevamiento,
-        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(
-            usuario_asignado=request.user),
-        pk=tarea_id
-    )
+    qs = SolicitudRelevamiento.objects.filter(pk=tarea_id).filter(
+        Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(usuario_asignado=request.user)
+    ).distinct()
+    tarea = get_object_or_404(qs)
 
     if tarea.estado != 'asignado_a_digitalizador':
         return JsonResponse({
@@ -199,11 +195,14 @@ def subir_precat(request, tarea_id):
     """
     Subir archivos de Precat y Planos, y cambiar estado a Pendiente de Revisión
     """
-    tarea = get_object_or_404(
-        SolicitudRelevamiento,
-        pk=tarea_id,
-        asignaciones_digitalizador__usuario_asignado=request.user
-    )
+    # Obtener la solicitud por pk primero para poder dar mensajes claros
+    tarea = get_object_or_404(SolicitudRelevamiento, pk=tarea_id)
+
+    # Verificar que el usuario actual esté asignado como digitalizador para esta tarea
+    asignado = tarea.asignaciones_digitalizador.filter(usuario_asignado=request.user).exists()
+    if not asignado:
+        messages.error(request, 'No estás asignado a esta tarea o no tienes permisos para subir archivos.')
+        return redirect('digitalizador:digitalizador_dashboard')
 
     if tarea.estado != 'en_proceso_digitalizacion':
         messages.error(

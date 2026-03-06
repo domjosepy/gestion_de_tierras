@@ -14,6 +14,7 @@
                 <th class="text-center">Fecha Aprobación</th>
                 <th class="text-center">Prioridad</th>
                 <th class="text-center">Dependencia Actual</th>
+                <th class="text-center">Estado Actual</th>
             </tr>
         </thead>
         <tbody>
@@ -34,7 +35,6 @@
                         {% endif %}
                     {% endwith %}
                 </td>
-                
                 <td class="text-center">
                     {% if solicitud.fecha_asignacion %}
                         <small>{{ solicitud.fecha_asignacion|date:"d/m/Y" }}</small>
@@ -106,6 +106,18 @@
                                 <span class="text-muted">-</span>
                             {% endif %}
                 </td>
+                <td>
+                    {% if solicitud.estado %}
+                        <div class="justify-content-between">
+                            <span class="status-dot me-4" data-estado="{{ solicitud.estado }}"></span>
+                            <span class="status-text mr-2">
+                                {{ solicitud.get_estado_display }}
+                            </span>
+                        </div>
+                    {% else %}
+                        <span class="text-muted">Sin registro</span>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -120,7 +132,6 @@
 {% endif %}
 
 <script>
- 
     const tablas = document.querySelectorAll('.beautiful-table');
     tablas.forEach(tabla => {
         if (tabla.rows.length > 1) {
@@ -136,6 +147,4 @@
             });
         }
     });
-
-    
 </script>

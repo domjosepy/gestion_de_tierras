@@ -5,17 +5,9 @@
 
 {% block content %}
 
-<div class="container-fluid fade-in">
-    <!-- Spinner de carga -->
-    <div class="spinner-overlay" id="loadingSpinner">
-        <div class="text-center">
-            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
-                <span class="visually-hidden">Cargando...</span>
-            </div>
-            <div class="text-light mt-3 fw-bold">Cargando datos...</div>
-        </div>
-    </div>
 
+<div class="container-fluid fade-in">
+   
     <!-- Encabezado -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
@@ -32,7 +24,7 @@
     </div>
 
     <!-- Estadísticas rápidas -->
-    <div class="row mb-4">
+    <div class="row mb-4 justify-content-end">
         <div class="col-xl-4 col-md-6 mb-3">
             <div class="card border-start-primary border-start-3 shadow h-100">
                 <div class="card-body py-3">
@@ -44,49 +36,7 @@
                             <div class="h5 mb-0 fw-bold text-primary">{{ total_colonias }}</div>
                         </div>
                         <div class="text-primary">
-                            <i class="fas fa-map-marked-alt fa-2x opacity-30"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-4 col-md-6 mb-3">
-            <div class="card border-start-success border-start-3 shadow h-100">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                                Órdenes Completadas
-                            </div>
-                            <div class="h5 mb-0 fw-bold text-success" id="ordenesCompletadasCount">
-                                {% for colonia_data in colonias_data %}
-                                    {% if forloop.first %}{{ colonia_data.ordenes_completadas }}{% endif %}
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="text-success">
-                            <i class="fas fa-check-circle fa-2x opacity-30"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-4 col-md-6 mb-3">
-            <div class="card border-start-info border-start-3 shadow h-100">
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
-                                Estado del Sistema
-                            </div>
-                            <div class="h6 mb-0 fw-bold text-info">
-                                <i class="fas fa-circle text-success me-1"></i>Operativo
-                            </div>
-                        </div>
-                        <div class="text-info">
-                            <i class="fas fa-server fa-2x opacity-30"></i>
+                            <i class="fas fa-tractor fa-2x opacity-30"></i>
                         </div>
                     </div>
                 </div>
@@ -100,7 +50,6 @@
             <h6 class="m-0 fw-bold text-white">
                 <i class="fas fa-table me-2"></i>Colonias con Órdenes Completadas
             </h6>
-            <span class="badge bg-light text-dark">{{ total_colonias }} registro(s)</span>
         </div>
         <div class="card-body">
             {% if colonias_data %}
@@ -108,32 +57,35 @@
                 <table class="table table-hover table-sm beautiful-table" id="coloniasTable">
                     <thead class="bg-light">
                         <tr>
-                            <th style="width: 5%;">#</th>
-                            <th style="width: 25%;">Colonia</th>
-                            <th style="width: 20%;">Distrito</th>
-                            <th style="width: 20%;">Departamento</th>
-                            <th style="width: 12%;" class="text-center">Órdenes</th>
-                            <th style="width: 13%;">Última Completada</th>
-                            <th style="width: 15%;" class="text-center">Acciones</th>
+                            <th class="text-center" style="width: 5%;">#</th>
+                            <th class="text-center" style="width: 20%;">Departamento</th>
+                            <th class="text-center" style="width: 20%;">Distrito</th>
+                            <th class="text-center" style="width: 20%;">Colonia</th>
+                            <th class="text-center" style="width: 10%;">Órdenes</th>
+                            <th class="text-center" style="width: 10%;">Finalizado</th>
+                            <th class="text-center" style="width: 30%;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for data in colonias_data %}
                         <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
-                                <span class="fw-semibold text-primary">{{ data.colonia.nombre }}</span>
-                            </td>
+                            <td class="text-center">{{ forloop.counter }}</td>
                             <td>
                                 <span class="text-muted">
-                                    <i class="fas fa-map-marker-alt me-1"></i>
-                                    {{ data.distrito.nombre|default:"Sin distrito" }}
+                                    <i class="fas fa-map-marked-alt me-1"></i>
+                                    {{ data.departamento.nombre }}
                                 </span>
                             </td>
                             <td>
                                 <span class="text-muted">
-                                    <i class="fas fa-globe-americas me-1"></i>
-                                    {{ data.departamento.nombre|default:"Sin departamento" }}
+                                    <i class="fas fa-map-marker me-1"></i>
+                                    {{ data.distrito.nombre }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-semibold text-primary">
+                                    <i class="fas fa-tractor me-1"></i>
+                                    {{ data.colonia.nombre }}
                                 </span>
                             </td>
                             <td class="text-center">
@@ -175,6 +127,17 @@
         </div>
     </div>
 
+     <!-- Spinner de carga -->
+    <div class="spinner-overlay" id="loadingSpinner">
+        <div class="text-center">
+            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <div class="text-light mt-3 fw-bold">Cargando datos...</div>
+        </div>
+    </div>
+
+
     <!-- Sección de Detalle (Dashboard de Mermas) - Se carga dinámicamente -->
     <div id="detalleSection" style="display: none;">
         <!-- KPIs -->
@@ -182,6 +145,8 @@
             <!-- Se llenarán dinámicamente con JavaScript -->
         </div>
 
+        
+        <!-- Registros Exitosos: se muestran sólo como cards (sin tabla) -->
         <!-- Tabla de Mermas -->
         <div class="card shadow">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
@@ -252,7 +217,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let datosActuales = {
         colonia: '',
         kpis: {},
-        mermas: []
+        mermas: [],
+        exitosos: []
     };
 
     console.log('Elementos del DOM:', {
@@ -330,7 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 datosActuales = {
                     colonia: data.colonia.nombre,
                     kpis: data.kpis,
-                    mermas: data.mermas
+                    mermas: data.mermas,
+                    exitosos: data.exitosos || []
                 };
                 
                 // Actualizar nombre de colonia
@@ -339,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Renderizar KPIs
                 renderKPIs(data.kpis);
 
-                // Renderizar tabla de mermas
+                // Renderizar mermas (los exitosos se muestran en los cards)
                 renderMermas(data.mermas);
 
                 // Mostrar sección de detalle
@@ -370,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const colorExito = porcentajeExito >= 80 ? 'success' : porcentajeExito >= 60 ? 'warning' : 'danger';
 
         kpisContainer.innerHTML = `
-            <div class="col-xl-3 col-md-6 mb-3">
+            <div class="col-xl-2 col-md-4 mb-3">
                 <div class="card border-start-primary border-start-3 shadow h-100 kpi-card">
                     <div class="card-body py-3">
                         <div class="d-flex justify-content-between align-items-center">
@@ -388,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
-            <div class="col-xl-3 col-md-6 mb-3">
+            <div class="col-xl-2 col-md-4 mb-3">
                 <div class="card border-start-info border-start-3 shadow h-100 kpi-card">
                     <div class="card-body py-3">
                         <div class="d-flex justify-content-between align-items-center">
@@ -406,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
-            <div class="col-xl-3 col-md-6 mb-3">
+            <div class="col-xl-2 col-md-4 mb-3">
                 <div class="card border-start-success border-start-3 shadow h-100 kpi-card">
                     <div class="card-body py-3">
                         <div class="d-flex justify-content-between align-items-center">
@@ -425,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
-            <div class="col-xl-3 col-md-6 mb-3">
+            <div class="col-xl-2 col-md-4 mb-3">
                 <div class="card border-start-${colorExito} border-start-3 shadow h-100 kpi-card">
                     <div class="card-body py-3">
                         <div class="d-flex justify-content-between align-items-center">
@@ -438,6 +405,43 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="text-${colorExito}">
                                 <i class="fas fa-chart-pie fa-2x opacity-30"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Cards adicionales: registros exitosos (sexo) y superficie total -->
+            <div class="col-xl-2 col-md-4 mb-3">
+                <div class="card border-start-success border-start-3 shadow h-100 kpi-card">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-xs fw-bold text-success text-uppercase mb-1">Registros Exitosos</div>
+                                <div class="h6 mb-0 fw-bold text-primary">
+                                <i class="fas fa-male mb-2"></i> Masculinos: ${kpis.masculinos || 0}</div>
+                                <div class="h6 mb-0 fw-bold text-warning"><i class="fas fa-female mb-2"></i> 
+                                Femeninos: ${kpis.femeninos || 0}</div>
+                                <small class="text-muted">Servicios: ${kpis.servicios || 0} • Viviendas: ${kpis.viviendas || 0}</small>
+                            </div>
+                            <div class="text-secondary">
+                                <i class="fas fa-user-check fa-2x opacity-30"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-2 col-md-4 mb-3">
+                <div class="card border-start-dark border-start-3 shadow h-100 kpi-card">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="text-xs fw-bold text-dark text-uppercase mb-1">Superficie Relevada</div>
+                                <div class="h6 mb-0 fw-bold text-dark">${kpis.superficie_ha || 0} ha</div>
+                                <small class="text-muted">${kpis.superficie_m2 || 0} m² (aprox)</small>
+                            </div>
+                            <div class="text-dark">
+                                <i class="fas fa-vector-square fa-2x opacity-30"></i>
                             </div>
                         </div>
                     </div>
@@ -509,9 +513,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         mermasTableBody.innerHTML = html;
     }
+
+    function renderExitosos(exitosos) {
+        // Ya no se usa tabla de exitosos; los datos exitosos se muestran en KPIs/cards.
+    }
     
     function exportarExcel() {
-        if (datosActuales.mermas.length === 0) {
+        if ((datosActuales.mermas.length === 0) && (datosActuales.exitosos.length === 0)) {
             alert('No hay datos para exportar');
             return;
         }
@@ -531,6 +539,12 @@ document.addEventListener('DOMContentLoaded', function() {
         csvContent += `Relevamientos Exitosos,${datosActuales.kpis.relevamientos_exitosos}\n`;
         csvContent += `Total Mermas,${datosActuales.kpis.total_mermas}\n`;
         csvContent += `Tasa de Éxito,${datosActuales.kpis.porcentaje_exito}%\n\n`;
+        // Agregar nuevos KPIs (sexo, servicios, viviendas, solicitudes)
+        csvContent += `Masculinos,${datosActuales.kpis.masculinos || 0}\n`;
+        csvContent += `Femeninos,${datosActuales.kpis.femeninos || 0}\n`;
+        csvContent += `Servicios,${datosActuales.kpis.servicios || 0}\n`;
+        csvContent += `Viviendas,${datosActuales.kpis.viviendas || 0}\n`;
+        csvContent += `Solicitudes,${datosActuales.kpis.solicitudes || 0}\n\n`;
         
         // Agregar encabezados de la tabla
         csvContent += 'REGISTROS PROBLEMÁTICOS\n';
@@ -549,6 +563,22 @@ document.addEventListener('DOMContentLoaded', function() {
             ];
             csvContent += row.join(',') + '\n';
         });
+        // Agregar registros exitosos al CSV
+        if (datosActuales.exitosos && datosActuales.exitosos.length > 0) {
+            csvContent += '\nREGISTROS EXITOSOS\n#,' + 'Manzana,Lote,Ocupante,Sexo,Encuestador,Fecha\n';
+            datosActuales.exitosos.forEach((r, idx) => {
+                const row = [
+                    idx + 1,
+                    `"${r.manzana}"`,
+                    `"${r.lote}"`,
+                    `"${r.ocupante}"`,
+                    `"${r.sexo || ''}"`,
+                    `"${r.encuestador}"`,
+                    `"${r.fecha}"`
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+        }
         
         // Crear blob y descargar
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

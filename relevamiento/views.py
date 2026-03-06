@@ -151,7 +151,10 @@ def habilitar_formulario_relevamiento(request, orden_id):
                     if solicitud:
                         solicitud.estado = 'en_ejecucion_campo'
                         solicitud.save()
+                    
+
                     orden.estado = 'en_proceso'
+                    orden.fecha_inicio_real = timezone.now().date()
                     orden.save()
 
                     # Auditoría
@@ -222,6 +225,7 @@ def finalizar_orden_campo(request, orden_id):
                 orden.estado = 'completada'
                 orden.fecha_fin_real = timezone.now().date()
                 orden.formulario_habilitado = False  # Deshabilitar formulario al finalizar
+                orden.activa = False
                 orden.save()
                 
                 # Asignar solicitud al grupo de análisis
@@ -243,8 +247,7 @@ def finalizar_orden_campo(request, orden_id):
                             
                         elif solicitud.tipo == SolicitudRelevamiento.TIPO_ACTUALIZACION:
                             solicitud.actualizacion_terminado = True
-                            solicitud.usuario_asignado = None
-                        solicitud.grupo_asignado = grupo_analisis
+                            solicitud.usuario_asignado = None  # No asignar a nadie para actualizaciones, asignaremos a análisis: lider
                         solicitud.save()
                         # Si existen otras solicitudes para la misma colonia creadas
                         # posteriormente a esta solicitud, marcarlas como actualización
@@ -710,7 +713,7 @@ def formulario_desde_orden(request, orden_id):
             relevamiento.encuestador = request.user
             relevamiento.save()
             form.save_m2m()
-            messages.success(request, f'Relevamiento creado correctamente.')
+            messages.success(request, f'Registro creadocorrectamente.')
             return redirect(
                 reverse('relevamiento:resumen_relevamiento', kwargs={'pk': relevamiento.pk})
             )
@@ -838,6 +841,8 @@ def mis_encuestas(request):
             'condicionVivienda': rel.get_condicion_vivienda_display() if rel.condicion_vivienda else 'Sin datos',
             'condicionEncuestado': rel.get_condicion_encuestado_display() if rel.condicion_encuestado else 'Sin datos',
             'quien_es_el_ocupante': rel.quien_es_el_ocupante or 'Sin información',
+            'cedula_ocupante': rel.cedula_ocupante or 'Sin información',
+            'sexo_ocupante': rel.get_sexo_ocupante_display() if rel.sexo_ocupante else 'Sin información',   
             'observaciones': rel.observacion_encuesta or 'Sin observaciones',
             'formularioHabilitado': rel.orden_trabajo.formulario_habilitado if rel.orden_trabajo else False,
             'firmo_solicitud': bool(rel.firmo_solicitud),

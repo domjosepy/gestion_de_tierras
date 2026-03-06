@@ -24,6 +24,7 @@ from digitalizador.models import PrecatArchivo
 from coordinacion.decorators import coordinacion_required, lider_coordinacion_required
 from coordinacion.forms import (GenerarOrdenForm)
 from coordinacion.utils import contar_dias_habiles
+from relevamiento.models import Vivienda
 
 
 # ------------------ DASHBOARD SIMPLIFICADO ------------------ #
@@ -164,9 +165,9 @@ def generar_orden_view(request, solicitud_id):
         messages.error(
             request, "La solicitud no está en estado válido para generar orden.")
         return redirect('coordinacion:solicitudes_pendientes')
-
+    
     if solicitud.ordenes_trabajo.filter(activa=True).exists():
-        messages.info(request, "Esta solicitud ya tiene una orden activa.")
+        messages.info(request, "Esta solicitud fue reactivada.")
         return redirect('coordinacion:detalle_orden', orden_id=solicitud.ordenes_trabajo.get(activa=True).id)
 
     # Obtener últimos archivos Precat/Planos para mostrar metadatos en la plantilla
@@ -226,8 +227,9 @@ def generar_orden_view(request, solicitud_id):
                         solicitud.subcoordinadores.set(subcoordinadores)
                     if choferes is not None:
                         solicitud.choferes.set(choferes)
-                    if encuestadores is not None:
-                        # Usamos el método existente asignar_relevadores que cambia estado a 'asignado_relevadores'
+                    if encuestadores:
+                        # Sólo asignar relevadores si la lista NO está vacía. El método
+                        # asignar_relevadores cambia el estado a 'asignado_relevadores'.
                         solicitud.asignar_relevadores(
                             encuestadores, request.user, "Asignado al generar orden")
 
@@ -304,13 +306,42 @@ def ordenes_trabajo(request):
     else:
         ordenes = OrdenTrabajo.objects.filter(estado=estado)
 
-    ordenes = ordenes.select_related('solicitud', 'solicitud__colonia', 'coordinador_responsable'
+    ordenes = ordenes.select_related('solicitud', 'solicitud__colonia', 'coordinador_responsable',
+                                     'solicitud__coordinador_campo'
                                      ).prefetch_related('equipos_asignados'
                                                         ).order_by('-fecha_creacion')
+
+    # Estadísticas para mostrar en los cards
+    estadisticas = {
+        'total': OrdenTrabajo.objects.count(),
+        'generadas': OrdenTrabajo.objects.filter(estado='generada').count(),
+        'asignadas': OrdenTrabajo.objects.filter(estado='asignada').count(),
+        'en_proceso': OrdenTrabajo.objects.filter(estado='en_proceso').count(),
+        'completadas': OrdenTrabajo.objects.filter(estado='completada').count(),
+    }
+
+    # Usuarios por rol (para modales de asignación)
+    coordinadores = User.objects.filter(
+        groups__name__icontains='Rol_COORDINADOR', is_active=True
+    ).order_by('username')
+    subcoordinadores = User.objects.filter(
+        groups__name__icontains='Rol_SUBCOORDINADOR', is_active=True
+    ).order_by('username')
+    encuestadores = User.objects.filter(
+        groups__name__icontains='Rol_ENCUESTADOR', is_active=True
+    ).order_by('username')
+    choferes = User.objects.filter(
+        groups__name__icontains='Rol_CHOFER', is_active=True
+    ).order_by('username')
 
     context = {
         'ordenes': ordenes,
         'estado_actual': estado,
+        'estadisticas': estadisticas,
+        'coordinadores': coordinadores,
+        'subcoordinadores': subcoordinadores,
+        'encuestadores': encuestadores,
+        'choferes': choferes,
     }
 
     return render(request, 'includes/coordinacion/orden_trabajo/ordenes_trabajo.html', context)
@@ -391,46 +422,6 @@ def detalle_orden(request, orden_id):
     }
 
     return render(request, 'includes/coordinacion/orden_trabajo/detalle_orden.html', context)
-
-
-@login_required
-@coordinacion_required
-def asignar_equipos_orden(request, orden_id):
-    """
-    Asignar equipos a orden
-    """
-    orden = get_object_or_404(OrdenTrabajo, id=orden_id)
-
-    if orden.estado != 'generada':
-        messages.error(
-            request, "Solo se pueden asignar equipos a órdenes en estado 'Generada'")
-        return redirect('coordinacion:detalle_orden', orden_id=orden.id)
-
-    if request.method == 'POST':
-        equipos_ids = request.POST.getlist('equipos')
-
-        if equipos_ids:
-            equipos = EquipoRelevamiento.objects.filter(
-                id__in=equipos_ids,
-                activo=True
-            )
-
-            # Asignar equipos
-            orden.equipos_asignados.set(equipos)
-
-            # Actualizar estado de equipos
-            equipos.update(estado='en_campo')
-
-            # Actualizar estado de la orden
-            orden.estado = 'asignada'
-            orden.save()
-
-            messages.success(
-                request, f'{equipos.count()} equipos asignados exitosamente')
-        else:
-            messages.warning(request, "No se seleccionaron equipos")
-
-    return redirect('coordinacion:detalle_orden', orden_id=orden.id)
 
 
 @login_required
@@ -592,13 +583,6 @@ def cancelar_orden(request, orden_id):
             orden.save()
 
             solicitud.estado = 'asignado_coordinacion'
-            solicitud.numero_orden_trabajo = None
-            solicitud.fecha_generacion_orden = None
-            solicitud.usuario_generador_orden = None
-            solicitud.coordinador_campo = None
-            solicitud.subcoordinadores.clear()
-            solicitud.relevadores_asignados.clear()
-            solicitud.choferes.clear()
             solicitud.save()
 
             equipo = orden.equipos_asignados.first()
@@ -675,71 +659,6 @@ def reactivar_orden(request, orden_id):
     except Exception as e:
         return JsonResponse({'error': f'Error al reactivar: {str(e)}'}, status=500)
 
-# ------------------ REPORTES SIMPLIFICADOS ------------------ #
-
-
-@login_required
-@coordinacion_required
-def reportes_coordinacion(request):
-    # Obtener fechas de filtro (si vienen por GET)
-    fecha_desde = request.GET.get('desde')
-    fecha_hasta = request.GET.get('hasta')
-
-    if fecha_desde and fecha_hasta:
-        desde = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
-        hasta = timezone.datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
-    else:
-        hasta = timezone.now().date()
-        desde = hasta - timedelta(days=30)
-
-    # Filtrar órdenes completadas en el rango
-    ordenes_completadas = OrdenTrabajo.objects.filter(
-        estado='completada',
-        fecha_modificacion__date__gte=desde,
-        fecha_modificacion__date__lte=hasta
-    ).select_related('solicitud__colonia').prefetch_related('equipos_asignados')
-
-    # Estadísticas generales
-    total_ordenes = ordenes_completadas.count()
-    total_encuestas = ordenes_completadas.aggregate(Sum('encuestas_completadas'))[
-        'encuestas_completadas__sum'] or 0
-
-    # Calcular promedio de duración manualmente (duracion_planeada es propiedad)
-    if total_ordenes > 0:
-        suma_dias = 0
-        for orden in ordenes_completadas:
-            suma_dias += (orden.fecha_fin_planeada -
-                          orden.fecha_inicio_planeada).days
-        promedio_duracion = suma_dias / total_ordenes
-    else:
-        promedio_duracion = 0
-
-    # Órdenes por estado (para gráfico de torta)
-    estados = list(OrdenTrabajo.objects.values(
-        'estado').annotate(cantidad=Count('id')))
-
-    # Encuestas por equipo (para gráfico de barras)
-    equipos = EquipoRelevamiento.objects.filter(activo=True)
-    datos_equipos = []
-    for equipo in equipos:
-        ordenes_equipo = ordenes_completadas.filter(equipos_asignados=equipo)
-        datos_equipos.append({
-            'nombre': equipo.nombre,
-            'ordenes': ordenes_equipo.count(),
-            'encuestas': ordenes_equipo.aggregate(Sum('encuestas_completadas'))['encuestas_completadas__sum'] or 0
-        })
-
-    context = {
-        'ordenes_completadas': ordenes_completadas[:20],
-        'total_ordenes': total_ordenes,
-        'total_encuestas': total_encuestas,
-        'promedio_duracion': round(promedio_duracion, 1),
-        'estados': estados,
-        'datos_equipos': datos_equipos,
-        'desde': desde,
-        'hasta': hasta,
-    }
-    return render(request, 'includes/coordinacion/coordinacion_reportes.html', context)
 
 # =========
 
@@ -850,14 +769,14 @@ def asignar_personal_orden(request, orden_id):
 
             # Usar el helper centralizado para asignar relevadores; este método
             # establecerá `usuario_asignado` preferentemente al `coordinador_campo`.
-            if encuestadores is not None:
+            if encuestadores:
                 solicitud.asignar_relevadores(encuestadores, request.user, motivo=comentario)
             else:
                 solicitud.save()
 
             # Crear el equipo (igual que antes)
             equipo = EquipoRelevamiento.objects.create(
-                nombre=f"Personal OT-{orden.numero_orden}",
+                nombre=f"Personal {orden.numero_orden}",
                 tipo='completo',
                 estado='planificado',
                 coordinador_campo=coordinador,
@@ -886,6 +805,72 @@ def asignar_personal_orden(request, orden_id):
         else:
             messages.error(request, f'Error al asignar: {str(e)}')
             return redirect('coordinacion:coordinacion_dashboard')
+
+# ------------------ REPORTES SIMPLIFICADOS ------------------ #
+
+@login_required
+@coordinacion_required
+def reportes_coordinacion(request):
+    # Obtener fechas de filtro (si vienen por GET)
+    fecha_desde = request.GET.get('desde')
+    fecha_hasta = request.GET.get('hasta')
+
+    if fecha_desde and fecha_hasta:
+        desde = timezone.datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+        hasta = timezone.datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+    else:
+        hasta = timezone.now().date()
+        desde = hasta - timedelta(days=30)
+
+    # Filtrar órdenes completadas en el rango
+    ordenes_completadas = OrdenTrabajo.objects.filter(
+        estado='completada',
+        fecha_modificacion__date__gte=desde,
+        fecha_modificacion__date__lte=hasta
+    ).select_related('solicitud__colonia').prefetch_related('equipos_asignados')
+
+    # Estadísticas generales
+    total_ordenes = ordenes_completadas.count()
+    total_encuestas = ordenes_completadas.aggregate(Sum('encuestas_completadas'))[
+        'encuestas_completadas__sum'] or 0
+
+    # Calcular promedio de duración manualmente (duracion_planeada es propiedad)
+    if total_ordenes > 0:
+        suma_dias = 0
+        for orden in ordenes_completadas:
+            suma_dias += (orden.fecha_fin_planeada -
+                          orden.fecha_inicio_planeada).days
+        promedio_duracion = suma_dias / total_ordenes
+    else:
+        promedio_duracion = 0
+
+    # Órdenes por estado (para gráfico de torta)
+    estados = list(OrdenTrabajo.objects.values(
+        'estado').annotate(cantidad=Count('id')))
+
+    # Encuestas por equipo (para gráfico de barras)
+    equipos = EquipoRelevamiento.objects.filter(activo=True)
+    datos_equipos = []
+    for equipo in equipos:
+        ordenes_equipo = ordenes_completadas.filter(equipos_asignados=equipo)
+        datos_equipos.append({
+            'nombre': equipo.nombre,
+            'ordenes': ordenes_equipo.count(),
+            'encuestas': ordenes_equipo.aggregate(Sum('encuestas_completadas'))['encuestas_completadas__sum'] or 0
+        })
+
+    context = {
+        'ordenes_completadas': ordenes_completadas[:20],
+        'total_ordenes': total_ordenes,
+        'total_encuestas': total_encuestas,
+        'promedio_duracion': round(promedio_duracion, 1),
+        'estados': estados,
+        'datos_equipos': datos_equipos,
+        'desde': desde,
+        'hasta': hasta,
+    }
+    return render(request, 'includes/coordinacion/coordinacion_reportes.html', context)
+
 
 
 # ------------------ GESTIÓN DE CONTROL DE RELEVAMIENTO ------------------ #
@@ -934,10 +919,13 @@ def control_relevamiento_panel(request):
                     colonias_dict[colonia.id]['ultima_fecha_fin'] = orden.fecha_fin_real
 
     colonias_data = list(colonias_dict.values())
+    # Total de órdenes completadas (global)
+    total_ordenes_completadas = ordenes_completadas.count()
 
     context = {
         'colonias_data': colonias_data,
         'total_colonias': len(colonias_data),
+        'total_ordenes_completadas': total_ordenes_completadas,
     }
     return render(request, 'coordinacion/control_relevamiento/control_relevamiento.html', context)
 
@@ -1010,11 +998,57 @@ def control_relevamiento_obtener_mermas(request, colonia_id):
             orden_trabajo_id__in=orden_ids
         ).count()
 
+        # Superficie total relevada (sumar superficies en hectareas)
+        superficie_total_ha = Relevamiento.objects.filter(
+            colonia=colonia,
+            orden_trabajo_id__in=orden_ids
+        ).aggregate(total_superficie=Sum('superficie_ha'))['total_superficie'] or 0
+        superficie_total_m2 = round(float(superficie_total_ha) * 10000, 2)
+
         # Contar mermas
         total_mermas = mermas.count()
 
         # Relevamientos exitosos
         relevamientos_exitosos = total_relevamientos - total_mermas
+
+        # Registros exitosos (entrevista completa)
+        exitosos_qs = Relevamiento.objects.filter(
+            colonia=colonia,
+            orden_trabajo_id__in=orden_ids,
+            estado_entrevista='completa'
+        ).select_related('encuestador', 'orden_trabajo').order_by('manzana', 'lote_sirt')
+
+        # Estadísticas sobre registros exitosos
+        masculinos_count = exitosos_qs.filter(sexo_ocupante='M').count()
+        femeninos_count = exitosos_qs.filter(sexo_ocupante='F').count()
+        servicios_count = exitosos_qs.filter(condicion_vivienda='servicio').count()
+
+        # Viviendas registradas: contar relevamientos cuya condicion_vivienda sea 'presente'
+        viviendas_count = Relevamiento.objects.filter(
+            colonia=colonia,
+            orden_trabajo_id__in=orden_ids,
+            condicion_vivienda='presente'
+        ).count()
+
+        # Cantidad de solicitudes para la colonia
+        solicitudes_count = SolicitudRelevamiento.objects.filter(colonia=colonia).count()
+
+        # Serializar exitosos
+        exitosos_data = []
+        for ex in exitosos_qs:
+            nombre_encuestador = 'Sin asignar'
+            if ex.encuestador:
+                nc = ex.encuestador.get_full_name()
+                nombre_encuestador = nc if nc.strip() else ex.encuestador.username
+            exitosos_data.append({
+                'id': ex.id,
+                'manzana': ex.manzana or 'Sin datos',
+                'lote': ex.lote_sirt or ex.lote_indert or 'Sin datos',
+                'ocupante': ex.quien_es_el_ocupante or 'Sin información',
+                'sexo': ex.get_sexo_ocupante_display() if ex.sexo_ocupante else 'Sin registro',
+                'encuestador': nombre_encuestador,
+                'fecha': ex.creado_en.strftime('%d/%m/%Y') if ex.creado_en else '',
+            })
 
         # Serializar mermas para JSON
         mermas_data = []
@@ -1059,8 +1093,16 @@ def control_relevamiento_obtener_mermas(request, colonia_id):
                 'relevamientos_exitosos': relevamientos_exitosos,
                 'total_mermas': total_mermas,
                 'porcentaje_exito': round((relevamientos_exitosos / total_relevamientos * 100), 1) if total_relevamientos > 0 else 0,
+                'masculinos': masculinos_count,
+                'femeninos': femeninos_count,
+                'servicios': servicios_count,
+                'viviendas': viviendas_count,
+                'solicitudes': solicitudes_count,
+                'superficie_ha': round(float(superficie_total_ha), 3) if superficie_total_ha else 0,
+                'superficie_m2': superficie_total_m2,
             },
             'mermas': mermas_data,
+            'exitosos': exitosos_data,
         }
 
         return JsonResponse(response_data)

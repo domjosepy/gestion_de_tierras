@@ -2,6 +2,16 @@
 {% load static %}
 
 {% block content %}
+<style>
+  .bg-success-light {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border: 2px solid #28a745;
+  }
+  .alert-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+</style>
 
 <!-- Antecedentes de Objetivos -->
 
@@ -23,14 +33,22 @@
     {% if objetivos_activos %}
       {% for obj in objetivos_activos %}
         <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <div class="card shadow-sm border-0 rounded-4 h-100">
+          <div class="card shadow-sm border-0 rounded-4 h-100{% if obj.objetivo_cumplido %} bg-success-light{% endif %}">
             <div class="card-body text-center">
-              <i class="fas fa-bullseye fa-2x text-primary mb-2"></i>
+              {% if obj.objetivo_cumplido %}
+                <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
+                <div class="alert alert-success alert-sm mb-2">
+                  <strong>¡OBJETIVO CUMPLIDO!</strong><br>
+                  <small>{{ obj.fecha_cumplimiento|date:"d/m/Y H:i" }}</small>
+                </div>
+              {% else %}
+                <i class="fas fa-bullseye fa-2x text-primary mb-2"></i>
+              {% endif %}
               <h5 class="fw-bold small mb-1">{{ obj.tipo_nombre }}</h5>
               <p class="text-muted small mb-2">{{ obj.grupo_nombre }}</p>
 
               <div class="progress mb-2" style="height:20px;">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ obj.porcentaje_avance }}%;" aria-valuenow="{{ obj.porcentaje_avance }}" aria-valuemin="0" aria-valuemax="100">{{ obj.porcentaje_avance }}%</div>
+                <div class="progress-bar progress-bar-striped progress-bar-animated{% if obj.objetivo_cumplido %} bg-success{% endif %}" role="progressbar" style="width: {{ obj.porcentaje_avance }}%;" aria-valuenow="{{ obj.porcentaje_avance }}" aria-valuemin="0" aria-valuemax="100">{{ obj.porcentaje_avance }}%</div>
               </div>
 
               <p class="mb-2 small text-muted">Meta: {{ obj.meta }} — Avance: {{ obj.avance_actual }}</p>

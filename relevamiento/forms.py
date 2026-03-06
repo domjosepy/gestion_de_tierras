@@ -72,6 +72,8 @@ class RelevamientoForm(forms.ModelForm):
             "residencia_manzana",
             "residencia_lote",
             "quien_es_el_ocupante",
+            "cedula_ocupante",
+            "sexo_ocupante",
             "parentesco",
             "produccion_agricola_ha",
             "produccion_ganadera_ha",

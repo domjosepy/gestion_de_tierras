@@ -1153,6 +1153,17 @@ class Objetivo(models.Model):
         default=True,
         verbose_name="Activo"
     )
+    fecha_cumplimiento = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Cumplimiento",
+        help_text="Fecha en que se alcanzó el 100% de la meta"
+    )
+    objetivo_cumplido = models.BooleanField(
+        default=False,
+        verbose_name="Objetivo Cumplido",
+        help_text="Indica si el objetivo alcanzó el 100% de la meta"
+    )
     
     class Meta:
         verbose_name = "Objetivo"
@@ -1230,6 +1241,49 @@ class Objetivo(models.Model):
             return 'info'     # Azul
         else:
             return 'danger'   # Rojo
+    
+    def verificar_cumplimiento(self):
+        """Verifica si el objetivo se cumplió y marca la fecha"""
+        if self.porcentaje_avance >= 100 and not self.objetivo_cumplido:
+            from django.utils import timezone
+            self.objetivo_cumplido = True
+            self.fecha_cumplimiento = timezone.now()
+            self.save(update_fields=['objetivo_cumplido', 'fecha_cumplimiento'])
+            return True
+        return False
+    
+    def verificar_vencimiento(self):
+        """Verifica si el objetivo está vencido y debe pasar a inactivo"""
+        if self.fecha_fin and self.activo:
+            from datetime import date
+            today = date.today()
+            if today > self.fecha_fin:
+                self.activo = False
+                self.save(update_fields=['activo'])
+                return True
+        return False
+    
+    @property
+    def esta_vencido(self):
+        """Indica si el objetivo está vencido"""
+        if not self.fecha_fin:
+            return False
+        from datetime import date
+        return date.today() > self.fecha_fin
+    
+    @classmethod
+    def procesar_vencimientos_automaticos(cls):
+        """Procesa objetivos vencidos y los marca como inactivos"""
+        from datetime import date
+        today = date.today()
+        
+        objetivos_vencidos = cls.objects.filter(
+            activo=True,
+            fecha_fin__lt=today
+        )
+        
+        count = objetivos_vencidos.update(activo=False)
+        return count
     
     @classmethod
     def obtener_objetivos_por_anio(cls, anio):

@@ -171,20 +171,11 @@
 </div>
 
 <script>
-// ============================================================================
-// DATOS REALES DESDE EL BACKEND
-// ============================================================================
+
 const relevamientosData = {{ relevamientos_json|safe }};
 
-// ============================================================================
-// VARIABLES GLOBALES
-// ============================================================================
 let allData = [];
 let filteredData = [];
-
-// ============================================================================
-// FUNCIONES DE UTILIDAD
-// ============================================================================
 
 function formatDate(dateString) {
   const [year, month, day] = dateString.split('-');
@@ -334,13 +325,13 @@ function renderTable(data) {
           </span>
         </td>
         <td class="text-center text-nowrap">
-          <a href="/relevamiento/${item.id}/fotos/agregar/" 
-             class="btn btn-info btn-sm me-1" 
-             title="Ver/Agregar Fotos">
-            <i class="fas fa-camera"></i>
-          </a>
           ${item.formularioHabilitado ? 
-            `<a href="/relevamiento/${item.id}/editar/" 
+            `<a href="/relevamiento/${item.id}/fotos/agregar/" 
+              class="btn btn-info btn-sm me-1" 
+              title="Ver/Agregar Fotos">
+              <i class="fas fa-camera"></i>
+            </a>
+            <a href="/relevamiento/${item.id}/editar/" 
                 class="btn btn-primary btn-sm" 
                 title="Editar Encuesta">
               <i class="fas fa-pencil-alt"></i>
