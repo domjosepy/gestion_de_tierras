@@ -364,10 +364,8 @@ function updateStats(data) {
   // Total de encuestas
   document.getElementById('totalCount').textContent = data.length;
   
-  // Encuestas completas (estado_entrevista === 'completa')
-  const completasCount = data.filter(item => 
-    item.condicionEncuestado === 'Titular' || item.condicionEncuestado === 'Titular'
-  ).length;
+  // Encuestas completas: usamos el flag `firmoSolicitud` que provee el backend
+  const completasCount = data.filter(item => Boolean(item.firmoSolicitud)).length;
   document.getElementById('completasCount').textContent = completasCount;
   
   // Colonias únicas

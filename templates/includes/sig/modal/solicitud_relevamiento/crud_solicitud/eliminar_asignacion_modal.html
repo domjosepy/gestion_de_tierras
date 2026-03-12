@@ -62,21 +62,27 @@ document.addEventListener('DOMContentLoaded', function() {
     const eliminarModal = document.getElementById('eliminarAsignacionModal');
     if (eliminarModal) {
         eliminarModal.addEventListener('show.bs.modal', function(event) {
-            // Botón que disparó el modal
-            const button = event.relatedTarget;
-            
-            // Extraer datos del botón
-            const solicitudId = button.getAttribute('data-solicitud-id');
-            const coloniaNombre = button.getAttribute('data-colonia-nombre');
-            const digitalizador = button.getAttribute('data-digitalizador');
-            
-            // Actualizar el modal
-            document.getElementById('solicitudIdEliminar').value = solicitudId;
-            document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
-            document.getElementById('digitalizadorActualEliminar').textContent = digitalizador;
-            
-            // Limpiar formulario
-            document.getElementById('comentarioEliminacion').value = '';
+            // Botón que disparó el modal (puede ser undefined si abrimos el modal desde JS)
+            const button = event && event.relatedTarget ? event.relatedTarget : null;
+
+            if (button) {
+                // Extraer datos del botón
+                const solicitudId = button.getAttribute('data-solicitud-id');
+                const coloniaNombre = button.getAttribute('data-colonia-nombre');
+                const digitalizador = button.getAttribute('data-digitalizador');
+
+                // Actualizar el modal
+                const inputSol = document.getElementById('solicitudIdEliminar');
+                if (inputSol) inputSol.value = solicitudId;
+                const coloniaDiv = document.getElementById('coloniaNombreEliminar');
+                if (coloniaDiv) coloniaDiv.textContent = coloniaNombre;
+                const digiDiv = document.getElementById('digitalizadorActualEliminar');
+                if (digiDiv) digiDiv.textContent = digitalizador;
+            }
+
+            // Limpiar formulario siempre (valores pueden haberse puesto manualmente antes de abrir)
+            const comentario = document.getElementById('comentarioEliminacion');
+            if (comentario) comentario.value = '';
             const errorDiv = document.getElementById('eliminarError');
             if (errorDiv) {
                 errorDiv.textContent = '';
@@ -116,15 +122,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const modal = bootstrap.Modal.getInstance(eliminarModal);
                     if (modal) modal.hide();
                     
-                    // Mostrar mensaje de éxito
-                    if (window.ToastManager) {
-                        window.ToastManager.mostrarToast(data.message, 'success');
-                    }
+
                     
                     // Recargar después de 1 segundo
                     setTimeout(() => {
                         location.reload();
-                    }, 1000);
+                    }, 2000);
                 } else {
                     const errorDiv = document.getElementById('eliminarError');
                     if (errorDiv) {

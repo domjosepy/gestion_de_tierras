@@ -24,9 +24,11 @@
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
           <i class="fas fa-times me-1"></i>Cerrar
         </button>
-        <button type="button" class="btn btn-outline-warning" id="btnEditarDetalle">
-          <i class="fas fa-edit me-1"></i>Editar Solicitud
-        </button>
+        {% if solicitud.estado != 'finalizado' %}
+            <button type="button" class="btn btn-outline-warning" id="btnEditarDetalle">
+            <i class="fas fa-edit me-1"></i>Editar Solicitud
+            </button>
+        {% endif %}
       </div>
     </div>
   </div>
@@ -306,20 +308,25 @@ function verDetalleSolicitud(solicitudId) {
                 
                 document.getElementById('detalleSolicitudContent').innerHTML = content;
                 
-                // Mostrar/ocultar botón de editar
+                // Mostrar/ocultar botón de editar (guardas y ocultar si está finalizado)
                 const btnEditar = document.getElementById('btnEditarDetalle');
-                if (data.puede_editar) {
-                    btnEditar.style.display = 'inline-block';
-                    btnEditar.onclick = function() {
-                        modal.hide();
-                        // Buscar y hacer clic en el botón de editar correspondiente
-                        const btnEditarEnTabla = document.querySelector(`button[data-solicitudid="${solicitudId}"][data-bs-target="#editarSolicitudRelevModal"]`);
-                        if (btnEditarEnTabla) {
-                            btnEditarEnTabla.click();
-                        }
-                    };
-                } else {
-                    btnEditar.style.display = 'none';
+                if (btnEditar) {
+                    // Si la solicitud ya está finalizada, siempre ocultar el botón
+                    if (data.solicitud && typeof data.solicitud.estado === 'string' && data.solicitud.estado.includes('finalizado')) {
+                        btnEditar.style.display = 'none';
+                    } else if (data.puede_editar) {
+                        btnEditar.style.display = 'inline-block';
+                        btnEditar.onclick = function() {
+                            modal.hide();
+                            // Buscar y hacer clic en el botón de editar correspondiente
+                            const btnEditarEnTabla = document.querySelector(`button[data-solicitudid="${solicitudId}"][data-bs-target="#editarSolicitudRelevModal"]`);
+                            if (btnEditarEnTabla) {
+                                btnEditarEnTabla.click();
+                            }
+                        };
+                    } else {
+                        btnEditar.style.display = 'none';
+                    }
                 }
             } else {
                 document.getElementById('detalleSolicitudContent').innerHTML = `

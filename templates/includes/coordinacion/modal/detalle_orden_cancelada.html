@@ -23,7 +23,7 @@
                                     {{ solicitud.get_prioridad_display }}
                                 </span>
                             </p>
-                            <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Fecha creación:</strong> {{ solicitud.fecha_creacion|date:"d/m/Y" }}</p>
                             <p><strong>Creado por:</strong> {{ solicitud.creado_por.get_full_name|default:"Sistema" }}</p>
                         </div>
                         <div class="col-md-6">
@@ -31,17 +31,15 @@
                                 {% with ud=solicitud.usuario_digitalizador %}
                                     {% if ud %}
                                         {{ ud.get_full_name|default:ud.username }}
-                                        <br><small class="text-muted">{% if solicitud.fecha_asignacion %}{{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}{% else %}Sin fecha{% endif %}</small>
+                                        <br><small class="text-muted">Fecha asignada: {% if solicitud.fecha_asignacion %}{{ solicitud.fecha_asignacion|date:"d/m/Y" }}{% else %}Sin fecha{% endif %}</small>
                                     {% else %}
                                         —
                                     {% endif %}
                                 {% endwith %}
                             </p>
-                            <p><strong>Analista:</strong> 
-                                {{ solicitud.usuario_analista.username|default:"—" }}
-                            </p>
+
                             <p><strong>Fecha aprobación campo:</strong> 
-                                {{ solicitud.fecha_aprobacion_campo|date:"d/m/Y H:i"|default:"—" }}
+                                {{ solicitud.fecha_aprobacion_campo|date:"d/m/Y"|default:"—" }}
                             </p>
                         </div>
                     </div>

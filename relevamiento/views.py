@@ -3,7 +3,6 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Count
 from .models import ArchivoSubcoordinador
 from django.utils import timezone as tz
 from coordinacion.models import OrdenTrabajo
@@ -338,13 +337,21 @@ def detalle_relevamiento_coordinador(request, orden_id):
     subcoordinadores = list(dict.fromkeys(subcoordinadores))
     encuestadores = list(dict.fromkeys(encuestadores))
     
+    # Base de relevamientos de la orden para conteos consistentes
+    relevamientos_orden = Relevamiento.objects.filter(orden_trabajo=orden)
+
     # Resumen por encuestador
     encuestadores_stats = []
     for encuestador in encuestadores:
-        # Contar encuestas en esta colonia por este encuestador
-        total_encuestas = Relevamiento.objects.filter(
+        # Contar encuestas de esta orden por este encuestador
+        total_encuestas = relevamientos_orden.filter(
             encuestador=encuestador,
-            colonia=datos_geo['colonia']
+        ).count()
+
+        # Contar solicitudes firmadas por este encuestador en la orden
+        total_solicitudes = relevamientos_orden.filter(
+            encuestador=encuestador,
+            firmo_solicitud=True,
         ).count()
         
         # Contar fotos registradas por este encuestador en esta orden
@@ -357,6 +364,7 @@ def detalle_relevamiento_coordinador(request, orden_id):
         encuestadores_stats.append({
             'encuestador': encuestador,
             'total_encuestas': total_encuestas,
+            'total_solicitudes': total_solicitudes,
             'total_fotos': total_fotos,
         })
     
@@ -374,14 +382,16 @@ def detalle_relevamiento_coordinador(request, orden_id):
             'total_archivos': total_archivos,
         })
     
-    # Cuenta las solicitudes firmadas para esta colonia (si existe la colonia)
-    total_solicitudes = Relevamiento.objects.filter(
-        colonia=datos_geo['colonia']
-    ).count() if datos_geo['colonia'] else 0
-    #cuenta las solicitudes discriminadas por usuario
-    solicitudes_por_usuario = Relevamiento.objects.filter(
-        colonia=datos_geo['colonia']
-    ).values('encuestador').annotate(total=Count('id')) if datos_geo['colonia'] else []
+    # Totales ejecutivos para la cabecera y exportaciones
+    total_encuestas_orden = relevamientos_orden.count()
+    total_solicitudes = relevamientos_orden.filter(firmo_solicitud=True).count()
+    total_fotos_orden = Documento.objects.filter(
+        relevamiento__orden_trabajo=orden,
+        tipo__in=['recibo', 'vivienda', 'documento', 'lote']
+    ).count()
+    total_archivos_subcoordinadores = ArchivoSubcoordinador.objects.filter(
+        orden_trabajo=orden
+    ).count()
 
     context = {
         'orden': orden,
@@ -390,8 +400,10 @@ def detalle_relevamiento_coordinador(request, orden_id):
         'encuestadores': encuestadores,
         'encuestadores_stats': encuestadores_stats,
         'subcoordinadores_stats': subcoordinadores_stats,
+        'total_encuestas_orden': total_encuestas_orden,
         'total_solicitudes': total_solicitudes,
-        'solicitudes_por_usuario': solicitudes_por_usuario,
+        'total_fotos_orden': total_fotos_orden,
+        'total_archivos_subcoordinadores': total_archivos_subcoordinadores,
     }
     
     return render(request, 'includes/relevamiento/coordinador/detalle_relevamiento.html', context)
@@ -416,7 +428,8 @@ def subcoordinador_dashboard(request):
 
     colonias_map = {}
     total_relevamientos = 0
-    total_archivos = 0
+    # Contar todos los archivos subidos por el subcoordinador (usuario actual)
+    total_archivos = ArchivoSubcoordinador.objects.filter(subido_por=request.user).count()
     ordenes_completadas = 0
     ordenes_en_proceso = 0
     
@@ -429,13 +442,23 @@ def subcoordinador_dashboard(request):
         relevamientos_count = Relevamiento.objects.filter(orden_trabajo=orden).count()
         total_relevamientos += relevamientos_count
         
-        # Contar archivos subidos para esta orden
-        from .models import ArchivoSubcoordinador
-        archivos_count = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).count()
-        total_archivos += archivos_count
-        
-        # Obtener el archivo más reciente
-        archivo_reciente = ArchivoSubcoordinador.objects.filter(orden_trabajo=orden).first()
+        # Contar archivos subidos por cualquier usuario relacionados a la colonia (todas las órdenes)
+        archivos_count_total = ArchivoSubcoordinador.objects.filter(orden_trabajo__solicitud__colonia=colonia).count()
+        archivos_count_por_usuario = ArchivoSubcoordinador.objects.filter(orden_trabajo__solicitud__colonia=colonia, subido_por=request.user).count()
+
+        # Obtener el archivo más reciente para la colonia (todas las órdenes) y últimos 3 archivos
+        archivo_reciente = ArchivoSubcoordinador.objects.filter(orden_trabajo__solicitud__colonia=colonia).order_by('-fecha_subida').first()
+        ultimos_archivos_qs = ArchivoSubcoordinador.objects.filter(orden_trabajo__solicitud__colonia=colonia).order_by('-fecha_subida')[:3]
+        ultimos_archivos = [
+            {
+                'id': a.id,
+                'nombre': a.nombre_archivo,
+                'fecha_subida': a.fecha_subida,
+                'subido_por': getattr(a.subido_por, 'username', None),
+                'url': a.archivo.url if a.archivo else None,
+            }
+            for a in ultimos_archivos_qs
+        ]
         
         # Contar estados de órdenes
         if orden.estado == 'completada':
@@ -451,7 +474,7 @@ def subcoordinador_dashboard(request):
                 'codigo': getattr(colonia, 'codigo', ''),
                 'distrito': colonia.distritos.first() if colonia.distritos.exists() else None,
                 'ultima_carga': archivo_reciente.fecha_subida if archivo_reciente else None,
-                'archivo_url': archivo_reciente.archivo.url if archivo_reciente else None,
+                'archivo_url': archivo_reciente.archivo.url if archivo_reciente and archivo_reciente.archivo else None,
                 'numero_orden': getattr(orden, 'numero_orden', ''),
                 'fecha_inicio_planeada': getattr(orden, 'fecha_inicio_planeada', None),
                 'fecha_fin_planeada': getattr(orden, 'fecha_fin_planeada', None),
@@ -467,7 +490,9 @@ def subcoordinador_dashboard(request):
                 ],
                 'estado_orden': orden.estado,
                 'relevamientos_count': relevamientos_count,
-                'archivos_count': archivos_count,
+                'archivos_count_usuario': archivos_count_por_usuario,
+                'archivos_count_total': archivos_count_total,
+                'ultimos_archivos': ultimos_archivos,
                 # habilitar_subida se controla por la orden (formulario_habilitado)
                 'habilitar_subida': bool(orden.formulario_habilitado),
             }
@@ -477,6 +502,7 @@ def subcoordinador_dashboard(request):
     return render(request, 'relevamiento/subcoordinador_dashboard.html', {
         'colonias': colonias,
         'total_ordenes': ordenes.count(),
+        'total_archivos': total_archivos,
         'ordenes_en_proceso': ordenes_en_proceso,
         'ordenes_completadas': ordenes_completadas,
         'total_relevamientos': total_relevamientos,

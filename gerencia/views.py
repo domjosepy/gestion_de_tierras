@@ -22,7 +22,6 @@ from gerencia.forms import CrearSolicitudRelevamientoForm, EditarSolicitudReleva
 from relevamiento.models import Relevamiento
 from datetime import datetime
 from django.utils import timezone
-from django.db.models import Sum
 
 
 # MUESTRA LA VISTA DEL ADMINISTRADOR

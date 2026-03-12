@@ -158,7 +158,10 @@
                     <button class="btn btn-sm btn-light" id="exportarExcelBtn">
                         <i class="fas fa-file-excel text-success"></i>
                     </button>
-                    <button class="btn btn-sm btn-light" id="imprimirBtn">
+                    <button class="btn btn-sm btn-light" id="exportarPdfBtn" title="Exportar reporte PDF">
+                        <i class="fas fa-file-pdf text-danger"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light" id="imprimirBtn" title="Imprimir vista actual">
                         <i class="fas fa-print text-info"></i>
                     </button>
                     <button class="btn btn-sm btn-light" id="cerrarDetalleBtn">
@@ -253,7 +256,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Event listener para exportar a Excel
     document.getElementById('exportarExcelBtn').addEventListener('click', function() {
-        exportarExcel();
+        exportarExcelMejorado();
+    });
+
+    // Event listener para exportar a PDF
+    document.getElementById('exportarPdfBtn').addEventListener('click', function() {
+        exportarPDF();
     });
 
     // Event listener para imprimir
@@ -518,84 +526,279 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ya no se usa tabla de exitosos; los datos exitosos se muestran en KPIs/cards.
     }
     
-    function exportarExcel() {
+    function escapeXml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
+
+    function obtenerFechaHoraLocal() {
+        return new Date().toLocaleString('es-PY', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function exportarExcelMejorado() {
         if ((datosActuales.mermas.length === 0) && (datosActuales.exitosos.length === 0)) {
             alert('No hay datos para exportar');
             return;
         }
-        
-        // Crear contenido CSV
-        let csvContent = '\ufeff'; // BOM para UTF-8
-        
-        // Agregar información de la colonia
-        csvContent += `Control de Relevamiento - ${datosActuales.colonia}\n`;
-        csvContent += `Fecha de exportación: ${new Date().toLocaleDateString('es-PY')}\n\n`;
-        
-        // Agregar KPIs
-        csvContent += 'INDICADORES\n';
-        csvContent += `Lotes Digitalizados,${datosActuales.kpis.lotes_digitalizados}\n`;
-        csvContent += `Meta de Relevamiento,${datosActuales.kpis.meta_relevamiento}\n`;
-        csvContent += `Total Relevamientos,${datosActuales.kpis.total_relevamientos}\n`;
-        csvContent += `Relevamientos Exitosos,${datosActuales.kpis.relevamientos_exitosos}\n`;
-        csvContent += `Total Mermas,${datosActuales.kpis.total_mermas}\n`;
-        csvContent += `Tasa de Éxito,${datosActuales.kpis.porcentaje_exito}%\n\n`;
-        // Agregar nuevos KPIs (sexo, servicios, viviendas, solicitudes)
-        csvContent += `Masculinos,${datosActuales.kpis.masculinos || 0}\n`;
-        csvContent += `Femeninos,${datosActuales.kpis.femeninos || 0}\n`;
-        csvContent += `Servicios,${datosActuales.kpis.servicios || 0}\n`;
-        csvContent += `Viviendas,${datosActuales.kpis.viviendas || 0}\n`;
-        csvContent += `Solicitudes,${datosActuales.kpis.solicitudes || 0}\n\n`;
-        
-        // Agregar encabezados de la tabla
-        csvContent += 'REGISTROS PROBLEMÁTICOS\n';
-        csvContent += '#,Manzana,Lote,Ocupante,Entrevista,Encuestador,Fecha\n';
-        
-        // Agregar datos de las mermas
+
+        const fechaExportacion = obtenerFechaHoraLocal();
+        const k = datosActuales.kpis || {};
+
+        // Formato SpreadsheetML compatible con Excel (sin librerías externas)
+        let xml = `<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Header">
+   <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#1E4E8C" ss:Pattern="Solid"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="SubHeader">
+   <Font ss:Bold="1" ss:Color="#1E4E8C"/>
+  </Style>
+  <Style ss:ID="NumberCenter">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+  </Style>
+  <Style ss:ID="TextWrap">
+   <Alignment ss:Vertical="Top" ss:WrapText="1"/>
+  </Style>
+ </Styles>
+
+ <Worksheet ss:Name="Resumen">
+  <Table>
+   <Row><Cell ss:MergeAcross="3" ss:StyleID="Header"><Data ss:Type="String">Control de Relevamiento - ${escapeXml(datosActuales.colonia)}</Data></Cell></Row>
+   <Row><Cell ss:MergeAcross="3"><Data ss:Type="String">Fecha de exportación: ${escapeXml(fechaExportacion)}</Data></Cell></Row>
+   <Row/>
+   <Row><Cell ss:MergeAcross="3" ss:StyleID="SubHeader"><Data ss:Type="String">Indicadores Principales</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Lotes Digitalizados</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.lotes_digitalizados || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Meta de Relevamiento</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.meta_relevamiento || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Total Relevamientos</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.total_relevamientos || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Relevamientos Exitosos</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.relevamientos_exitosos || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Total Mermas</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.total_mermas || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Tasa de Éxito (%)</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.porcentaje_exito || 0)}</Data></Cell></Row>
+   <Row/>
+   <Row><Cell ss:MergeAcross="3" ss:StyleID="SubHeader"><Data ss:Type="String">Distribución y Cobertura</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Masculinos</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.masculinos || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Femeninos</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.femeninos || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Servicios</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.servicios || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Viviendas</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.viviendas || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Solicitudes</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.solicitudes || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Superficie (ha)</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.superficie_ha || 0)}</Data></Cell></Row>
+   <Row><Cell><Data ss:Type="String">Superficie (m2)</Data></Cell><Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${Number(k.superficie_m2 || 0)}</Data></Cell></Row>
+  </Table>
+ </Worksheet>
+
+ <Worksheet ss:Name="Registros Problematicos">
+  <Table>
+   <Row ss:StyleID="Header">
+    <Cell><Data ss:Type="String">#</Data></Cell>
+    <Cell><Data ss:Type="String">Manzana</Data></Cell>
+    <Cell><Data ss:Type="String">Lote</Data></Cell>
+    <Cell><Data ss:Type="String">Ocupante</Data></Cell>
+    <Cell><Data ss:Type="String">Entrevista</Data></Cell>
+    <Cell><Data ss:Type="String">Observacion</Data></Cell>
+    <Cell><Data ss:Type="String">Encuestador</Data></Cell>
+    <Cell><Data ss:Type="String">Fecha</Data></Cell>
+   </Row>`;
+
         datosActuales.mermas.forEach((merma, index) => {
-            const row = [
-                index + 1,
-                `"${merma.manzana}"`,
-                `"${merma.lote}"`,
-                `"${merma.ocupante}"`,
-                `"${merma.estado}"`,
-                `"${merma.encuestador}"`,
-                `"${merma.fecha}"`
-            ];
-            csvContent += row.join(',') + '\n';
+            xml += `
+   <Row>
+    <Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${index + 1}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(merma.manzana || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(merma.lote || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(merma.ocupante || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(merma.estado || '')}</Data></Cell>
+    <Cell ss:StyleID="TextWrap"><Data ss:Type="String">${escapeXml(merma.observaciones || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(merma.encuestador || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(merma.fecha || '')}</Data></Cell>
+   </Row>`;
         });
-        // Agregar registros exitosos al CSV
-        if (datosActuales.exitosos && datosActuales.exitosos.length > 0) {
-            csvContent += '\nREGISTROS EXITOSOS\n#,' + 'Manzana,Lote,Ocupante,Sexo,Encuestador,Fecha\n';
-            datosActuales.exitosos.forEach((r, idx) => {
-                const row = [
-                    idx + 1,
-                    `"${r.manzana}"`,
-                    `"${r.lote}"`,
-                    `"${r.ocupante}"`,
-                    `"${r.sexo || ''}"`,
-                    `"${r.encuestador}"`,
-                    `"${r.fecha}"`
-                ];
-                csvContent += row.join(',') + '\n';
-            });
-        }
-        
-        // Crear blob y descargar
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+        xml += `
+  </Table>
+ </Worksheet>
+
+ <Worksheet ss:Name="Registros Exitosos">
+  <Table>
+   <Row ss:StyleID="Header">
+    <Cell><Data ss:Type="String">#</Data></Cell>
+    <Cell><Data ss:Type="String">Manzana</Data></Cell>
+    <Cell><Data ss:Type="String">Lote</Data></Cell>
+    <Cell><Data ss:Type="String">Ocupante</Data></Cell>
+    <Cell><Data ss:Type="String">Sexo</Data></Cell>
+    <Cell><Data ss:Type="String">Encuestador</Data></Cell>
+    <Cell><Data ss:Type="String">Fecha</Data></Cell>
+   </Row>`;
+
+        (datosActuales.exitosos || []).forEach((registro, idx) => {
+            xml += `
+   <Row>
+    <Cell ss:StyleID="NumberCenter"><Data ss:Type="Number">${idx + 1}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(registro.manzana || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(registro.lote || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(registro.ocupante || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(registro.sexo || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(registro.encuestador || '')}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(registro.fecha || '')}</Data></Cell>
+   </Row>`;
+        });
+
+        xml += `
+  </Table>
+ </Worksheet>
+</Workbook>`;
+
+        const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
-        
+
         const fechaActual = new Date().toISOString().split('T')[0];
-        const nombreArchivo = `Control_Relevamiento_${datosActuales.colonia.replace(/\s+/g, '_')}_${fechaActual}.csv`;
-        
+        const nombreArchivo = `Control_Relevamiento_${datosActuales.colonia.replace(/\s+/g, '_')}_${fechaActual}.xls`;
+
         link.setAttribute('href', url);
         link.setAttribute('download', nombreArchivo);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
-        console.log('Archivo CSV exportado:', nombreArchivo);
+
+        URL.revokeObjectURL(url);
+        console.log('Archivo Excel exportado:', nombreArchivo);
+    }
+
+    function exportarPDF() {
+        if ((datosActuales.mermas.length === 0) && (datosActuales.exitosos.length === 0)) {
+            alert('No hay datos para exportar');
+            return;
+        }
+
+        const fechaExportacion = obtenerFechaHoraLocal();
+        const k = datosActuales.kpis || {};
+
+        const problemRows = datosActuales.mermas.map((merma, index) => `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${escapeXml(merma.manzana || '')}</td>
+                <td>${escapeXml(merma.lote || '')}</td>
+                <td>${escapeXml(merma.ocupante || '')}</td>
+                <td>${escapeXml(merma.estado || '')}</td>
+                <td>${escapeXml(merma.observaciones || '')}</td>
+                <td>${escapeXml(merma.encuestador || '')}</td>
+                <td>${escapeXml(merma.fecha || '')}</td>
+            </tr>
+        `).join('');
+
+        const successRows = (datosActuales.exitosos || []).map((registro, idx) => `
+            <tr>
+                <td>${idx + 1}</td>
+                <td>${escapeXml(registro.manzana || '')}</td>
+                <td>${escapeXml(registro.lote || '')}</td>
+                <td>${escapeXml(registro.ocupante || '')}</td>
+                <td>${escapeXml(registro.sexo || '')}</td>
+                <td>${escapeXml(registro.encuestador || '')}</td>
+                <td>${escapeXml(registro.fecha || '')}</td>
+            </tr>
+        `).join('');
+
+        const htmlReporte = `
+            <!doctype html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8" />
+                <title>Reporte de Control de Relevamiento</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
+                    .header { margin-bottom: 18px; border-bottom: 2px solid #1e4e8c; padding-bottom: 8px; }
+                    .header h1 { margin: 0; color: #1e4e8c; font-size: 20px; }
+                    .header .meta { color: #4b5563; font-size: 12px; margin-top: 4px; }
+                    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+                    .card { border: 1px solid #d1d5db; border-left: 4px solid #1e4e8c; border-radius: 6px; padding: 8px 10px; background: #f9fafb; }
+                    .card .label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+                    .card .value { font-size: 17px; font-weight: bold; color: #111827; margin-top: 2px; }
+                    .section-title { font-size: 14px; font-weight: bold; color: #1e4e8c; margin: 16px 0 8px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                    th, td { border: 1px solid #d1d5db; padding: 6px; vertical-align: top; }
+                    th { background: #1e4e8c; color: #fff; text-align: left; }
+                    .empty { color: #6b7280; font-style: italic; }
+                    @media print {
+                        body { margin: 12mm; }
+                        .page-break { page-break-before: always; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Control de Relevamiento - ${escapeXml(datosActuales.colonia)}</h1>
+                    <div class="meta">Fecha de generación: ${escapeXml(fechaExportacion)}</div>
+                </div>
+
+                <div class="cards">
+                    <div class="card"><div class="label">Lotes Digitalizados</div><div class="value">${Number(k.lotes_digitalizados || 0)}</div></div>
+                    <div class="card"><div class="label">Meta de Relevamiento</div><div class="value">${Number(k.meta_relevamiento || 0)}</div></div>
+                    <div class="card"><div class="label">Total Relevamientos</div><div class="value">${Number(k.total_relevamientos || 0)}</div></div>
+                    <div class="card"><div class="label">Relevamientos Exitosos</div><div class="value">${Number(k.relevamientos_exitosos || 0)}</div></div>
+                    <div class="card"><div class="label">Mermas</div><div class="value">${Number(k.total_mermas || 0)}</div></div>
+                    <div class="card"><div class="label">Tasa de Exito</div><div class="value">${Number(k.porcentaje_exito || 0)}%</div></div>
+                    <div class="card"><div class="label">Masculinos / Femeninos</div><div class="value">${Number(k.masculinos || 0)} / ${Number(k.femeninos || 0)}</div></div>
+                    <div class="card"><div class="label">Servicios / Viviendas</div><div class="value">${Number(k.servicios || 0)} / ${Number(k.viviendas || 0)}</div></div>
+                    <div class="card"><div class="label">Superficie (ha)</div><div class="value">${Number(k.superficie_ha || 0)}</div></div>
+                </div>
+
+                <div class="section-title">Registros Problematicos</div>
+                ${datosActuales.mermas.length > 0 ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th><th>Manzana</th><th>Lote</th><th>Ocupante</th><th>Entrevista</th><th>Observacion</th><th>Encuestador</th><th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>${problemRows}</tbody>
+                </table>` : '<p class="empty">No se encontraron registros problematicos.</p>'}
+
+                <div class="section-title page-break">Registros Exitosos</div>
+                ${(datosActuales.exitosos || []).length > 0 ? `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th><th>Manzana</th><th>Lote</th><th>Ocupante</th><th>Sexo</th><th>Encuestador</th><th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>${successRows}</tbody>
+                </table>` : '<p class="empty">No hay registros exitosos para mostrar.</p>'}
+            </body>
+            </html>
+        `;
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('No se pudo abrir la ventana de impresión. Verifique si el navegador bloqueó ventanas emergentes.');
+            return;
+        }
+
+        win.document.open();
+        win.document.write(htmlReporte);
+        win.document.close();
+        win.focus();
+
+        setTimeout(() => {
+            win.print();
+        }, 300);
     }
     
     console.log('=== Script completamente cargado ===');

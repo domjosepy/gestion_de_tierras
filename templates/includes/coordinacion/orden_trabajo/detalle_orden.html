@@ -231,8 +231,8 @@
                         <div class="d-flex align-items-center">
                             <i class="fas fa-user me-2"></i>
                             {{ orden.solicitud.creado_por.get_full_name }}
-                            <small class="text-muted ms-2">
-                                {{ orden.solicitud.fecha_creacion }}
+                            <small class="text-muted ms-2"> En fecha:
+                                {{ orden.solicitud.fecha_creacion|date:"d/m/Y" }}
                             </small>
                         </div>
                     </div>

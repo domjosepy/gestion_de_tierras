@@ -146,20 +146,38 @@
               </div>
               <div class="d-flex align-items-center mb-1">
                   <i class="fas fa-file-archive me-2 text-primary"></i>
-                  <strong>Archivos subidos:</strong>&nbsp;<span>{{ colonia.archivos_count }}</span>
-                </div>
-              <!-- Última carga (si existe) -->
-              {% if colonia.ultima_carga %}
-                <div class="py-2 px-2 mb-3 small d-flex align-items-center justify-content-between">
-                  <div>
-                    <i class="fas fa-check-circle me-1"></i>
-                    <strong>Última carga:</strong>&nbsp;
-                    <span class="text-muted">{{ colonia.ultima_carga|date:"d/m/Y H:i" }}</span>
-                  </div>
-                  {% if colonia.archivo_url %}
-                    <a href="{{ colonia.archivo_url }}" class="btn btn-sm btn-outline-primary" download>
-                      <i class="fas fa-download"></i>
-                    </a>
+                  <strong>Archivos subidos:</strong>&nbsp;
+                 <span>{{ colonia.archivos_count_usuario }}</span>
+              </div>
+              {% if colonia.ultima_carga or colonia.ultimos_archivos %}
+                <div class="py-2 px-2 mb-3 small">
+                  
+                  {% if colonia.ultimos_archivos %}
+                    <div class="mb-2 small text-muted d-flex align-items-center justify-content-between">
+                      <span>Archivos de Subcoordinador</span>
+                      <span class="badge bg-primary">SUBCOORDINADOR</span>
+                    </div>
+                    <ul class="list-unstyled small mb-0">
+                      {% for af in colonia.ultimos_archivos %}
+                        <li class="d-flex align-items-center py-1">
+                          <i class="fas fa-file-upload me-2 text-primary"></i>
+                          <div class="flex-fill">
+                            <div class="fw-semibold">{{ af.nombre }}</div>
+                            <div class="text-muted small">
+                              {{ af.fecha_subida|date:"d/m/Y H:i" }}
+                              {% if af.subido_por %}
+                                - Subido por: {{ af.subido_por }}
+                              {% endif %}
+                            </div>
+                          </div>
+                          {% if af.url %}
+                            <a href="{{ af.url }}" class="btn btn-sm btn-outline-secondary ms-2" download>
+                              <i class="fas fa-download"></i>
+                            </a>
+                          {% endif %}
+                        </li>
+                      {% endfor %}
+                    </ul>
                   {% endif %}
                 </div>
               {% endif %}
@@ -167,12 +185,18 @@
               <!-- Archivos Precat subidos por el digitalizador (con descarga) -->
               {% if colonia.habilitar_subida and colonia.precat_files %}
                 <div class="mb-3">
-                  <small class="text-muted">Archivos Precat / Planos:</small>
+                  <div class="d-flex align-items-center justify-content-between mb-1">
+                    <small class="text-muted">Archivos Precat / Planos</small>
+                    <span class="badge bg-info text-dark">PRECAT DIGITALIZADOR</span>
+                  </div>
                   <ul class="list-unstyled small mb-0">
                     {% for af in colonia.precat_files %}
                       <li class="d-flex align-items-center py-1">
-                        <i class="fas fa-file-archive me-2 text-secondary"></i>
-                        <span class="flex-fill">{{ af.nombre }}</span>
+                        <i class="fas fa-file-archive me-2 text-info"></i>
+                        <div class="flex-fill">
+                          <div class="fw-semibold">{{ af.nombre }}</div>
+                          <div class="text-muted small">Tipo: {{ af.tipo|default:"Precat" }}</div>
+                        </div>
                         <a href="{% url 'digitalizador:descargar_precat' af.id %}" class="btn btn-sm btn-outline-secondary ms-2">
                           <i class="fas fa-download"></i>
                         </a>

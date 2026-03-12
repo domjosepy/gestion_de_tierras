@@ -30,8 +30,8 @@
                             <i class="fas fa-cog me-1"></i>Acciones
                         </button>
                         <ul class="dropdown-menu">
-                            <!-- Asignar (solo en pendientes y rechazadas) -->
-                            {% if solicitud.estado in 'pendiente_asignacion_sig,rechazado' %}
+                            <!-- Asignar (solo en pendientes) -->
+                            {% if solicitud.estado in 'pendiente_asignacion_sig' %}
                                 <li>
                                     <button class="dropdown-item btn-asignar" 
                                             data-solicitud-id="{{ solicitud.id }}"
@@ -111,6 +111,19 @@
                                             data-solicitud-id="{{ solicitud.id }}"
                                             data-accion="aprobar_campo">
                                         <i class="fas fa-check-circle text-success me-2"></i>Aprobar Relevamiento
+                                    </button>
+                                </li>
+                            {% endif %}
+                            <!--si estan rechazadas devolver para correccion-->
+                            {% if solicitud.estado == 'rechazado' %}
+                                <li>
+                                    <button class="dropdown-item btn-revision-sig me-1" 
+                                            data-solicitud-id="{{ solicitud.id }}"
+                                            data-estado-actual="{{ solicitud.estado }}"
+                                            data-accion="devolver_correccion"
+                                            data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                            title="Solicitar corrección">
+                                        <i class="fas fa-redo text-warning me-2"></i> Devolver para corrección
                                     </button>
                                 </li>
                             {% endif %}
@@ -612,7 +625,8 @@
                         // Actualizar formulario
                         document.getElementById('solicitudIdEliminar').value = solicitudId;
                         document.getElementById('coloniaNombreEliminar').textContent = coloniaNombre;
-                        document.getElementById('digitalizadorEliminar').textContent = digitalizador;
+                        const digiEl = document.getElementById('digitalizadorEliminar') || document.getElementById('digitalizadorActualEliminar');
+                        if (digiEl) digiEl.textContent = digitalizador;
                         
                         // Actualizar acción del formulario
                         const form = document.getElementById('formEliminarAsignacion');

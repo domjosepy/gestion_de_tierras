@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Q, Count, Sum, Avg
+import json
 from django.forms import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -16,7 +17,7 @@ from django.db.models import Max
 from django.db.models import Prefetch
 
 # 3. Aplicaciones locales (Tus modelos, decoradores y formularios)
-from administrador.models import User, Grupo
+from administrador.models import User
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit
 from coordinacion.models import EquipoRelevamiento, OrdenTrabajo, RegistroCampo
 from relevamiento.models import Relevamiento
@@ -767,8 +768,6 @@ def asignar_personal_orden(request, orden_id):
             solicitud.subcoordinadores.set(subcoordinadores)
             solicitud.choferes.set(choferes)
 
-            # Usar el helper centralizado para asignar relevadores; este método
-            # establecerá `usuario_asignado` preferentemente al `coordinador_campo`.
             if encuestadores:
                 solicitud.asignar_relevadores(encuestadores, request.user, motivo=comentario)
             else:
@@ -831,8 +830,11 @@ def reportes_coordinacion(request):
 
     # Estadísticas generales
     total_ordenes = ordenes_completadas.count()
-    total_encuestas = ordenes_completadas.aggregate(Sum('encuestas_completadas'))[
-        'encuestas_completadas__sum'] or 0
+    # Contar relevamientos completos asociados a las órdenes seleccionadas
+    total_encuestas = Relevamiento.objects.filter(
+        orden_trabajo__in=ordenes_completadas,
+        estado_entrevista='completa'
+    ).count()
 
     # Calcular promedio de duración manualmente (duracion_planeada es propiedad)
     if total_ordenes > 0:
@@ -853,10 +855,39 @@ def reportes_coordinacion(request):
     datos_equipos = []
     for equipo in equipos:
         ordenes_equipo = ordenes_completadas.filter(equipos_asignados=equipo)
+        # Contar relevamientos completos asociados a las órdenes del equipo
+        encuestas_equipo = Relevamiento.objects.filter(
+            orden_trabajo__in=ordenes_equipo,
+            estado_entrevista='completa'
+        ).count()
         datos_equipos.append({
             'nombre': equipo.nombre,
             'ordenes': ordenes_equipo.count(),
-            'encuestas': ordenes_equipo.aggregate(Sum('encuestas_completadas'))['encuestas_completadas__sum'] or 0
+            'encuestas': encuestas_equipo
+        })
+
+    # Preparar datos JSON seguros para uso en JS (evita problemas con single quotes)
+    datos_equipos_json = json.dumps(datos_equipos)
+    estados = list(OrdenTrabajo.objects.values('estado').annotate(cantidad=Count('id')))
+    estados_json = json.dumps(estados)
+
+    # Preparar filas de tabla con fecha fin formateada y encuestas realizadas (suma de registros si es necesario)
+    ordenes_table = []
+    for orden in ordenes_completadas[:20]:
+        fecha_fin = orden.fecha_fin_real or orden.fecha_fin_planeada
+        fecha_fin_str = fecha_fin.strftime('%d/%m/%Y') if fecha_fin else ''
+        # Contar relevamientos completos para la orden (fuente principal de encuestas realizadas)
+        encuestas_realizadas = Relevamiento.objects.filter(
+            orden_trabajo=orden
+        ).count()
+        equipos_nombres = ', '.join([e.nombre for e in orden.equipos_asignados.all()])
+        ordenes_table.append({
+            'numero_orden': orden.numero_orden,
+            'colonia': orden.solicitud.colonia.nombre if orden.solicitud and orden.solicitud.colonia else '',
+            'fecha_fin': fecha_fin_str,
+            'encuestas_realizadas': encuestas_realizadas,
+            'meta_encuestas': orden.meta_encuestas,
+            'equipos': equipos_nombres
         })
 
     context = {
@@ -866,6 +897,9 @@ def reportes_coordinacion(request):
         'promedio_duracion': round(promedio_duracion, 1),
         'estados': estados,
         'datos_equipos': datos_equipos,
+        'datos_equipos_json': datos_equipos_json,
+        'estados_json': estados_json,
+        'ordenes_table': ordenes_table,
         'desde': desde,
         'hasta': hasta,
     }

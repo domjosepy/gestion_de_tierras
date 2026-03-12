@@ -10,10 +10,6 @@
     <div class="card-header position-relative justify-content-between">
       <h2 class="mb-0">
         <i class="fas fa-clipboard-list me-2"></i>Formulario de Relevamiento</h2>
-      <div class="d-flex gap-2 align-items-center">
-        <a href="/" class="btn btn-secondary">Volver</a>
-      </div>
-
     </div>
 
     <div class="card-body inner-subsection">
@@ -65,7 +61,7 @@
             <td class="read-only-field">{{ relevamiento.superficie_ha }}</td>
           </tr>
           <tr>
-            <th>Condición del encuestado</th>
+            <th>Situación del ocupante</th>
             <td class="read-only-field text-uppercase">{{ relevamiento.condicion_encuestado}}, {{ relevamiento.condicion_vivienda }}</td>
           </tr>
           {% if relevamiento.condicion_vivienda == 'servicio' %}

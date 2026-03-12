@@ -1,8 +1,16 @@
 <!-- includes/sig/tablas/detalle_solicitudes/tabla_aprobadas.html -->
 {% load gerencia_tags tz %}
 {% if solicitudes_aprobadas %}
+<div class="d-flex justify-content-end gap-2 mb-2">
+    <button type="button" class="btn btn-sm btn-success" id="exportExcelAprobadasBtn" title="Exportar a Excel">
+        <i class="fas fa-file-excel me-1"></i> Excel
+    </button>
+    <button type="button" class="btn btn-sm btn-danger" id="exportPdfAprobadasBtn" title="Exportar a PDF">
+        <i class="fas fa-file-pdf me-1"></i> PDF
+    </button>
+</div>
 <div class="table-responsive">
-    <table class="beautiful-table table-hover" width="100%" cellspacing="0">
+    <table class="beautiful-table table-hover" id="tablaAprobadas" width="100%" cellspacing="0">
         <thead class="table-light">
             <tr>
                 <th class="text-center">#</th>
@@ -132,19 +140,129 @@
 {% endif %}
 
 <script>
-    const tablas = document.querySelectorAll('.beautiful-table');
-    tablas.forEach(tabla => {
-        if (tabla.rows.length > 1) {
+    (function () {
+        const tabla = document.getElementById('tablaAprobadas');
+        if (!tabla) return;
+
+        if (tabla.rows.length > 1 && typeof simpleDatatables !== 'undefined' && simpleDatatables.DataTable) {
             new simpleDatatables.DataTable(tabla, {
                 perPage: 10,
                 perPageSelect: [5, 10, 20, 50],
                 labels: {
-                    placeholder: "Buscar...",
-                    perPage: "registros por página",
-                    noRows: "No se encontraron tareas",
-                    info: "Mostrando {start} a {end} de {rows} tareas"
+                    placeholder: 'Buscar...',
+                    perPage: 'registros por página',
+                    noRows: 'No se encontraron tareas',
+                    info: 'Mostrando {start} a {end} de {rows} tareas'
                 }
             });
         }
-    });
+
+        function obtenerFilasAprobadas() {
+            return Array.from(tabla.querySelectorAll('tbody tr')).map((fila) =>
+                Array.from(fila.querySelectorAll('td')).map((celda) =>
+                    celda.innerText.replace(/\s+/g, ' ').trim()
+                )
+            );
+        }
+
+        function escaparHtml(valor) {
+            return String(valor)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        const encabezados = [
+            '#',
+            'Fecha Creacion',
+            'Datos Geograficos',
+            'Fecha Asignacion',
+            'Digitalizador Asignado',
+            'Tiempo Digitalizacion',
+            'Fecha Aprobacion',
+            'Prioridad',
+            'Dependencia Actual',
+            'Estado Actual'
+        ];
+
+        const btnExcel = document.getElementById('exportExcelAprobadasBtn');
+        if (btnExcel) {
+            btnExcel.addEventListener('click', function () {
+                if (typeof XLSX === 'undefined') {
+                    alert('No se pudo exportar. La libreria XLSX no esta disponible.');
+                    return;
+                }
+
+                const filas = obtenerFilasAprobadas();
+                if (!filas.length) {
+                    alert('No hay datos para exportar.');
+                    return;
+                }
+
+                const libro = XLSX.utils.book_new();
+                const hoja = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
+                XLSX.utils.book_append_sheet(libro, hoja, 'Aprobadas');
+
+                const fecha = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(libro, `solicitudes_aprobadas_${fecha}.xlsx`);
+            });
+        }
+
+        const btnPdf = document.getElementById('exportPdfAprobadasBtn');
+        if (btnPdf) {
+            btnPdf.addEventListener('click', function () {
+                const filas = obtenerFilasAprobadas();
+                if (!filas.length) {
+                    alert('No hay datos para exportar.');
+                    return;
+                }
+
+                const fechaExportacion = new Date().toLocaleString('es-PY');
+                const theadHtml = `
+                    <tr>${encabezados.map((titulo) => `<th>${escaparHtml(titulo)}</th>`).join('')}</tr>
+                `;
+                const tbodyHtml = filas
+                    .map((columnas) => `<tr>${columnas.map((valor) => `<td>${escaparHtml(valor)}</td>`).join('')}</tr>`)
+                    .join('');
+
+                const ventana = window.open('', '_blank');
+                if (!ventana) {
+                    alert('No se pudo abrir la ventana de impresion. Verifica el bloqueador de pop-ups.');
+                    return;
+                }
+
+                ventana.document.write(`
+                    <!doctype html>
+                    <html lang="es">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Solicitudes Aprobadas</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; margin: 20px; color: #1f2937; }
+                            h2 { margin: 0 0 6px; color: #0f5132; }
+                            .meta { margin-bottom: 12px; font-size: 12px; color: #4b5563; }
+                            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                            th, td { border: 1px solid #d1d5db; padding: 6px; vertical-align: top; }
+                            th { background: #e9ecef; text-align: left; }
+                            @media print { body { margin: 12mm; } }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>Solicitudes Aprobadas para Campo</h2>
+                        <div class="meta">Fecha de exportacion: ${fechaExportacion}</div>
+                        <table>
+                            <thead>${theadHtml}</thead>
+                            <tbody>${tbodyHtml}</tbody>
+                        </table>
+                    </body>
+                    </html>
+                `);
+                ventana.document.close();
+                ventana.focus();
+                ventana.print();
+            });
+        }
+    })();
 </script>

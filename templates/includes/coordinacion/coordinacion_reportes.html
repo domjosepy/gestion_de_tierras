@@ -4,155 +4,312 @@
 {% block title %}Reportes de Coordinación{% endblock %}
 
 {% block content %}
-<div class="container-fluid fade-in">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800 fw-bold">
-            <i class="fas fa-chart-pie me-2"></i>Reportes de Coordinación
-        </h1>
-        <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Volver
-        </a>
+<style>
+    .reporte-wrap {
+        --rp-bg: linear-gradient(135deg, #f8fbff 0%, #eef4ff 100%);
+        --rp-title: #1a365d;
+        --rp-muted: #5f6f86;
+        --rp-primary: #2c7be5;
+        --rp-success: #00a66c;
+        --rp-warning: #e3a008;
+        --rp-danger: #dc3545;
+    }
+
+    .reporte-header {
+        background: var(--rp-bg);
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        border: 1px solid #dbe8ff;
+    }
+
+    .reporte-title {
+        color: var(--rp-title);
+        letter-spacing: 0.2px;
+    }
+
+    .periodo-label {
+        color: var(--rp-muted);
+        font-size: 0.88rem;
+        margin-bottom: 0;
+    }
+
+    .kpi-card {
+        border: 0;
+        border-radius: 14px;
+        box-shadow: 0 8px 20px rgba(20, 64, 129, 0.08);
+    }
+
+    .kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .kpi-card h6 {
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.3rem;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 1.65rem;
+        font-weight: 700;
+        line-height: 1;
+        color: #1f2d3d;
+    }
+
+    .section-card {
+        border: 0;
+        border-radius: 14px;
+        box-shadow: 0 8px 20px rgba(20, 64, 129, 0.08);
+    }
+
+    .section-title {
+        color: var(--rp-title);
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .insight-box {
+        border-radius: 12px;
+        background: #f7fbff;
+        border: 1px solid #d6e8ff;
+        padding: 0.75rem;
+    }
+
+    .insight-label {
+        font-size: 0.78rem;
+        color: var(--rp-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.1rem;
+    }
+
+    .insight-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1f2d3d;
+        margin: 0;
+    }
+
+    .chart-wrap {
+        min-height: 290px;
+    }
+
+    .table thead th {
+        border: 0;
+        background: #f1f7ff;
+        color: #355274;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .progreso-cell {
+        min-width: 170px;
+    }
+
+    .progreso-text {
+        font-size: 0.78rem;
+        color: var(--rp-muted);
+    }
+
+    .mini-progress {
+        height: 8px;
+        border-radius: 999px;
+        background: #e9f0fb;
+    }
+
+    .mini-progress .progress-bar {
+        border-radius: 999px;
+    }
+
+    .badge-equipo {
+        border-radius: 999px;
+        padding: 0.35rem 0.6rem;
+        background: #edf5ff;
+        color: #1e4f8a;
+        font-weight: 600;
+        font-size: 0.78rem;
+    }
+
+    @media (max-width: 768px) {
+        .kpi-card .kpi-value {
+            font-size: 1.35rem;
+        }
+
+        .chart-wrap {
+            min-height: 240px;
+        }
+    }
+</style>
+
+<div class="container-fluid fade-in reporte-wrap">
+    <div class="reporte-header mb-4">
+        <div class="d-sm-flex align-items-start justify-content-between gap-3">
+            <div>
+                <h1 class="h3 mb-2 fw-bold reporte-title">
+                    <i class="fas fa-chart-line me-2 text-primary"></i>Reporte de Coordinación
+                </h1>
+                <p class="periodo-label">
+                    Vista simplificada del rendimiento operativo para toma de decisiones.
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success" onclick="exportarExcel()">
+                    <i class="fas fa-file-excel me-1"></i> Excel
+                </button>
+                <button class="btn btn-danger" onclick="exportarPDF()">
+                    <i class="fas fa-file-pdf me-1"></i> PDF
+                </button>
+                <a href="{% url 'coordinacion:coordinacion_dashboard' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Volver
+                </a>
+            </div>
+        </div>
     </div>
 
-    <!-- Filtro de fechas -->
-    <div class="card shadow mb-4">
+    <div class="card section-card mb-4">
         <div class="card-body">
             <form method="get" class="row g-3 align-items-end">
                 <div class="col-md-4">
-                    <label class="form-label">Desde</label>
+                    <label class="form-label fw-semibold">Desde</label>
                     <input type="date" name="desde" class="form-control" value="{{ desde|date:'Y-m-d' }}">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Hasta</label>
+                    <label class="form-label fw-semibold">Hasta</label>
                     <input type="date" name="hasta" class="form-control" value="{{ hasta|date:'Y-m-d' }}">
                 </div>
                 <div class="col-md-4">
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-1"></i> Filtrar
+                        <i class="fas fa-filter me-1"></i> Actualizar reporte
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tarjetas de resumen -->
     <div class="row mb-4">
         <div class="col-xl-4 col-md-6 mb-3">
-            <div class="card border-left-primary shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">
-                                Órdenes Completadas
-                            </div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_ordenes }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar-check fa-2x text-primary"></i>
-                        </div>
+            <div class="card kpi-card h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-primary">Órdenes completadas</h6>
+                        <div class="kpi-value" id="kpiTotalOrdenes">{{ total_ordenes }}</div>
                     </div>
+                    <span class="kpi-icon" style="background:#eaf2ff;color:#2c7be5;">
+                        <i class="fas fa-clipboard-check"></i>
+                    </span>
                 </div>
             </div>
         </div>
         <div class="col-xl-4 col-md-6 mb-3">
-            <div class="card border-left-success shadow h-100">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs fw-bold text-success text-uppercase mb-1">
-                                Total Encuestas
-                            </div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ total_encuestas }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clipboard-list fa-2x text-success"></i>
-                        </div>
+            <div class="card kpi-card h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-success">Encuestas realizadas</h6>
+                        <div class="kpi-value" id="kpiTotalEncuestas">{{ total_encuestas }}</div>
                     </div>
+                    <span class="kpi-icon" style="background:#eafaf3;color:#00a66c;">
+                        <i class="fas fa-list-check"></i>
+                    </span>
                 </div>
             </div>
         </div>
         <div class="col-xl-4 col-md-6 mb-3">
-            <div class="card border-left-info shadow h-100">
+            <div class="card kpi-card h-100">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-warning">Duración promedio</h6>
+                        <div class="kpi-value" id="kpiDuracion">{{ promedio_duracion }} <small class="text-muted fs-6">días</small></div>
+                    </div>
+                    <span class="kpi-icon" style="background:#fff8e8;color:#e3a008;">
+                        <i class="fas fa-hourglass-half"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-3">
+            <div class="card section-card h-100">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h6 class="section-title mb-0 text-white">
+                        <i class="fas fa-users me-2"></i>Rendimiento por equipo
+                    </h6>
+                </div>
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs fw-bold text-info text-uppercase mb-1">
-                                Duración Promedio (días)
-                            </div>
-                            <div class="h5 mb-0 fw-bold text-gray-800">{{ promedio_duracion }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-hourglass-half fa-2x text-info"></i>
-                        </div>
+                    <div class="chart-wrap">
+                        <canvas id="graficoEquipos"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-3">
+            <div class="card section-card h-100">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h6 class="section-title mb-0 text-white">
+                        <i class="fas fa-chart-pie me-2"></i>Estado de órdenes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-wrap d-flex align-items-center">
+                        <canvas id="graficoEstados"></canvas>
+                    </div>
+                    <div class="insight-box mt-3">
+                        <p class="insight-label">Estado principal</p>
+                        <p class="insight-value" id="estadoPrincipal">Sin datos</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Gráficos -->
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-3">
-            <div class="card shadow h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 fw-bold text-white">Órdenes por Estado</h6>
-                </div>
-                <div class="card-body">
-                    <canvas id="graficoEstados" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6 mb-3">
-            <div class="card shadow h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 fw-bold text-white">Encuestas por Equipo</h6>
-                </div>
-                <div class="card-body">
-                    <canvas id="graficoEquipos" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabla de órdenes completadas -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 fw-bold text-white">
-                <i class="fas fa-table me-2"></i>Órdenes Completadas (últimas 20)
+    <div class="card section-card mb-4">
+        <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+            <h6 class="section-title mb-0 text-white">
+                <i class="fas fa-table me-2"></i>Órdenes completadas recientes
             </h6>
-            <div>
-                <button class="btn btn-sm btn-success me-1" onclick="exportarExcel()">
-                    <i class="fas fa-file-excel me-1"></i> Excel
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="exportarPDF()">
-                    <i class="fas fa-file-pdf me-1"></i> PDF
-                </button>
-            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="beautiful-table table-hover" id="tablaReportes">
+                <table class="table table-hover align-middle" id="tablaReportes">
                     <thead>
                         <tr>
                             <th>Orden</th>
                             <th>Colonia</th>
-                            <th>Fecha Fin</th>
-                            <th>Encuestas</th>
+                            <th>Fecha fin</th>
+                            <th>Avance</th>
                             <th>Equipo</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for orden in ordenes_completadas %}
+                        {% for orden in ordenes_table %}
                         <tr>
-                            <td>{{ orden.numero_orden }}</td>
-                            <td>{{ orden.solicitud.colonia.nombre }}</td>
-                            <td>{{ orden.fecha_fin_real|date:"d/m/Y"|default:orden.fecha_fin_planeada|date:"d/m/Y" }}</td>
-                            <td>{{ orden.encuestas_completadas }}/{{ orden.meta_encuestas }}</td>
-                            <td>
-                                {% for equipo in orden.equipos_asignados.all %}
-                                    {{ equipo.nombre }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
+                            <td class="fw-semibold">{{ orden.numero_orden }}</td>
+                            <td>{{ orden.colonia }}</td>
+                            <td>{{ orden.fecha_fin }}</td>
+                            {% widthratio orden.encuestas_realizadas orden.meta_encuestas 100 as progreso_orden %}
+                            <td class="progreso-cell" data-progress="{{ progreso_orden }}">
+                                <div class="d-flex justify-content-between progreso-text mb-1">
+                                    <span>{{ orden.encuestas_realizadas }} / {{ orden.meta_encuestas }}</span>
+                                    <span>{{ progreso_orden }}%</span>
+                                </div>
+                                <div class="progress mini-progress">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progreso_orden }}%;" aria-valuenow="{{ progreso_orden }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
                             </td>
+                            <td><span class="badge-equipo">{{ orden.equipos }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No hay órdenes completadas para el período seleccionado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -167,59 +324,115 @@
 {{ block.super }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gráfico de estados
-    const ctx1 = document.getElementById('graficoEstados').getContext('2d');
-    const estados = {{ estados|safe }};
-    new Chart(ctx1, {
-        type: 'doughnut',
-        data: {
-            labels: estados.map(e => e.estado),
-            datasets: [{
-                data: estados.map(e => e.cantidad),
-                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b']
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
-    });
+    const estados = {{ estados_json|safe }} || [];
+    const equiposRaw = {{ datos_equipos_json|safe }} || [];
+    const equipos = [...equiposRaw]
+        .sort((a, b) => (b.encuestas || 0) - (a.encuestas || 0))
+        .slice(0, 8);
 
-    // Gráfico de equipos
-    const ctx2 = document.getElementById('graficoEquipos').getContext('2d');
-    const equipos = {{ datos_equipos|safe }};
-    new Chart(ctx2, {
-        type: 'bar',
-        data: {
-            labels: equipos.map(e => e.nombre),
-            datasets: [{
-                label: 'Encuestas',
-                data: equipos.map(e => e.encuestas),
-                backgroundColor: '#4e73df'
-            }]
-        },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
-    });
+    const coloresEstados = ['#2c7be5', '#00a66c', '#e3a008', '#dc3545', '#7a6ff0', '#0dcaf0'];
+    const totalEstados = estados.reduce((acc, item) => acc + (item.cantidad || 0), 0);
+    const principal = estados.length
+        ? [...estados].sort((a, b) => (b.cantidad || 0) - (a.cantidad || 0))[0]
+        : null;
 
-    // Inicializar DataTable (simple-datatables)
-    const tabla = document.querySelector('.beautiful-table');
-    if (tabla) {
+    if (principal && totalEstados > 0) {
+        const pct = ((principal.cantidad / totalEstados) * 100).toFixed(1);
+        document.getElementById('estadoPrincipal').textContent = `${principal.estado} (${pct}%)`;
+    }
+
+    const ctxEstados = document.getElementById('graficoEstados');
+    if (ctxEstados && estados.length) {
+        new Chart(ctxEstados.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: estados.map(e => e.estado),
+                datasets: [{
+                    data: estados.map(e => e.cantidad),
+                    backgroundColor: coloresEstados,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, usePointStyle: true }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw || 0;
+                                const pct = totalEstados ? ((value / totalEstados) * 100).toFixed(1) : 0;
+                                return `${context.label}: ${value} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    const ctxEquipos = document.getElementById('graficoEquipos');
+    if (ctxEquipos && equipos.length) {
+        new Chart(ctxEquipos.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: equipos.map(e => e.nombre),
+                datasets: [{
+                    label: 'Encuestas',
+                    data: equipos.map(e => e.encuestas),
+                    borderRadius: 8,
+                    backgroundColor: '#2c7be5',
+                    hoverBackgroundColor: '#1f64bf'
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(77, 117, 173, 0.10)' }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    const tabla = document.getElementById('tablaReportes');
+    if (tabla && window.simpleDatatables && simpleDatatables.DataTable) {
         new simpleDatatables.DataTable(tabla, {
             perPage: 10,
             perPageSelect: [5, 10, 20, 50],
             labels: {
-                placeholder: "Buscar...",
-                perPage: "registros por página",
-                noRows: "No se encontraron órdenes",
-                info: "Mostrando {start} a {end} de {rows} órdenes"
+                placeholder: 'Buscar orden, colonia o equipo...',
+                perPage: 'registros por página',
+                noRows: 'No se encontraron órdenes',
+                info: 'Mostrando {start} a {end} de {rows} órdenes'
             }
         });
     }
 });
 
-// Funciones de exportación (requieren SheetJS y jsPDF)
 function exportarExcel() {
     import('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js').then(() => {
         const tabla = document.getElementById('tablaReportes');
-        const wb = XLSX.utils.table_to_book(tabla, { sheet: "Reporte" });
-        XLSX.writeFile(wb, "reporte_coordinacion.xlsx");
+        if (!tabla) {
+            return;
+        }
+        const wb = XLSX.utils.table_to_book(tabla, { sheet: 'Reporte Ejecutivo' });
+        XLSX.writeFile(wb, 'reporte_coordinacion.xlsx');
     });
 }
 
@@ -227,9 +440,56 @@ function exportarPDF() {
     import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(() => {
         import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js').then(() => {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.autoTable({ html: '#tablaReportes' });
-            doc.save('reporte_coordinacion.pdf');
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const totalOrdenes = document.getElementById('kpiTotalOrdenes')?.textContent?.trim() || '0';
+            const totalEncuestas = document.getElementById('kpiTotalEncuestas')?.textContent?.trim() || '0';
+            const duracion = document.getElementById('kpiDuracion')?.textContent?.replace(/\s+/g, ' ').trim() || '0 días';
+
+            const desde = document.querySelector('input[name="desde"]')?.value || 'Inicio';
+            const hasta = document.querySelector('input[name="hasta"]')?.value || 'Hoy';
+
+            doc.setFillColor(30, 79, 138);
+            doc.rect(0, 0, 210, 28, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(15);
+            doc.text('Reporte Ejecutivo de Coordinación', 14, 12);
+            doc.setFontSize(10);
+            doc.text(`Periodo: ${desde} a ${hasta}`, 14, 19);
+
+            doc.setTextColor(31, 45, 61);
+            doc.setFontSize(11);
+            doc.text(`Órdenes completadas: ${totalOrdenes}`, 14, 38);
+            doc.text(`Encuestas realizadas: ${totalEncuestas}`, 14, 45);
+            doc.text(`Duración promedio: ${duracion}`, 14, 52);
+
+            const estadoPrincipal = document.getElementById('estadoPrincipal')?.textContent?.trim() || 'Sin datos';
+            doc.setFontSize(10);
+            doc.text(`Estado principal: ${estadoPrincipal}`, 14, 60);
+
+            doc.autoTable({
+                html: '#tablaReportes',
+                startY: 67,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [44, 123, 229],
+                    textColor: [255, 255, 255],
+                    fontStyle: 'bold'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2.4
+                },
+                alternateRowStyles: {
+                    fillColor: [245, 249, 255]
+                }
+            });
+
+            const fechaGen = new Date().toLocaleString();
+            const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 280;
+            doc.setTextColor(110, 120, 132);
+            doc.setFontSize(8);
+            doc.text(`Generado el ${fechaGen}`, 14, Math.min(finalY, 290));
+            doc.save('reporte_coordinacion_profesional.pdf');
         });
     });
 }
