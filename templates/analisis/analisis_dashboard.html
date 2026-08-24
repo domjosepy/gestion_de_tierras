@@ -1,0 +1,212 @@
+<!-- analisis/templates/analisis/analisis_dashboard.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}ANÁLISIS - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 mb-2 text-primary fw-bold">
+                <i class="fas fa-chart-bar me-2"></i>ANÁLISIS
+            </h2>
+            <p class="mb-0">Resumen general de actividades del grupo</p>
+        </div>
+        <div class="d-flex align-items-center">
+            {% if es_lider %}
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-crown me-1"></i> Líder de Grupo
+                </span>
+            {% endif %}
+            <span class="badge bg-info">
+                <i class="fas fa-users me-1"></i>
+                {% for grupo in grupos_usuario %}
+                    {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        </div>
+    </div>
+
+        <!-- Colonias Relevadas: cards de conteo -->
+
+    <div class="row mb-4">
+        <!-- Total Colonias -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Total Colonias</div>
+                            <div class="h5 mb-0 fw-bold text-primary">{{ estadisticas_colonias.total|default:0 }}</div>
+                        </div>
+                        <div class="text-primary">
+                            <i class="fas fa-map fa-2x"></i>
+                        </div>
+                        <div class="mt-2"> 
+                            <a href="{% url 'analisis:colonias_relevadas_analisis' %}" class="btn btn-sm btn-outline-primary">
+                                Gestionar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Con Relevamiento -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start-success border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Con Relevamiento</div>
+                            <div class="h5 mb-0 fw-bold text-success">{{ estadisticas_colonias.con_relevamiento|default:0 }}</div>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>                     
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Con Actualizaciones -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start-info border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-info text-uppercase mb-1">Con Actualizaciones</div>
+                            <div class="h5 mb-0 fw-bold text-info">{{ estadisticas_colonias.con_actualizaciones|default:0 }}</div>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-sync-alt fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sin Actualizaciones -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-start-warning border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">Sin Actualizaciones</div>
+                            <div class="h5 mb-0 fw-bold text-warning">{{ estadisticas_colonias.sin_actualizaciones|default:0 }}</div>
+                        </div>
+                        <div class="text-warning">
+                            <i class="fas fa-exclamation-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Colonias Relevadas -->
+    <div class="row mb-4">
+        <div class="col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header-brown bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-white">
+                        <i class="fas fa-map-marked-alt me-2"></i>Colonias Relevadas
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if colonias_relevadas %}
+                    <div class="table-responsive">
+                        <table class="beautiful-table table-bordered colonias-table" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>Datos Geográficos</th>
+                                    <th class="text-center">Fecha Relevada</th>
+                                    <th class="text-center">Coordinador</th>
+                                    <th class="text-center">Encuestas</th>
+                                    <th class="text-center">Archivos</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in colonias_relevadas %}
+                                <tr>
+                                    <td class="text-center">{{ forloop.counter }}</td>
+                                    <td>
+                                        <small><strong>{{ item.colonia_nombre }}</strong></small>
+                                        <br>
+                                        <small class="text-muted">{{ item.departamento_nombre }}, {{ item.distrito_nombre }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                            <span class="badge bg-success">{{ item.fecha_relevada|date:"d/m/Y" }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if item.coordinador_campo != 'Sin coordinador' %}bg-info{% else %}bg-secondary{% endif %}">
+                                            {{ item.coordinador_campo }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if item.encuestas_total > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ item.encuestas_total }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if item.total_archivos > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                            {{ item.total_archivos }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-info"
+                                                onclick="verDetalleRelevamientoAnalisis({{ item.id }})"
+                                                title="Ver detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-map fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay colonias relevadas registradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+ 
+{% endblock %} 
+
+{% block scripts %}
+{% include 'includes/analisis/modal/accion_relevamiento/detalle_relevamiento_analisis.html' %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Verificar que la librería esté disponible
+        if (typeof simpleDatatables !== 'undefined' && simpleDatatables.DataTable) {
+            const tablas = document.querySelectorAll('.beautiful-table');
+            tablas.forEach(tabla => {
+                if (tabla.rows.length > 1) {
+                    new simpleDatatables.DataTable(tabla, {
+                        perPage: 10,
+                        perPageSelect: [5, 10, 20, 50],
+                        labels: {
+                            placeholder: "Buscar...",
+                            perPage: "registros por página",
+                            noRows: "No se encontraron registros",
+                            info: "Mostrando {start} a {end} de {rows} registros"
+                        }
+                    });
+                }
+            });
+        } else {
+            console.error('simpleDatatables no está cargado. Verifica la inclusión de la librería.');
+        }
+    });
+</script>
+{% endblock %}

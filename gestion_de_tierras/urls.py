@@ -42,7 +42,7 @@ urlpatterns = [
     path("relevamiento/", include("relevamiento.urls", namespace="coordinador")),
     path("relevamiento/", include("relevamiento.urls", namespace="subcoordinador")),
     path("relevamiento/", include("relevamiento.urls", namespace="encuestador")),
-
+    path("analisis/", include("analisis.urls", namespace="analisis")),
 ]
 
 if settings.DEBUG:

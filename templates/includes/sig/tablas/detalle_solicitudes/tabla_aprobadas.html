@@ -18,7 +18,6 @@
                 <th class="text-center">Datos Geográficos</th>
                 <th class="text-center">Fecha Asignación</th>
                 <th class="text-center">Digitalizador Asignado</th>
-                <th class="text-center">Tiempo Digitalizacion</th>
                 <th class="text-center">Fecha Aprobación</th>
                 <th class="text-center">Prioridad</th>
                 <th class="text-center">Dependencia Actual</th>
@@ -44,12 +43,14 @@
                     {% endwith %}
                 </td>
                 <td class="text-center">
-                    {% if solicitud.fecha_asignacion %}
-                        <small>{{ solicitud.fecha_asignacion|date:"d/m/Y" }}</small>
-                        <br><small class="text-muted">{{ solicitud.fecha_asignacion|date:"H:i" }}</small>
-                    {% else %}
-                        <span class="text-muted">Sin asignar</span>
-                    {% endif %}
+                    {% with asignacion=solicitud.ultima_asignacion_digitalizador %}
+                        {% if asignacion and asignacion.fecha_asignacion %}
+                            <small>{{ asignacion.fecha_asignacion|date:"d/m/Y" }}</small>
+                            <br><small class="text-muted">{{ asignacion.fecha_asignacion|date:"H:i" }}</small>
+                        {% else %}
+                            <span class="text-muted">Sin asignar</span>
+                        {% endif %}
+                    {% endwith %}
                 </td>
                 <td class="text-center">
                     {% with ud=solicitud.usuario_digitalizador %}
@@ -62,32 +63,6 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     {% endwith %}
-                </td>
-                <td class="text-center">
-                    {% if solicitud.inicio_digitalizacion or solicitud.tiempo_digitalizacion_mostrar %}
-                        <div class="small text-muted">
-                            {% if solicitud.inicio_digitalizacion %}
-                                Inicio: {{ solicitud.inicio_digitalizacion|localtime|date:"H:i" }} h.
-                            {% else %}
-                                Inicio: -
-                            {% endif %}
-                            &nbsp;&nbsp;
-                            {% if solicitud.fin_digitalizacion %}
-                                Fin: {{ solicitud.fin_digitalizacion|localtime|date:"H:i" }} h.
-                            {% else %}
-                                Fin: -
-                            {% endif %}
-                        </div>
-                        <div>
-                            {% if solicitud.tiempo_digitalizacion_mostrar %}
-                                <small class="text-success">{{ solicitud.tiempo_digitalizacion_mostrar|format_timedelta }}</small>
-                            {% else %}
-                                <small class="text-muted">-</small>
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        <small class="text-muted">-</small>
-                    {% endif %}
                 </td>
                 <td class="text-center">
                     {% if solicitud.fecha_aprobacion_campo %}

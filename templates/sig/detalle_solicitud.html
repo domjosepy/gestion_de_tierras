@@ -15,10 +15,8 @@
                 <h2 class="h4 mb-0 text-warning fw-bold">
                     <i class="fas fa-tractor me-2"></i> {{ solicitud.colonia.nombre }}
                 </h2>
-
-                
             </div>
-            
+            <!-- Encabezado -->
             <div class="btn-group" role="group">
                 <a href="{% url 'sig:sig_dashboard' %}" class="btn btn-outline-primary">
                     <i class="fas fa-arrow-left me-1"></i>Volver
@@ -161,6 +159,74 @@
         </div>
         <!-- Tarjetas de información  -->
         <div class="row mb-4">
+            <!-- Información de la colonia -->
+            <div class="col-xl-4 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100">
+                    <div class="card-header bg-warning text-white py-3">
+                        <h6 class="m-0 fw-bold">
+                            <i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Colonia</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-tractor text-warning"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ solicitud.colonia.nombre }}</strong>
+                                    <br><small class="text-muted">Código: {{ solicitud.colonia.codigo }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {% if distritos %}
+                                <small class="text-muted d-block">Distrito</small>
+                                {% for distrito in distritos %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map text-success"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ distrito.nombre }}</strong>
+                                            <br><small class="text-muted">Código:{{ distrito.codigo }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {% if departamentos %}
+                                <small class="text-muted d-block">Departamento</small>
+                                {% for departamento in departamentos %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map-marked-alt text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ departamento.nombre }}</strong>
+                                            <br><small class="text-muted">Código: {{ departamento.codigo }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Estado de relevamiento</small>
+                            <span class="badge {% if solicitud.colonia.tiene_relevamiento %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if solicitud.colonia.tiene_relevamiento %}
+                                <i class="fas fa-check me-1"></i>Con relevamiento
+                                {% else %}
+                                <i class="fas fa-times me-1"></i>Sin relevamiento
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- Información de la solicitud -->
             <div class="col-xl-4 col-md-6 mb-4">
                 <div class="card border-left-primary shadow h-100">
@@ -260,89 +326,10 @@
                                         <span class="text-muted fst-italic">Sin asignar</span>
                                     {% endif %}
                                 </div>
+                              
                             </div>
                         </div>
                         
-                        {% if solicitud.asignado_por %}
-                            <div class="mb-3">
-                                <small class="text-muted d-block">Asignado por</small>
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle p-2 me-2">
-                                        <i class="fas fa-user-check text-success"></i>
-                                    </div>
-                                    <span>{{ solicitud.asignado_por.get_full_name|default:solicitud.asignado_por.username }}</span>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Información de la colonia -->
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-warning shadow h-100">
-                    <div class="card-header bg-warning text-white py-3">
-                        <h6 class="m-0 fw-bold">
-                            <i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <small class="text-muted d-block">Colonia</small>
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light rounded-circle p-2 me-2">
-                                    <i class="fas fa-tractor text-warning"></i>
-                                </div>
-                                <div>
-                                    <strong>{{ solicitud.colonia.nombre }}</strong>
-                                    <br><small class="text-muted">Código: {{ solicitud.colonia.codigo }}</small>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            {% if distritos %}
-                                <small class="text-muted d-block">Distrito</small>
-                                {% for distrito in distritos %}
-                                    <div class="d-flex align-items-center mb-2">
-                                        <div class="bg-light rounded-circle p-2 me-2">
-                                            <i class="fas fa-map text-success"></i>
-                                        </div>
-                                        <div>
-                                            <strong>{{ distrito.nombre }}</strong>
-                                            <br><small class="text-muted">Código:{{ distrito.codigo }}</small>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            {% if departamentos %}
-                                <small class="text-muted d-block">Departamento</small>
-                                {% for departamento in departamentos %}
-                                    <div class="d-flex align-items-center mb-2">
-                                        <div class="bg-light rounded-circle p-2 me-2">
-                                            <i class="fas fa-map-marked-alt text-primary"></i>
-                                        </div>
-                                        <div>
-                                            <strong>{{ departamento.nombre }}</strong>
-                                            <br><small class="text-muted">Código: {{ departamento.codigo }}</small>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            <small class="text-muted d-block">Estado de relevamiento</small>
-                            <span class="badge {% if solicitud.colonia.tiene_relevamiento %}bg-success{% else %}bg-secondary{% endif %}">
-                                {% if solicitud.colonia.tiene_relevamiento %}
-                                <i class="fas fa-check me-1"></i>Con relevamiento
-                                {% else %}
-                                <i class="fas fa-times me-1"></i>Sin relevamiento
-                                {% endif %}
-                            </span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -463,7 +450,7 @@
                 </div>
             </div>
         </div>
-        <!-- Historial de auditorías -->
+        <!-- Historial de auditorías
         <div class="card shadow">
             <div class="card-header bg-secondary text-white py-3 d-flex justify-content-between align-items-center" 
                 style="cursor: pointer;" 
@@ -520,6 +507,7 @@
                 </div>
             </div>
         </div>
+         -->
     </div>
 
 

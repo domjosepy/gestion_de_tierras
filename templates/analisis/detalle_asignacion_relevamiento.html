@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+{% load static tz %}
+
+{% block title %}Analisis - Detalle de Asignacion{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <div class="d-sm-flex align-items-start justify-content-between mb-4 gap-3">
+        <div>
+           <div>
+                <h6 class="h3 mb-2 text-info fw-bold">
+                   DETALLE DE LA COLONIA RELEVADA - ASIGNADA
+                </h6>
+                <h2 class="h4 mb-0 text-warning fw-bold">
+                    <i class="fas fa-tractor me-2"></i> {{ solicitud.colonia.nombre }}
+                </h2>
+            </div>
+        </div>
+
+        <div class="btn-group" role="group">
+            <a href="{% url 'analisis:colonias_relevadas_analisis' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+
+            {% if es_lider and asignacion_actual.estado != 'proceso_analisis' %}
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Acciones
+                        </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <!-- Asignar (solo en pendientes) -->
+                    {% if asignacion_actual.estado == 'analista_asignado' %}
+                    <li>
+                        <button class="dropdown-item btn-cambiar-analista"
+                                data-asignacion-id="{{ asignacion_actual.id }}"
+                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                data-analista-actual="{% if asignacion_actual.analista %}{{ asignacion_actual.analista.get_full_name|default:asignacion_actual.analista.username }}{% else %}Sin analista{% endif %}">
+                            <i class="fas fa-exchange-alt text-warning me-2"></i>Cambiar analista
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item btn-eliminar-asignacion-analista"
+                                data-solicitud-id="{{ solicitud.id }}"
+                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                data-analista="{% if asignacion_actual.analista %}{{ asignacion_actual.analista.get_full_name|default:asignacion_actual.analista.username }}{% else %}Sin analista{% endif %}">
+                            <i class="fas fa-user-minus text-danger me-2"></i>Eliminar asignacion
+                        </button>
+                    </li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <button class="dropdown-item btn-aprobar-analisis" data-solicitud-id="{{ solicitud.id }}">
+                            <i class="fas fa-check-circle text-success me-2"></i>Validar analisis de colonia
+                        </button>
+                    </li>
+                    <li>
+                        <button class="dropdown-item btn-generar-dictamen" data-solicitud-id="{{ solicitud.id }}">
+                            <i class="fas fa-file-signature text-info me-2"></i>Generar dictamen tecnico
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100">
+                <div class="card-header bg-warning text-white py-3">
+                    <h6 class="m-0 fw-bold"><i class="fas fa-map-marked-alt me-2"></i>Datos Geográficos</h6>
+                </div>
+                <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Colonia</small>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle p-2 me-2">
+                                    <i class="fas fa-tractor text-warning"></i>
+                                </div>
+                                <div>
+                                    <strong>{{ solicitud.colonia.nombre }}</strong>
+                                    <br><small class="text-muted">Código: {{ solicitud.colonia.codigo }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {% if distritos %}
+                                <small class="text-muted d-block">Distrito</small>
+                                {% for distrito in distritos %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map text-success"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ distrito.nombre }}</strong>
+                                            <br><small class="text-muted">Código:{{ distrito.codigo }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            {% if departamentos %}
+                                <small class="text-muted d-block">Departamento</small>
+                                {% for departamento in departamentos %}
+                                    <div class="d-flex align-items-center mb-2">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fas fa-map-marked-alt text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <strong>{{ departamento.nombre }}</strong>
+                                            <br><small class="text-muted">Código: {{ departamento.codigo }}</small>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted d-block">Estado de relevamiento</small>
+                            <span class="badge {% if solicitud.estado %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ solicitud.get_estado_display }}
+                            </span>
+                            <small class="text-muted">En fecha: {{ orden_trabajo.fecha_fin_real|date:"d/m/Y"|default:"Sin fecha" }}</small>
+                            
+
+                        </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100">
+                <div class="card-header bg-primary text-white py-3">
+                    <h6 class="m-0 fw-bold"><i class="fas fa-info-circle me-2"></i>Informacion General</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Tipo de relevamiento</small>
+                        <span class="badge {% if solicitud.tipo == 'relevamiento' %}bg-primary{% else %}bg-warning{% endif %}">
+                            {{ solicitud.get_tipo_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Sectores / manzanas relevadas</small>
+                        {% if manzanas_relevadas %}
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for manzana in manzanas_relevadas %}
+                                    <span class="badge bg-light text-dark border">{{ manzana }}</span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <small class="text-muted">Sin manzanas registradas</small>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Hectareas aprox.</small>
+                            <strong>{{ ultimo_precat.hectareas_aprox|default:'0' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Lotes relevados</small>
+                            <strong>{{ estadisticas_relevamiento.lotes_digitalizados|default:'0' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Reservas</small>
+                            <strong>{{ ultimo_precat.reservas|default:'0' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Campos comunales</small>
+                            <strong>{{ ultimo_precat.campos_comunales|default:'0' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Solicitudes firmadas</small>
+                            <strong>{{ estadisticas_relevamiento.solicitudes_firmadas|default:'0' }}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100">
+                <div class="card-header bg-success text-white py-3">
+                    <h6 class="m-0 fw-bold"><i class="fas fa-users-cog me-2"></i>Asignacion de Analisis</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Grupo asignado</small>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light rounded-circle p-2 me-2">
+                                <i class="fas fa-users text-success"></i>
+                            </div>
+                            <div>
+                                <strong>{{ solicitud.grupo_asignado.nombre }}</strong>
+                                {% if solicitud.grupo_asignado and solicitud.grupo_asignado.lider %}
+                                <br><small class="text-muted">Líder: {{ solicitud.grupo_asignado.lider.get_full_name|default:solicitud.grupo_asignado.lider.username }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                        
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Analista asignado</small>
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light rounded-circle p-2 me-2">
+                                <i class="fas fa-user text-success"></i>
+                            </div>
+                            <div>
+                                {% if solicitud.usuario_asignado %}
+                                    <strong>{{ solicitud.usuario_asignado.get_full_name|default:solicitud.usuario_asignado.username }}</strong>
+                                    {% if solicitud.fecha_asignacion %}
+                                        <br><small class="text-muted">Asignado el: {{ solicitud.fecha_asignacion|date:"d/m/Y H:i" }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted fst-italic">Sin asignar</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <small class="text-muted d-block">Fecha de termino</small>
+                        {% if asignacion_actual and asignacion_actual.fecha_termino %}
+                            <strong>{{ asignacion_actual.fecha_termino|date:"d/m/Y H:i" }}</strong>
+                        {% else %}
+                            <span class="text-muted">No finalizado</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-light py-3">
+                    <h6 class="mb-0"><i class="fas fa-file-pdf me-2 text-danger"></i>Antecedentes (PDF)</h6>
+                </div>
+                <div class="card-body">
+                    {% if antecedentes_pdf %}
+                        <a href="{{ antecedentes_pdf.url }}" class="btn btn-outline-danger btn-sm" target="_blank">
+                            <i class="fas fa-eye me-1"></i>Ver antecedentes
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay antecedentes cargados en el modelo actual.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-light py-3">
+                    <h6 class="mb-0"><i class="fas fa-folder-open me-2 text-primary"></i>Archivos SENATICS (PDF)</h6>
+                </div>
+                <div class="card-body">
+                    {% if senatics_pdf %}
+                        <a href="{{ senatics_pdf.url }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                            <i class="fas fa-eye me-1"></i>Ver archivo SENATICS
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-0">No hay archivos SENATICS cargados en el modelo actual.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-light py-3">
+                    <h6 class="mb-0"><i class="fas fa-map me-2 text-success"></i>Planos y Documentacion GIS</h6>
+                </div>
+                <div class="card-body">
+                    {% if ultimo_planos %}
+                        <div class="mb-2">
+                            <small class="text-muted d-block">Plano final (SIG)</small>
+                            <a href="{{ ultimo_planos.archivo.url }}" target="_blank">{{ ultimo_planos.get_nombre_archivo }}</a>
+                        </div>
+                    {% endif %}
+
+                    {% if archivos_gis %}
+                        <small class="text-muted d-block">Archivos GIS recientes</small>
+                        <ul class="list-unstyled mb-0">
+                            {% for archivo in archivos_gis %}
+                                <li>
+                                    <a href="{{ archivo.archivo.url }}" target="_blank">{{ archivo.nombre_archivo }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% elif not ultimo_planos %}
+                        <p class="text-muted mb-0">No hay archivos GIS adjuntos.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-info text-white py-3">
+                    <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Notas de Campo / Digitalizacion</h6>
+                </div>
+                <div class="card-body">
+                    {% if solicitud.observaciones or ultimo_precat.observaciones %}
+                        {% if solicitud.observaciones %}
+                            <small class="text-muted d-block">Observaciones de solicitud</small>
+                            <div class="p-2 bg-light rounded mb-3">{{ solicitud.observaciones|linebreaks }}</div>
+                        {% endif %}
+                        {% if ultimo_precat and ultimo_precat.observaciones %}
+                            <small class="text-muted d-block">Observaciones tecnicas del digitalizador</small>
+                            <div class="p-2 bg-light rounded">{{ ultimo_precat.observaciones|linebreaks }}</div>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted mb-0">No hay observaciones registradas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+            <div class="card shadow h-100">
+                <div class="card-header bg-secondary text-white py-3">
+                    <h6 class="mb-0"><i class="fas fa-file-signature me-2"></i>Dictamen / Observaciones de Analisis</h6>
+                </div>
+                <div class="card-body">
+                    {% if asignacion_actual and asignacion_actual.observaciones %}
+                        <div class="p-2 bg-light rounded">{{ asignacion_actual.observaciones|linebreaks }}</div>
+                    {% else %}
+                        <p class="text-muted mb-0">Aun no hay dictamen tecnico registrado para esta asignacion.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Historial y Auditoria 
+    <div class="card shadow">
+        <div class="card-header bg-secondary text-white py-3 d-flex justify-content-between align-items-center"
+             style="cursor: pointer;"
+             data-bs-toggle="collapse"
+             data-bs-target="#collapseHistorial">
+            <h6 class="m-0 fw-bold">
+                <i class="fas fa-history me-2"></i>Historial y Auditoria
+                <small class="ms-2">({{ auditorias|length }} registros)</small>
+            </h6>
+            <i class="fas fa-chevron-down transition-icon"></i>
+        </div>
+
+        <div class="collapse" id="collapseHistorial">
+            <div class="card-body">
+                {% if auditorias %}
+                    <div class="timeline">
+                        {% for auditoria in auditorias %}
+                        <div class="timeline-item mb-4">
+                            <div class="timeline-content">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-user-edit me-1 text-info"></i>{{ auditoria.cambiado_por_display }}
+                                    </h6>
+                                    <small class="text-muted">{{ auditoria.fecha|date:"d/m/Y H:i" }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    <strong>{{ auditoria.campo_display }}:</strong>
+                                    <span class="text-muted">{{ auditoria.valor_anterior|default:'-' }}</span>
+                                    <i class="fas fa-arrow-right mx-2 text-primary"></i>
+                                    <span class="fw-bold">{{ auditoria.valor_nuevo|default:'-' }}</span>
+                                </p>
+                                {% if auditoria.comentario %}
+                                <div class="alert alert-light border-start border-primary border-3 mt-2 mb-0">
+                                    <i class="fas fa-comment text-primary me-2"></i>{{ auditoria.comentario }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No hay historial registrado.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    -->
+</div>
+
+{% if es_lider and usuarios_grupo %}
+    {% include 'includes/analisis/modal/accion_relevamiento/asignar_analista_modal.html' %}
+    {% include 'includes/analisis/modal/accion_relevamiento/cambiar_analista_modal.html' %}
+    {% include 'includes/analisis/modal/accion_relevamiento/eliminar_asignacion_modal.html' %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = '{{ csrf_token }}';
+
+    document.addEventListener('click', function (event) {
+        const showPending = function (message) {
+            if (window.ToastManager) {
+                window.ToastManager.mostrarToast(message, 'info');
+            } else {
+                alert(message);
+            }
+        };
+
+        const postJson = async function (url, payload) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload || {})
+            });
+            return response.json();
+        };
+
+        if (event.target.closest('.btn-asignar-analista')) {
+            const btn = event.target.closest('.btn-asignar-analista');
+            const modalEl = document.getElementById('asignarAnalistaModal');
+            if (!modalEl) {
+                showPending('No hay modal de asignacion disponible para este perfil.');
+                event.preventDefault();
+                return;
+            }
+
+            const solicitudId = btn.dataset.solicitudId;
+            const coloniaNombre = btn.dataset.coloniaNombre;
+            const inputId = document.getElementById('solicitudIdAsignarAnalista');
+            const inputColonia = document.getElementById('coloniaNombreAsignarAnalista');
+            const inputAnalista = document.getElementById('analistaAsignado');
+            const inputComentario = document.getElementById('comentarioAsignacionAnalista');
+            const error = document.getElementById('asignarAnalistaError');
+
+            if (inputId) inputId.value = solicitudId;
+            if (inputColonia) inputColonia.textContent = coloniaNombre;
+            if (inputAnalista) inputAnalista.value = '';
+            if (inputComentario) inputComentario.value = '';
+            if (error) error.textContent = '';
+
+            new bootstrap.Modal(modalEl).show();
+            event.preventDefault();
+            return;
+        }
+
+        if (event.target.closest('.btn-cambiar-analista')) {
+            const btn = event.target.closest('.btn-cambiar-analista');
+            const modalEl = document.getElementById('cambiarAnalistaModal');
+            if (!modalEl) {
+                showPending('No hay modal de cambio disponible para este perfil.');
+                event.preventDefault();
+                return;
+            }
+
+            const asignacionId = btn.dataset.asignacionId;
+            const coloniaNombre = btn.dataset.coloniaNombre;
+            const analistaActual = btn.dataset.analistaActual;
+
+            const inputAsignacion = document.getElementById('asignacionIdCambiar');
+            const inputColonia = document.getElementById('coloniaNombreCambiarAnalista');
+            const inputActual = document.getElementById('analistaActualCambiar');
+            const inputNuevo = document.getElementById('nuevoAnalistaCambiar');
+            const inputComentario = document.getElementById('comentarioCambiarAnalista');
+            const error = document.getElementById('cambiarAnalistaError');
+
+            if (inputAsignacion) inputAsignacion.value = asignacionId;
+            if (inputColonia) inputColonia.textContent = coloniaNombre;
+            if (inputActual) inputActual.textContent = analistaActual;
+            if (inputNuevo) inputNuevo.value = '';
+            if (inputComentario) inputComentario.value = '';
+            if (error) error.textContent = '';
+
+            new bootstrap.Modal(modalEl).show();
+            event.preventDefault();
+            return;
+        }
+
+        if (event.target.closest('.btn-eliminar-asignacion-analista')) {
+            const btn = event.target.closest('.btn-eliminar-asignacion-analista');
+            const modalEl = document.getElementById('eliminarAsignacionModal');
+            if (!modalEl) {
+                showPending('No hay modal de eliminacion disponible para este perfil.');
+                event.preventDefault();
+                return;
+            }
+
+            const solicitudId = btn.dataset.solicitudId;
+            const coloniaNombre = btn.dataset.coloniaNombre;
+            const analista = btn.dataset.analista;
+
+            const inputSolicitud = document.getElementById('solicitudIdEliminar');
+            const inputColonia = document.getElementById('coloniaNombreEliminar');
+            const inputAnalista = document.getElementById('analistaActualEliminar');
+            const inputComentario = document.getElementById('comentarioEliminacion');
+            const error = document.getElementById('eliminarError');
+
+            if (inputSolicitud) inputSolicitud.value = solicitudId;
+            if (inputColonia) inputColonia.textContent = coloniaNombre;
+            if (inputAnalista) inputAnalista.textContent = analista;
+            if (inputComentario) inputComentario.value = '';
+            if (error) {
+                error.textContent = '';
+                error.classList.add('d-none');
+            }
+
+            const form = document.getElementById('formEliminarAsignacion');
+            if (form) {
+                form.action = `/analisis/solicitud/${solicitudId}/eliminar-asignacion/`;
+            }
+
+            new bootstrap.Modal(modalEl).show();
+            event.preventDefault();
+            return;
+        }
+
+
+        if (event.target.closest('.btn-aprobar-analisis')) {
+            const btn = event.target.closest('.btn-aprobar-analisis');
+            const solicitudId = btn.dataset.solicitudId;
+            if (!confirm('Confirma validar el analisis y aprobar para campo?')) {
+                event.preventDefault();
+                return;
+            }
+            const observacion = prompt('Observaciones de validacion (opcional):') || '';
+
+            postJson(`/analisis/solicitud/${solicitudId}/validar-analisis/`, {
+                observacion: observacion.trim()
+            }).then(function (data) {
+                if (data.success) {
+                    showPending(data.message || 'Analisis validado correctamente.');
+                    setTimeout(function () { window.location.reload(); }, 1200);
+                } else {
+                    showPending(data.message || 'No se pudo validar el analisis.');
+                }
+            }).catch(function () {
+                showPending('Error de conexion al validar el analisis.');
+            });
+
+            event.preventDefault();
+            return;
+        }
+
+        if (event.target.closest('.btn-generar-dictamen')) {
+            const btn = event.target.closest('.btn-generar-dictamen');
+            const solicitudId = btn.dataset.solicitudId;
+            const dictamen = prompt('Ingrese el dictamen tecnico a registrar:');
+            if (dictamen === null) {
+                event.preventDefault();
+                return;
+            }
+            if (!dictamen.trim()) {
+                showPending('El dictamen tecnico no puede estar vacio.');
+                event.preventDefault();
+                return;
+            }
+
+            postJson(`/analisis/solicitud/${solicitudId}/generar-dictamen/`, {
+                dictamen: dictamen.trim()
+            }).then(function (data) {
+                if (data.success) {
+                    showPending(data.message || 'Dictamen registrado correctamente.');
+                    setTimeout(function () { window.location.reload(); }, 1200);
+                } else {
+                    showPending(data.message || 'No se pudo registrar el dictamen.');
+                }
+            }).catch(function () {
+                showPending('Error de conexion al registrar dictamen.');
+            });
+
+            event.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock scripts %}

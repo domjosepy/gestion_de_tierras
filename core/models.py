@@ -80,6 +80,16 @@ class Colonia(models.Model):
         default=False,
         verbose_name="¿Tiene relevamiento previo?"
     )
+    conteo_relevamientos = models.IntegerField(
+        default=0,
+        verbose_name="Conteo de relevamientos",
+        help_text="Número de relevamientos iniciales completados para esta colonia."
+    )
+    conteo_actualizaciones = models.IntegerField(
+        default=0,
+        verbose_name="Conteo de actualizaciones",
+        help_text="Número de actualizaciones completadas para esta colonia."
+    )
 
     class Meta:
         verbose_name = "Colonia"
@@ -122,3 +132,33 @@ class Colonia(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    @property
+    def total_relevamientos_completados(self):
+        """Calcula dinámicamente relevamientos completados (fuente canónica para auditoría)."""
+        return self.solicitudes_relevamiento.filter(
+            relevamiento_terminado=True
+        ).count()
+
+    @property
+    def total_actualizaciones_completadas(self):
+        """Calcula dinámicamente actualizaciones completadas (fuente canónica para auditoría)."""
+        return self.solicitudes_relevamiento.filter(
+            actualizacion_terminado=True
+        ).count()
+
+    def recalcular_conteos(self):
+        """
+        Resincroniza los contadores desnormalizados desde la BD.
+        Usar para corregir inconsistencias o migrar datos históricos.
+        """
+        self.conteo_relevamientos = self.solicitudes_relevamiento.filter(
+            relevamiento_terminado=True
+        ).count()
+        self.conteo_actualizaciones = self.solicitudes_relevamiento.filter(
+            actualizacion_terminado=True
+        ).count()
+        Colonia.objects.filter(pk=self.pk).update(
+            conteo_relevamientos=self.conteo_relevamientos,
+            conteo_actualizaciones=self.conteo_actualizaciones,
+        )

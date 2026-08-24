@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Análisis - Asignación de Colonias{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 mb-2 text-primary fw-bold">
+                <i class="fas fa-map-marked-alt me-2"></i>GESTIÓN DE COLONIAS RELEVADAS
+            </h2>
+        </div>
+        <div class="d-flex align-items-center">
+            {% if es_lider %}
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-crown me-1"></i> Líder de Grupo
+                </span>
+            {% endif %}
+            <span class="badge bg-info">
+                <i class="fas fa-users me-1"></i>
+                {% for grupo in grupos_usuario %}
+                    {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        </div>
+    </div>
+
+    <!-- Tarjetas de conteo -->
+    <div class="row mb-4">
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-start-warning border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-warning text-uppercase mb-1">Pendientes</div>
+                            <div class="h5 mb-0 fw-bold text-warning">{{ estadisticas.pendientes|default:0 }}</div>
+                        </div>
+                        <div class="text-warning"><i class="fas fa-clock fa-2x"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-start-primary border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-primary text-uppercase mb-1">Asignadas</div>
+                            <div class="h5 mb-0 fw-bold text-primary">{{ estadisticas.asignadas|default:0 }}</div>
+                        </div>
+                        <div class="text-primary"><i class="fas fa-user-check fa-2x"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-md-6 mb-3">
+            <div class="card border-start-success border-start-3 border-top-0 border-end-0 border-bottom-0 shadow h-100">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-xs fw-bold text-success text-uppercase mb-1">Terminadas</div>
+                            <div class="h5 mb-0 fw-bold text-success">{{ estadisticas.terminadas|default:0 }}</div>
+                        </div>
+                        <div class="text-success"><i class="fas fa-flag-checkered fa-2x"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestañas: 3 tablas -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3">
+            <ul class="nav nav-tabs card-header-tabs" id="coloniasAnalisisTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pendientes-tab"
+                            data-bs-toggle="tab" data-bs-target="#pendientes"
+                            type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i> Pendientes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="asignadas-tab"
+                            data-bs-toggle="tab" data-bs-target="#asignadas"
+                            type="button" role="tab">
+                        <i class="fas fa-user-check me-1"></i> Asignadas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="terminadas-tab"
+                            data-bs-toggle="tab" data-bs-target="#terminadas"
+                            type="button" role="tab">
+                        <i class="fas fa-flag-checkered me-1"></i> Terminadas
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body">
+            <div class="tab-content" id="coloniasAnalisisTabsContent">
+                <!-- Pestaña Pendientes -->
+                <div class="tab-pane fade show active" id="pendientes" role="tabpanel">
+                    {% include 'includes/analisis/tablas/detalle_colonias_relevadas/tabla_relevamientos_pendientes.html' %}
+                </div>
+
+                <!-- Pestaña Asignadas -->
+                <div class="tab-pane fade" id="asignadas" role="tabpanel">
+                    {% include 'includes/analisis/tablas/detalle_colonias_relevadas/tabla_relevamientos_asignadas.html' %}
+                </div>
+
+                <!-- Pestaña Terminadas -->
+                <div class="tab-pane fade" id="terminadas" role="tabpanel">
+                    {% include 'includes/analisis/tablas/detalle_colonias_relevadas/tabla_relevamientos_terminadas.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if es_lider %}
+    {% include 'includes/analisis/modal/accion_relevamiento/asignar_analista_modal.html' %}
+    {% include 'includes/analisis/modal/accion_relevamiento/cambiar_analista_modal.html' %}
+    {% include 'includes/analisis/modal/accion_relevamiento/eliminar_asignacion_modal.html' %}
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tablas = document.querySelectorAll('.beautiful-table');
+    tablas.forEach(tabla => {
+        if (tabla.rows.length > 1) {
+            new simpleDatatables.DataTable(tabla, {
+                perPage: 10,
+                perPageSelect: [5, 10, 20, 50],
+                labels: {
+                    placeholder: "Buscar...",
+                    perPage: "registros por página",
+                    noRows: "No se encontraron registros",
+                    info: "Mostrando {start} a {end} de {rows} registros"
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

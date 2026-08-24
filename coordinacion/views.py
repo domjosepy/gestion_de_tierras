@@ -125,7 +125,7 @@ def solicitudes_pendientes(request):
     solicitudes = SolicitudRelevamiento.objects.filter(
         estado='asignado_coordinacion'
     ).exclude(
-        ordenes_trabajo__activa=True
+        ordenes_trabajo__activa=False
     ).select_related('colonia', 'creado_por').order_by('-prioridad', '-fecha_creacion')
 
     context = {
@@ -289,7 +289,6 @@ def generar_orden_view(request, solicitud_id):
 
 # ------------------ GESTIÓN DE ÓRDENES ------------------ #
 
-
 @login_required
 @coordinacion_required
 def ordenes_trabajo(request):
@@ -395,7 +394,7 @@ def detalle_orden(request, orden_id):
     if orden.solicitud and getattr(orden.solicitud, 'colonia', None):
         colonia = orden.solicitud.colonia
         colonia_relevamientos_count = Relevamiento.objects.filter(colonia=colonia).count()
-        colonia_solicitudes_count = SolicitudRelevamiento.objects.filter(colonia=colonia).count()
+        colonia_solicitudes_count = Relevamiento.objects.filter(colonia=colonia, firmo_solicitud=True).count()
         colonia_condicion_presente = Relevamiento.objects.filter(colonia=colonia, condicion_vivienda='presente').count()
         colonia_condicion_servicio = Relevamiento.objects.filter(colonia=colonia, condicion_vivienda='servicio').count()
 

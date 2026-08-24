@@ -146,14 +146,20 @@ def path_relevamiento_fotos_upload(instance, filename):
 # ============================
 
 USO_LOTE_CHOICES = [
-    ("acuario_forestal", "Acuario/Forestal"),
+    ("agropecuario_forestal", "Agropecuario/Forestal"),
     ("forestal_nativa", "Forestal - Nativa"),
+    ("forestal_reforestado", "Forestal - Reforestado"),
     ("barbecho_descanso", "Barbecho - Descanso"),
     ("abandonado", "Abandonado"),
     ("comercial", "Comercial"),
     ("industrial", "Industrial"),
     ("local_politico", "Local Político"),
     ("local_recreativo", "Local Recreativo"),
+    ("local_religioso", "Local Religioso"),
+    ("sitio_vacio", "Sitio Vacío"),
+    ("solo_vivienda", "Solo Vivienda"),
+    ("institucion_organizacion", "Institución/Organización"),
+
 ]
 
 MEJORAS_CHOICES = [

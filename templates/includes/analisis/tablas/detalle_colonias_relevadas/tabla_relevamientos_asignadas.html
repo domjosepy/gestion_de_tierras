@@ -1,0 +1,108 @@
+{% if asignaciones_activas %}
+<div class="table-responsive">
+    <table class="beautiful-table table-hover" width="100%" cellspacing="0">
+        <thead class="table-light">
+            <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Fecha Asignación</th>
+                <th class="text-center">Datos Geográficos</th>
+                <th class="text-center">Analista</th>
+                <th class="text-center">Asignado por</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Observaciones</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asignacion in asignaciones_activas %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">
+                    <small>{{ asignacion.fecha_asignacion|date:"d/m/Y" }}</small>
+                    <br><small class="text-muted">{{ asignacion.fecha_asignacion|date:"H:i" }}</small>
+                </td>
+                <td>
+                    {% with colonia=asignacion.solicitud.colonia distrito=asignacion.solicitud.colonia.distritos.first %}
+                        <small><strong>{{ colonia.nombre }}</strong></small>
+                        {% if distrito %}
+                            <br><small class="text-muted">{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                        {% endif %}
+                    {% endwith %}
+                </td>
+                <td class="text-center">
+                    {% if asignacion.analista %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-user me-1"></i>
+                            {{ asignacion.analista.get_full_name|default:asignacion.analista.username }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted">Sin asignar</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if asignacion.lider_asignador %}
+                        <small>{{ asignacion.lider_asignador.get_full_name|default:asignacion.lider_asignador.username }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <span class="badge {% if asignacion.estado == 'proceso_analisis' %}bg-info{% else %}bg-success{% endif %}">
+                        {{ asignacion.get_estado_display }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    {% if asignacion.observaciones %}
+                        <small>{{ asignacion.observaciones|truncatechars:40 }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <a href="{% url 'analisis:detalle_asignacion_relevamiento' asignacion.solicitud.id %}"
+                       class="btn btn-sm btn-info me-1"
+                       title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    {% if es_lider %}
+                        <button class="btn btn-sm btn-warning me-1"
+                                data-bs-toggle="modal"
+                                data-bs-target="#cambiarAnalistaModal"
+                                data-asignacion-id="{{ asignacion.id }}"
+                                data-solicitud-id="{{ asignacion.solicitud.id }}"
+                                data-colonia-nombre="{{ asignacion.solicitud.colonia.nombre }}"
+                                data-analista-actual="{{ asignacion.analista.get_full_name|default:asignacion.analista.username }}"
+                                title="Cambiar analista">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                        <!-- Botón Eliminar Asignación -->
+                        {% if asignacion.estado == 'analista_asignado' and es_lider %}
+                            <button class="btn btn-sm btn-danger" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#eliminarAsignacionModal"
+                                    data-solicitud-id="{{ asignacion.solicitud.id }}"
+                                    data-colonia-nombre="{{ asignacion.solicitud.colonia.nombre }}"
+                                    data-analista="{{ asignacion.analista.get_full_name|default:asignacion.analista.username }}"
+                                    title="Eliminar asignación">
+                                <i class="fa-solid fa-user-minus"></i>
+                            </button>
+                        {% elif asignacion.estado == 'proceso_analisis' and es_lider %}
+                            <button class="btn btn-sm btn-secondary" disabled
+                                    title="No se puede eliminar (En proceso de análisis)">
+                                <i class="fa-solid fa-user-minus"></i>
+                            </button>
+                        {% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-user-clock fa-4x text-muted mb-3"></i>
+    <h5 class="text-muted mb-3">No hay asignaciones activas</h5>
+    <p class="text-muted">Todas las colonias han sido procesadas o aún no hay asignaciones.</p>
+</div>
+{% endif %}

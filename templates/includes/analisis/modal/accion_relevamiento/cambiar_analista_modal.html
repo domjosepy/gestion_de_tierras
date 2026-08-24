@@ -1,0 +1,131 @@
+<div class="modal fade" id="cambiarAnalistaModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="cambiarAnalistaForm" method="post">
+        {% csrf_token %}
+        <div class="modal-header bg-warning text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-exchange-alt me-2"></i>Cambiar Analista
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="asignacion_id" id="asignacionIdCambiar">
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-map-marker-alt me-1"></i>Colonia
+            </label>
+            <div class="form-control bg-light" id="coloniaNombreCambiarAnalista"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-user me-1"></i>Analista Actual
+            </label>
+            <div class="form-control bg-light" id="analistaActualCambiar"></div>
+          </div>
+
+          <div class="mb-3">
+            <label for="nuevoAnalistaCambiar" class="form-label fw-bold">
+              <i class="fas fa-user-plus me-1"></i>Nuevo Analista
+            </label>
+            <select class="form-select" id="nuevoAnalistaCambiar" name="usuario_id" required>
+              <option value="">Seleccione un analista</option>
+              {% for usuario in usuarios_grupo %}
+                <option value="{{ usuario.id }}">
+                  {{ usuario.username }}{% if usuario.get_full_name %} - {{ usuario.get_full_name }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="comentarioCambiarAnalista" class="form-label">
+              <i class="fas fa-comment me-1"></i>Motivo del cambio (opcional)
+            </label>
+            <textarea class="form-control" id="comentarioCambiarAnalista"
+                      name="comentario" rows="2"
+                      placeholder="Indique el motivo del cambio..."></textarea>
+          </div>
+
+          <div id="cambiarAnalistaError" class="text-danger small mb-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-warning">
+            <i class="fas fa-exchange-alt me-1"></i>Cambiar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const cambiarAnalistaModal = document.getElementById('cambiarAnalistaModal');
+    if (cambiarAnalistaModal) {
+        cambiarAnalistaModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            document.getElementById('asignacionIdCambiar').value = button.getAttribute('data-asignacion-id');
+            document.getElementById('coloniaNombreCambiarAnalista').textContent = button.getAttribute('data-colonia-nombre');
+            document.getElementById('analistaActualCambiar').textContent = button.getAttribute('data-analista-actual');
+            document.getElementById('nuevoAnalistaCambiar').value = '';
+            document.getElementById('comentarioCambiarAnalista').value = '';
+            document.getElementById('cambiarAnalistaError').textContent = '';
+        });
+    }
+
+    const cambiarAnalistaForm = document.getElementById('cambiarAnalistaForm');
+    if (cambiarAnalistaForm) {
+        cambiarAnalistaForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const asignacionId = formData.get('asignacion_id');
+            const usuarioId = formData.get('usuario_id');
+            const comentario = formData.get('comentario') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalHTML = btnSubmit.innerHTML;
+
+            if (!usuarioId) {
+                document.getElementById('cambiarAnalistaError').textContent = 'Debe seleccionar un analista';
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cambiando...';
+
+            try {
+                const response = await fetch(`/analisis/asignacion/${asignacionId}/cambiar-analista/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ usuario_id: usuarioId, comentario: comentario }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(cambiarAnalistaModal)?.hide();
+                    if (window.ToastManager) window.ToastManager.mostrarToast(data.message, 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    document.getElementById('cambiarAnalistaError').textContent = data.error || data.message;
+                    if (window.ToastManager) window.ToastManager.mostrarToast(data.error || data.message, 'error');
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = originalHTML;
+                }
+            } catch (err) {
+                document.getElementById('cambiarAnalistaError').textContent = 'Error de conexión.';
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalHTML;
+            }
+        });
+    }
+});
+</script>

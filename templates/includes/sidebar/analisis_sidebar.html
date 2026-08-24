@@ -1,11 +1,59 @@
-<!-- templates/includes/sidebar/analisis_sidebar.html -->
-<aside class="sidebar-analisis">
-    <nav>
-        <ul>
-            <li><a href="#">Dashboard de Análisis</a></li>
-            <li><a href="#">Reportes</a></li>
-            <li><a href="#">Estadísticas</a></li>
-            <li><a href="#">Configuración</a></li>
-        </ul>
-    </nav>
-</aside>
+<li class="nav-item">
+  <a class="nav-link" href="{% url 'sig:sig_dashboard' %}">
+    <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+    <span class="justify-content-center">ANÁLISIS</span>
+  </a>
+</li>
+
+<hr class="sidebar-divider">
+
+<div class="sidebar-heading text-uppercase small px-3">
+  Módulos
+</div>
+
+<!-- sidebar.html -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-icon">
+      <i class="fas fa-map-marked-alt"></i>
+    </div>
+    <div class="sidebar-brand-text">GDT</div>
+  </div>
+
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link active text-center" title="Panel de ANALISIS" data-bs-toggle="tooltip" href="{% url 'analisis:analisis_dashboard' %}">
+        <i class="fas fa-tachometer-alt"></i>
+        <span>ANÁLISIS</span>
+      </a>
+    </li>
+    
+    <li class="nav-item">
+      <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseANALISISMenu" aria-expanded="false" aria-controls="collapseANALISISMenu" title="Operaciones ANALISIS">
+        <i class="fas fa-layer-group"></i>
+        <span>Operaciones Análisis</span>
+      </a>
+      <div id="collapseANALISISMenu" class="collapse">
+        <div class="collapse-inner">
+          <a class="collapse-item" href="{% url 'analisis:colonias_relevadas_analisis' %}">
+            <i class="fas fa-vector-square me-2"></i>Colonias Relevadas
+          </a>
+          <a class="collapse-item" href="{% url 'analisis:solicitudes_relevamiento_analisis' %}">
+            <i class="fas fa-file-upload me-2"></i>Solicitudes de Relevamiento
+          </a>
+        </div>
+      </div>
+    </li>
+
+  </ul>
+
+  <button id="sidebarToggle">
+    <i class="fas fa-angle-double-right"></i>
+  </button>
+</div>
+
+<!-- content wrapper -->
+<div id="content-wrapper">
+  {% block content %}
+  {% endblock %}
+</div>

@@ -80,7 +80,10 @@
                                 <tr>
                                      <td class="text-muted">Estado:</td>
                                     <td>
-                                        <span class=" badge bg-warning">
+                                        <span class="badge {% if tarea.estado == 'pendiente' %}bg-warning
+                                                            {% elif tarea.estado == 'en_progreso' %}bg-info
+                                                            {% elif tarea.estado == 'finalizado' %}bg-success
+                                                            {% else %}bg-secondary{% endif %}">
                                             {{ tarea.get_estado_display }}
                                         </span>
                                     </td>
@@ -91,21 +94,37 @@
                             <h6 class="text-muted mb-2">Asignación</h6>
                             <table class="table table-sm table-borderless">
                                 <tr>
-                                    <td class="text-muted" width="40%">Asignado por:</td>
-                                    <td>{{ tarea.asignado_por.get_full_name|default:tarea.asignado_por.username }}</td>
+                                    <td class="text-muted" width="40%">Digitalizador:</td>
+                                    <td>
+                                        {% if asignacion_digitalizador.usuario_asignado %}
+                                            {{ asignacion_digitalizador.usuario_asignado.get_full_name|default:asignacion_digitalizador.usuario_asignado.username }}
+                                        {% else %}
+                                            <span class="text-muted">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Asignado por:</td>
+                                    <td>
+                                        {% if asignacion_digitalizador.registrado_por %}
+                                            {{ asignacion_digitalizador.registrado_por.get_full_name|default:asignacion_digitalizador.registrado_por.username }}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Fecha asignación:</td>
-                                    <td>{{ tarea.fecha_asignacion|date:"d/m/Y H:i"|default:"-" }}</td>
+                                    <td>{{ asignacion_digitalizador.fecha_asignacion|date:"d/m/Y H:i"|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Fecha de aprobación:</td>
+                                    <td>{{ tarea.fecha_aprobacion_campo|date:"d/m/Y H:i"|default:"-" }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-muted">Creado por:</td>
                                     <td>
-                                        {% if tarea.creado_por %}
-                                            {{ tarea.creado_por.get_full_name|default:tarea.creado_por.username }}
-                                        {% else %}
-                                            <span class="text-muted">Usuario desconocido</span>
-                                        {% endif %}
+                                        {{ tarea.creado_por.get_full_name|default:tarea.creado_por.username }}
                                     </td>
                                 </tr>
                                 <tr>
@@ -149,7 +168,7 @@
                             </tr>
                             <tr>
                                 <td class="text-muted">Tiempo etapa actual:</td>
-                                <td>{{ tarea.obtener_tiempo_etapa_actual|format_timedelta }}</td>
+                                <td>{{ tarea.obtener_tiempo_digitalizacion|format_timedelta }}</td>
                             </tr>
                         </table>
                     </div>

@@ -55,6 +55,7 @@ class LoginView(DjangoLoginView):
             "digitalizador": "digitalizador",
             
             "invitado": "invitado",
+            "analisis": "analisis",
             "analista": "analista",
             "tecnico": "tecnico",
             "supervisor": "supervisor",

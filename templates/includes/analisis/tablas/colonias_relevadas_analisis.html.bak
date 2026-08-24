@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Análisis - Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Encabezado -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 mb-2 text-primary fw-bold">
+                <i class="fas fa-file-upload me-2"></i>SOLICITUDES DE RELEVAMIENTO
+            </h2>
+        </div>
+        <div class="d-flex align-items-center">
+            {% if es_lider %}
+                <span class="badge bg-success me-2">
+                    <i class="fas fa-crown me-1"></i> Líder de Grupo
+                </span>
+            {% endif %}
+            <span class="badge bg-info">
+                <i class="fas fa-users me-1"></i>
+                {% for grupo in grupos_usuario %}
+                    {{ grupo.nombre }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        </div>
+    </div>
+    
+    
+    <!-- Pestañas de solicitudes -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <ul class="nav nav-tabs card-header-tabs" id="analisisTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="pendientes-tab" data-bs-toggle="tab" data-bs-target="#pendientes" type="button" role="tab">
+                        <i class="fas fa-clock me-1"></i> Pendientes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="asignadas-tab" data-bs-toggle="tab" data-bs-target="#asignadas" type="button" role="tab">
+                        <i class="fas fa-user-check me-1"></i> Asignadas
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="revision-tab" data-bs-toggle="tab" data-bs-target="#revision" type="button" role="tab">
+                        <i class="fas fa-check-double me-1"></i> Por Revisar
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="aprobadas-tab" data-bs-toggle="tab" data-bs-target="#aprobadas" type="button" role="tab">
+                        <i class="fas fa-check-circle me-1"></i> Aprobadas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="rechazadas-tab" data-bs-toggle="tab" data-bs-target="#rechazadas" type="button" role="tab">
+                        <i class="fas fa-times-circle me-1"></i> Rechazadas
+                    </button>
+                </li>
+            </ul>
+
+        </div>
+        
+        <div class="card-body">
+            <div class="tab-content" id="analisisTabsContent">
+                <!-- Pestaña Pendientes -->
+                <div class="tab-pane fade show active" id="pendientes" role="tabpanel">
+                    {% include 'includes/analisis/tablas/detalle_colonias_relevadas/tabla_relevamientos_pendientes.html' %}
+                </div>
+                
+                <!-- Pestaña Asignadas -->
+                <div class="tab-pane fade" id="asignadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_asignadas.html' %}
+                </div>
+                                      
+                <!-- Pestaña Por Revisar -->
+                <div class="tab-pane fade" id="revision" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_revision.html' %}
+                </div>
+
+                <!-- Pestaña Aprobadas -->
+                <div class="tab-pane fade" id="aprobadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_aprobadas.html' %}
+                </div>
+                
+                <!-- Pestaña Rechazadas -->
+                <div class="tab-pane fade" id="rechazadas" role="tabpanel">
+                    {% include 'includes/sig/tablas/detalle_solicitudes/tabla_rechazadas.html' %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Incluir TODOS los modales necesarios -->
+    {% if es_lider %}
+        <!-- Modales de asignación -->
+        {% include 'includes/analisis/modal/asignar_analista_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/cambiar_digitalizador_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/crud_solicitud/eliminar_asignacion_modal.html' %}
+        
+        <!-- Modales de revisión -->
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/aprobar_digitalizacion_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/rechazar_digitalizacion_modal.html' %}
+        {% include 'includes/sig/modal/solicitud_relevamiento/revision_solicitud/devolver_correccion_modal.html' %}
+        <!-- Modal para ver detalles -->
+        {% include 'includes/sig/modal/archivos_precat_modal.html' %}
+    {% endif %}
+    
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Inicializar DataTables
+    const tablas = document.querySelectorAll('.beautiful-table');
+    tablas.forEach(tabla => {
+        if (tabla.rows.length > 1) {
+            new simpleDatatables.DataTable(tabla, {
+                perPage: 10,
+                perPageSelect: [5, 10, 20, 50],
+                labels: {
+                    placeholder: "Buscar...",
+                    perPage: "registros por página",
+                    noRows: "No se encontraron solicitudes",
+                    info: "Mostrando {start} a {end} de {rows} solicitudes"
+                }
+            });
+        }
+    });
+
+    // 2. Listeners para cuando se abre cada modal
+    const modales = {
+        'asignarDigitalizadorModal': function(event) {
+            const button = event.relatedTarget;
+            document.getElementById('solicitudIdAsignar').value = button.dataset.solicitudId;
+            document.getElementById('coloniaNombreAsignar').textContent = button.dataset.coloniaNombre;
+        },
+        'cambiarDigitalizadorModal': function(event) {
+            const button = event.relatedTarget;
+            document.getElementById('solicitudIdCambiar').value = button.dataset.solicitudId;
+            document.getElementById('coloniaNombreCambiar').textContent = button.dataset.coloniaNombre;
+            document.getElementById('digitalizadorActualCambiar').textContent = button.dataset.digitalizadorActual;
+        },
+        'devolverCorreccionModal': function(event) {
+            const button = event.relatedTarget;
+            document.getElementById('solicitudIdDevolver').value = button.dataset.solicitudId;
+            document.getElementById('coloniaNombreDevolver').textContent = button.dataset.coloniaNombre;
+        },
+        'aprobarDigitalizacionModal': function(event) {
+            const button = event.relatedTarget;
+            document.getElementById('solicitudIdAprobar').value = button.dataset.solicitudId;
+            document.getElementById('coloniaNombreAprobar').value = button.dataset.coloniaNombre;
+        },
+        'rechazarDigitalizacionModal': function(event) {
+            const button = event.relatedTarget;
+            document.getElementById('solicitudIdRechazar').value = button.dataset.solicitudId;
+            document.getElementById('coloniaNombreRechazar').value = button.dataset.coloniaNombre;
+        },
+        'eliminarAsignacionModal': function(event) {
+            const button = event.relatedTarget;
+            document.getElementById('solicitudIdEliminar').value = button.dataset.solicitudId;
+            document.getElementById('coloniaNombreEliminar').textContent = button.dataset.coloniaNombre;
+            document.getElementById('digitalizadorActualEliminar').textContent = button.dataset.digitalizador;
+        }
+    };
+
+    // Registrar listeners
+    Object.keys(modales).forEach(modalId => {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            modalElement.addEventListener('show.bs.modal', modales[modalId]);
+        }
+    });
+
+    // 3. Handlers de formularios (sin duplicación)
+    const formularios = {
+        'formAsignarDigitalizador': '/sig/solicitud/{id}/asignar-usuario/',
+        'formCambiarDigitalizador': '/sig/solicitud/{id}/cambiar-usuario/',
+        'formEliminarAsignacion': '/sig/solicitud/{id}/eliminar-asignacion/',
+        'formAprobarDigitalizacion': '/sig/solicitud/{id}/aprobar-digitalizacion/',
+        'formRechazarDigitalizacion': '/sig/solicitud/{id}/rechazar-digitalizacion/'
+    };
+
+    Object.keys(formularios).forEach(formId => {
+        const form = document.getElementById(formId);
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const solicitudId = formData.get('solicitud_id');
+                const url = formularios[formId].replace('{id}', solicitudId);
+                const btnSubmit = this.querySelector('button[type="submit"]');
+                
+                // Preparar datos según el formulario
+                let data = {};
+                if (formId === 'formAsignarDigitalizador' || formId === 'formCambiarDigitalizador') {
+                    data.usuario_id = formData.get('usuario_id');
+                    data.comentario = formData.get('comentario');
+                } else if (formId === 'formRechazarDigitalizacion') {
+                    data.motivo_rechazo = formData.get('motivo_rechazo');
+                } else if (formId === 'formAprobarDigitalizacion') {
+                    data.observacion = formData.get('observacion');
+                } else if (formId === 'formEliminarAsignacion') {
+                    data.comentario = formData.get('comentario');
+                }
+                
+                btnSubmit.disabled = true;
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: JSON.stringify(data),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        bootstrap.Modal.getInstance(this.closest('.modal')).hide();
+                        if (window.ToastManager) {
+                            window.ToastManager.mostrarToast(result.message, 'success');
+                        }
+                        setTimeout(() => location.reload(), 500);
+                    } else {
+                        alert(result.message || 'Error en la operación');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error de conexión');
+                } finally {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = btnSubmit.dataset.originalText || 'Confirmar';
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

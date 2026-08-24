@@ -19,6 +19,7 @@ from django.template.loader import render_to_string
 from django.db import transaction
 # importar libreria json
 import json
+from sig.models import AsignacionDigitalizador
 
 # ------------------ Dashboard y Listado de Solicitudes ------------------ #
 
@@ -141,6 +142,7 @@ def sig_solicitudes(request):
         'colonia__distritos__departamento'
     ).distinct()
 
+    # Se usa la fecha de la última asignación por solicitud, nunca una sola fecha global.
     rechazadas_qs = SolicitudRelevamiento.objects.filter(estado='rechazado')
     try:
         miembros = grupos_usuario.first().usuarios.all()
@@ -723,6 +725,12 @@ def aprobar_digitalizacion(request, solicitud_id):
             # Determinar el nuevo estado según el estado actual
             if solicitud.estado == 'en_proceso_digitalizacion':
                 # Aprobar digitalización, pasar a revisión SIG
+                # Salvaguarda: si por datos históricos faltara el inicio de etapa,
+                # usar fecha_asignacion como referencia mínima para poder congelar
+                # correctamente la duración en el save del modelo.
+                if not solicitud.fecha_inicio_etapa:
+                    solicitud.fecha_inicio_etapa = solicitud.fecha_asignacion or timezone.now()
+
                 nuevo_estado = 'pendiente_revision_sig'
                 mensaje = 'Digitalización aprobada. Pendiente de revisión SIG.'
 

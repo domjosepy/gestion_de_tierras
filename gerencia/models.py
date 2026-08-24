@@ -3,9 +3,9 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from administrador.models import Grupo, FlujoTrabajo, TipoObjetivo
-from django.db.models import Q
+from django.db.models import Q, F, Avg
+from django.db.models.functions import Greatest
 from core.models import Colonia
-from django.db.models import Avg
 
 User = settings.AUTH_USER_MODEL
 
@@ -81,7 +81,7 @@ class SolicitudRelevamiento(models.Model):
         "en_ejecucion_campo": ["RELEVAMIENTO"],
         "pendiente_cierre": ["RELEVAMIENTO"],
         "finalizado": ["RELEVAMIENTO"],
-    }
+    } 
 
     # CAMPOS PRINCIPALES
     colonia = models.ForeignKey(
@@ -591,12 +591,19 @@ class SolicitudRelevamiento(models.Model):
         """Actualizar el estado de la colonia según cambios en la solicitud"""
         if estado_nuevo == "finalizado" and estado_anterior != "finalizado":
             if self.tipo == self.TIPO_RELEVAMIENTO:
+                update_fields = {
+                    'conteo_relevamientos': F('conteo_relevamientos') + 1,
+                }
                 if not self.colonia.tiene_relevamiento:
-                    Colonia.objects.filter(pk=self.colonia.pk).update(
-                        tiene_relevamiento=True
-                    )
-                    # Opcional: Actualizar la instancia en memoria
-                    self.colonia.refresh_from_db()
+                    update_fields['tiene_relevamiento'] = True
+                Colonia.objects.filter(pk=self.colonia.pk).update(**update_fields)
+                self.colonia.refresh_from_db()
+
+            elif self.tipo == self.TIPO_ACTUALIZACION:
+                Colonia.objects.filter(pk=self.colonia.pk).update(
+                    conteo_actualizaciones=F('conteo_actualizaciones') + 1
+                )
+                self.colonia.refresh_from_db()
 
         elif estado_nuevo != "finalizado" and estado_anterior == "finalizado":
             if self.tipo == self.TIPO_RELEVAMIENTO:
@@ -607,15 +614,51 @@ class SolicitudRelevamiento(models.Model):
                     tipo=self.TIPO_RELEVAMIENTO
                 ).exclude(pk=self.pk)
 
+                update_fields = {
+                    'conteo_relevamientos': Greatest(F('conteo_relevamientos') - 1, 0),
+                }
                 if not otros_finalizados.exists():
-                    Colonia.objects.filter(pk=self.colonia.pk).update(
-                        tiene_relevamiento=False
-                    )
-                    # Opcional: Actualizar la instancia en memoria
-                    self.colonia.refresh_from_db()
+                    update_fields['tiene_relevamiento'] = False
+                Colonia.objects.filter(pk=self.colonia.pk).update(**update_fields)
+                self.colonia.refresh_from_db()
+
+            elif self.tipo == self.TIPO_ACTUALIZACION:
+                Colonia.objects.filter(pk=self.colonia.pk).update(
+                    conteo_actualizaciones=Greatest(F('conteo_actualizaciones') - 1, 0)
+                )
+                self.colonia.refresh_from_db()
 
     def _procesar_cambio_estado(self, estado_anterior, estado_nuevo, ahora):
         """Procesar lógica al cambiar de estado"""
+
+        estados_inicio = {
+            "en_proceso_digitalizacion",
+            "en_proceso_analisis",
+            "en_ejecucion_campo",
+        }
+
+        # Al salir de una etapa en curso, congelar su duración acumulada.
+        if estado_anterior == "en_proceso_digitalizacion" and self.fecha_inicio_etapa:
+            duracion = ahora - self.fecha_inicio_etapa
+            self.tiempo_digitalizacion = (
+                self.tiempo_digitalizacion or timezone.timedelta(0)
+            ) + duracion
+
+        if estado_anterior == "en_proceso_analisis" and self.fecha_inicio_etapa:
+            duracion = ahora - self.fecha_inicio_etapa
+            self.tiempo_analisis = (
+                self.tiempo_analisis or timezone.timedelta(0)
+            ) + duracion
+
+        if estado_anterior == "en_ejecucion_campo" and self.fecha_inicio_etapa:
+            duracion = ahora - self.fecha_inicio_etapa
+            self.tiempo_campo = (
+                self.tiempo_campo or timezone.timedelta(0)
+            ) + duracion
+
+        # Limpiar inicio cuando se abandona una etapa en curso.
+        if estado_anterior in estados_inicio and estado_nuevo not in estados_inicio:
+            self.fecha_inicio_etapa = None
 
         # TRANSICIÓN AUTOMÁTICA: aprobado_para_campo → asignado_coordinacion
         if estado_nuevo == "aprobado_para_campo":
@@ -637,36 +680,15 @@ class SolicitudRelevamiento(models.Model):
         elif self.estado == "finalizado":
             self.fecha_finalizacion = ahora
 
-        # Calcular tiempos de etapas
-        estados_inicio = [
-            "en_proceso_digitalizacion",
-            "en_proceso_analisis",
-            "en_ejecucion_campo"
-        ]
-
         # Si el nuevo estado inicia una etapa, registrar inicio
         if self.estado in estados_inicio:
             self.fecha_inicio_etapa = ahora
 
-        # Si salimos de una etapa, calcular duración
-        if estado_anterior == "en_proceso_digitalizacion" and self.fecha_inicio_etapa:
-            duracion = ahora - self.fecha_inicio_etapa
-            self.tiempo_digitalizacion = (
-                self.tiempo_digitalizacion or timezone.timedelta(0)) + duracion
-
-        if estado_anterior == "en_proceso_analisis" and self.fecha_inicio_etapa:
-            duracion = ahora - self.fecha_inicio_etapa
-            self.tiempo_analisis = (
-                self.tiempo_analisis or timezone.timedelta(0)) + duracion
-
-        if estado_anterior == "en_ejecucion_campo" and self.fecha_inicio_etapa:
-            duracion = ahora - self.fecha_inicio_etapa
-            self.tiempo_campo = (
-                self.tiempo_campo or timezone.timedelta(0)) + duracion
-
         # Calcular tiempo total al finalizar
         if self.estado == "finalizado":
-            self.tiempo_total = ahora - self.fecha_creacion
+            referencia = self.fecha_asignacion or self.fecha_creacion
+            if referencia:
+                self.tiempo_total = ahora - referencia
 
             if self.tipo == self.TIPO_RELEVAMIENTO:
                 if not self.colonia.tiene_relevamiento:
@@ -915,16 +937,41 @@ class SolicitudRelevamiento(models.Model):
         self.save()
 
     def obtener_tiempo_transcurrido(self):
-        """Obtener tiempo transcurrido desde la creación"""
-        if self.fecha_creacion:
-            return timezone.now() - self.fecha_creacion
+        """Tiempo global del trámite desde la asignación.
+
+        Usa `fecha_asignacion` como referencia principal y `fecha_creacion` como
+        respaldo. Si ya finalizó y existe `tiempo_total`, retorna ese valor
+        congelado.
+        """
+        if self.estado == "finalizado" and self.tiempo_total:
+            return self.tiempo_total
+
+        referencia = self.fecha_asignacion or self.fecha_creacion
+        if referencia:
+            return timezone.now() - referencia
         return timezone.timedelta(0)
 
     def obtener_tiempo_etapa_actual(self):
-        """Obtener tiempo transcurrido en la etapa actual"""
-        if self.fecha_inicio_etapa:
+        """Tiempo de la etapa actualmente activa (cálculo en vivo)."""
+        estados_activos = {
+            "en_proceso_digitalizacion",
+            "en_proceso_analisis",
+            "en_ejecucion_campo",
+        }
+        if self.estado in estados_activos and self.fecha_inicio_etapa:
             return timezone.now() - self.fecha_inicio_etapa
         return timezone.timedelta(0)
+
+    def obtener_tiempo_digitalizacion(self):
+        """Duración de digitalización con congelamiento al finalizar etapa.
+
+        - En `en_proceso_digitalizacion`: acumulado + tramo actual.
+        - En otros estados: tiempo congelado guardado en `tiempo_digitalizacion`.
+        """
+        acumulado = self.tiempo_digitalizacion or timezone.timedelta(0)
+        if self.estado == "en_proceso_digitalizacion" and self.fecha_inicio_etapa:
+            return acumulado + (timezone.now() - self.fecha_inicio_etapa)
+        return acumulado
 
     def es_urgente(self):
         """Determinar si la solicitud es urgente basado en tiempo"""
@@ -989,18 +1036,23 @@ class SolicitudRelevamiento(models.Model):
         return None
 
     @property
+    def ultima_asignacion_digitalizador(self):
+        """Devuelve la última asignación real del digitalizador para esta solicitud."""
+        try:
+            from sig.models import AsignacionDigitalizador
+            return AsignacionDigitalizador.objects.filter(solicitud=self).select_related('usuario_asignado').order_by('-fecha_asignacion').first()
+        except Exception:
+            return None
+
+    @property
     def usuario_digitalizador(self):
         """Compatibilidad: obtener el usuario digitalizador más reciente registrado en `sig.AsignacionDigitalizador`.
 
         Esto permite mantener plantillas y código que acceden a `solicitud.usuario_digitalizador`.
         """
-        try:
-            from sig.models import AsignacionDigitalizador
-            ultima = AsignacionDigitalizador.objects.filter(solicitud=self).select_related('usuario_asignado').order_by('-fecha_asignacion').first()
-            if ultima:
-                return ultima.usuario_asignado
-        except Exception:
-            pass
+        ultima = self.ultima_asignacion_digitalizador
+        if ultima:
+            return ultima.usuario_asignado
         return None
 
     @property
@@ -1021,6 +1073,155 @@ class SolicitudRelevamiento(models.Model):
         return cls.objects.filter(usuario_asignado=usuario).exclude(
             estado__in=["rechazado", "finalizado"]
         )
+
+    def get_orden_trabajo_completada(self):
+        """Retorna la primera OrdenTrabajo completada asociada a esta solicitud,
+        con prefetch de equipos y sus miembros para evitar queries N+1 en las vistas
+        de detalle."""
+        from coordinacion.models import OrdenTrabajo
+        return (
+            OrdenTrabajo.objects
+            .filter(solicitud=self, estado='completada')
+            .select_related('solicitud')
+            .prefetch_related(
+                'equipos_asignados__coordinador_campo',
+                'equipos_asignados__subcoordinadores',
+                'equipos_asignados__encuestadores',
+            )
+            .first()
+        )
+
+    def get_estadisticas_relevamiento(self, orden_trabajo):
+        """Calcula y retorna las estadísticas del relevamiento de campo para esta
+        solicitud en el contexto de la orden de trabajo dada.
+
+        Centraliza los cálculos de lotes, encuestas, mermas y porcentaje de éxito
+        para que tanto la vista de Gerencia como la de Análisis reutilicen la misma
+        lógica sin duplicar código.
+
+        Args:
+            orden_trabajo (OrdenTrabajo): La orden completada asociada a esta solicitud.
+
+        Returns:
+            dict: Claves lotes_digitalizados, meta_encuestas, total_encuestas,
+                  encuestas_exitosas, total_mermas, porcentaje_exito,
+                  ausentes, rechazos, conflictos, solicitudes_firmadas.
+        """
+        from relevamiento.models import Relevamiento
+        from digitalizador.models import PrecatArchivo
+
+        colonia = self.colonia
+
+        # Lotes del último precat registrado
+        lotes_digitalizados = 0
+        ultimo_precat = (
+            PrecatArchivo.objects
+            .filter(solicitud=self)
+            .order_by('-fecha_subida')
+            .first()
+        )
+        if ultimo_precat and ultimo_precat.lotes_digitalizados:
+            lotes_digitalizados = ultimo_precat.lotes_digitalizados
+
+        meta_encuestas = orden_trabajo.meta_encuestas or 0
+
+        base_qs = Relevamiento.objects.filter(
+            colonia=colonia, orden_trabajo=orden_trabajo
+        )
+        total_relevamientos = base_qs.count()
+        solicitudes_firmadas = base_qs.filter(firmo_solicitud=True).count()
+
+        mermas_qs = base_qs.filter(
+            Q(condicion_vivienda='ausente') |
+            Q(estado_entrevista='rechazo') |
+            Q(estado_entrevista='en_conflicto')
+        )
+        total_mermas = mermas_qs.count()
+        ausentes = mermas_qs.filter(condicion_vivienda='ausente').count()
+        rechazos = mermas_qs.filter(estado_entrevista='rechazo').count()
+        conflictos = mermas_qs.filter(estado_entrevista='en_conflicto').count()
+
+        encuestas_exitosas = total_relevamientos - total_mermas
+        porcentaje_exito = (
+            round(encuestas_exitosas / total_relevamientos * 100, 1)
+            if total_relevamientos > 0 else 0
+        )
+
+        return {
+            'lotes_digitalizados': lotes_digitalizados,
+            'meta_encuestas': meta_encuestas,
+            'total_encuestas': total_relevamientos,
+            'encuestas_exitosas': encuestas_exitosas,
+            'total_mermas': total_mermas,
+            'porcentaje_exito': porcentaje_exito,
+            'ausentes': ausentes,
+            'rechazos': rechazos,
+            'conflictos': conflictos,
+            'solicitudes_firmadas': solicitudes_firmadas,
+            # Alias de compatibilidad para templates/vistas que usan la clave histórica.
+            'solicitudes': solicitudes_firmadas,
+        }
+
+    def get_info_analista(self):
+        """Retorna un diccionario con la información de la asignación de análisis más
+        reciente para esta solicitud.
+
+        Usa un import local para evitar la dependencia circular entre `gerencia` y
+        `analisis` (ambas apps se importan mutuamente).
+
+        Returns:
+            dict: Claves asignada, estado, estado_display, fecha_asignacion,
+                  fecha_termino, analista (dict|None), lider_asignador (dict|None).
+        """
+        _default = {
+            'asignada': False,
+            'estado': None,
+            'estado_display': None,
+            'fecha_asignacion': None,
+            'fecha_termino': None,
+            'analista': None,
+            'lider_asignador': None,
+        }
+        try:
+            from analisis.models import AsignacionAnalisis
+
+            asignacion = (
+                AsignacionAnalisis.objects
+                .filter(solicitud=self)
+                .select_related('analista', 'lider_asignador')
+                .order_by('-fecha_asignacion')
+                .first()
+            )
+            if not asignacion:
+                return _default
+
+            analista = asignacion.analista
+            lider = asignacion.lider_asignador
+            fmt = lambda dt: timezone.localtime(dt).strftime("%d/%m/%Y %H:%M") if dt else None  # noqa: E731
+            return {
+                'asignada': analista is not None,
+                'estado': asignacion.estado,
+                'estado_display': asignacion.get_estado_display(),
+                'fecha_asignacion': fmt(asignacion.fecha_asignacion),
+                'fecha_termino': fmt(asignacion.fecha_termino),
+                'analista': {
+                    'username': analista.username,
+                    'email': analista.email,
+                    'nombre_completo': (
+                        f"{analista.first_name} {analista.last_name}".strip()
+                        or analista.username
+                    ),
+                } if analista else None,
+                'lider_asignador': {
+                    'username': lider.username,
+                    'nombre_completo': (
+                        f"{lider.first_name} {lider.last_name}".strip()
+                        or lider.username
+                    ),
+                } if lider else None,
+            }
+        except Exception:
+            return _default
 
     def obtener_historial_asignaciones(self):
         """Obtener historial completo de asignaciones"""

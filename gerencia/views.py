@@ -15,6 +15,7 @@ from django.views.generic import TemplateView
 
 from administrador.models import Grupo, TipoObjetivo
 from coordinacion.models import OrdenTrabajo
+from sig.models import AsignacionDigitalizador
 from digitalizador.models import PrecatArchivo
 from core.models import Colonia, Departamento, Distrito
 from gerencia.models import SolicitudRelevamiento, SolicitudRelevamientoAudit, Objetivo
@@ -1045,131 +1046,95 @@ def actualizar_avance_objetivo(request, pk):
 @login_required
 def obtener_datos_relevamiento_finalizado(request, pk):
     """
-    Obtener datos completos de un relevamiento finalizado para el modal de detalles.
-    Incluye estadísticas de éxito del relevamiento.
+    Retorna los datos completos de un relevamiento finalizado para el modal de detalles
+    del módulo de Gerencia.
+
+    Delega los cálculos de negocio a los métodos del modelo SolicitudRelevamiento:
+    - get_orden_trabajo_completada(): obtiene la OT con prefetch de equipos.
+    - get_estadisticas_relevamiento(orden_trabajo): calcula métricas de encuestas/mermas.
+    - get_info_analista(): recupera la asignación de análisis más reciente.
+
+    La vista se ocupa únicamente de autorización, ensamblado del JsonResponse y manejo
+    de errores HTTP, sin contener lógica de negocio propia.
     """
     try:
         solicitud = get_object_or_404(SolicitudRelevamiento, pk=pk)
-        
-        # Obtener la orden de trabajo relacionada
-        try:
-            orden_trabajo = OrdenTrabajo.objects.filter(
-                solicitud=solicitud,
-                estado='completada'
-            ).select_related('solicitud').prefetch_related(
-                'equipos_asignados__coordinador_campo',
-                'equipos_asignados__subcoordinadores',
-                'equipos_asignados__encuestadores'
-            ).first()
-            
-            if not orden_trabajo:
-                return JsonResponse({
-                    'success': False,
-                    'error': 'No se encontró una orden de trabajo completada para esta solicitud'
-                }, status=404)
-        except Exception as e:
+
+        orden_trabajo = solicitud.get_orden_trabajo_completada()
+        if not orden_trabajo:
             return JsonResponse({
                 'success': False,
-                'error': f'Error al obtener la orden de trabajo: {str(e)}'
-            }, status=500)
-        
-        # Obtener información jerárquica
+                'error': 'No se encontró una orden de trabajo completada para esta solicitud',
+            }, status=404)
+
+        # Datos geográficos
         colonia = solicitud.colonia
         distrito = colonia.distritos.first() if colonia.distritos.exists() else None
         departamento = distrito.departamento if distrito else None
-        
-        # Obtener información de asignación
+
+        # Información de asignación de grupo y usuario actual
         grupo_info = None
         if solicitud.grupo_asignado:
             grupo_info = {
                 'nombre': solicitud.grupo_asignado.nombre,
                 'lider': solicitud.grupo_asignado.lider.username if solicitud.grupo_asignado.lider else None,
-                'color': solicitud.grupo_asignado.color or '#6c757d'
+                'color': solicitud.grupo_asignado.color or '#6c757d',
             }
-        
+
         usuario_info = None
         if solicitud.usuario_asignado:
+            u = solicitud.usuario_asignado
             usuario_info = {
-                'username': solicitud.usuario_asignado.username,
-                'email': solicitud.usuario_asignado.email,
-                'nombre_completo': f"{solicitud.usuario_asignado.first_name} {solicitud.usuario_asignado.last_name}".strip() or solicitud.usuario_asignado.username
+                'username': u.username,
+                'email': u.email,
+                'nombre_completo': f"{u.first_name} {u.last_name}".strip() or u.username,
             }
-        
-        # Obtener información del equipo de relevamiento
+
+        # Equipo de relevamiento
         coordinador_campo_info = None
         subcoordinadores_info = []
         encuestadores_info = []
-        
-        # Obtener el primer equipo asignado a la orden
+
+        asignacion_digitalizador_obj = solicitud.ultima_asignacion_digitalizador
+
+        asignacion_digitalizador = None
+        if asignacion_digitalizador_obj:
+            fecha_asignacion = timezone.localtime(asignacion_digitalizador_obj.fecha_asignacion) if asignacion_digitalizador_obj.fecha_asignacion else None
+            asignacion_digitalizador = {
+                'id': asignacion_digitalizador_obj.id,
+                'fecha_asignacion': fecha_asignacion.strftime('%d/%m/%Y %H:%M') if fecha_asignacion else None,
+                'usuario_asignado': asignacion_digitalizador_obj.usuario_asignado.username if asignacion_digitalizador_obj.usuario_asignado else None,
+                'registrado_por': asignacion_digitalizador_obj.registrado_por.username if asignacion_digitalizador_obj.registrado_por else None,
+            }
+
         equipo = orden_trabajo.equipos_asignados.first()
         if equipo:
-            # Coordinador de campo
             if equipo.coordinador_campo:
+                c = equipo.coordinador_campo
                 coordinador_campo_info = {
-                    'username': equipo.coordinador_campo.username,
-                    'email': equipo.coordinador_campo.email,
-                    'nombre_completo': f"{equipo.coordinador_campo.first_name} {equipo.coordinador_campo.last_name}".strip() or equipo.coordinador_campo.username
+                    'username': c.username,
+                    'email': c.email,
+                    'nombre_completo': f"{c.first_name} {c.last_name}".strip() or c.username,
                 }
-            
-            # Subcoordinadores
             for subcoor in equipo.subcoordinadores.all():
                 subcoordinadores_info.append({
                     'username': subcoor.username,
                     'email': subcoor.email,
-                    'nombre_completo': f"{subcoor.first_name} {subcoor.last_name}".strip() or subcoor.username
+                    'nombre_completo': f"{subcoor.first_name} {subcoor.last_name}".strip() or subcoor.username,
                 })
-            
-            # Encuestadores
             for enc in equipo.encuestadores.all():
                 encuestadores_info.append({
                     'username': enc.username,
                     'email': enc.email,
-                    'nombre_completo': f"{enc.first_name} {enc.last_name}".strip() or enc.username
+                    'nombre_completo': f"{enc.first_name} {enc.last_name}".strip() or enc.username,
                 })
-        
-        # Calcular estadísticas del relevamiento
-        # Lotes digitalizados del último Precat
-        lotes_digitalizados = 0
-        ultimo_precat = PrecatArchivo.objects.filter(
-            solicitud=solicitud
-        ).order_by('-fecha_subida').first()
-        
-        if ultimo_precat and ultimo_precat.lotes_digitalizados:
-            lotes_digitalizados = ultimo_precat.lotes_digitalizados
-        
-        # Meta de encuestas de la orden
-        meta_encuestas = orden_trabajo.meta_encuestas or 0
-        
-        # Total de relevamientos realizados en esta colonia para esta orden
-        total_relevamientos = Relevamiento.objects.filter(
-            colonia=colonia,
-            orden_trabajo=orden_trabajo
-        ).count()
-        
-        # Contar mermas (problemas)
-        mermas = Relevamiento.objects.filter(
-            colonia=colonia,
-            orden_trabajo=orden_trabajo
-        ).filter(
-            Q(condicion_vivienda='ausente') |
-            Q(estado_entrevista='rechazo') |
-            Q(estado_entrevista='en_conflicto')
-        )
-        
-        total_mermas = mermas.count()
-        
-        # Desglose de problemas
-        ausentes = mermas.filter(condicion_vivienda='ausente').count()
-        rechazos = mermas.filter(estado_entrevista='rechazo').count()
-        conflictos = mermas.filter(estado_entrevista='en_conflicto').count()
-        
-        # Relevamientos exitosos
-        encuestas_exitosas = total_relevamientos - total_mermas
-        
-        # Porcentaje de éxito
-        porcentaje_exito = round((encuestas_exitosas / total_relevamientos * 100), 1) if total_relevamientos > 0 else 0
-        
-        # Preparar datos de respuesta
+
+        # Información de analista y estadísticas — delegados al modelo
+        analista_info = solicitud.get_info_analista()
+        estadisticas = solicitud.get_estadisticas_relevamiento(orden_trabajo)
+
+        fmt = lambda dt: timezone.localtime(dt).strftime("%d/%m/%Y %H:%M") if dt else None 
+
         data = {
             'success': True,
             'solicitud': {
@@ -1178,15 +1143,14 @@ def obtener_datos_relevamiento_finalizado(request, pk):
                 'tipo_display': solicitud.get_tipo_display(),
                 'estado': solicitud.estado,
                 'estado_display': solicitud.get_estado_display(),
-                'fecha_creacion': timezone.localtime(solicitud.fecha_creacion).strftime("%d/%m/%Y %H:%M") if solicitud.fecha_creacion else None,
-                'fecha_aprobacion': timezone.localtime(solicitud.fecha_aprobacion_campo).strftime("%d/%m/%Y %H:%M") if solicitud.fecha_aprobacion_campo else None,
-                'fecha_asignacion': timezone.localtime(solicitud.fecha_asignacion).strftime("%d/%m/%Y %H:%M") if solicitud.fecha_asignacion else None,
+                'fecha_creacion': fmt(solicitud.fecha_creacion),
+                'fecha_aprobacion': fmt(solicitud.fecha_aprobacion_campo),
             },
             'orden_trabajo': {
                 'id': orden_trabajo.id,
                 'estado': orden_trabajo.estado,
                 'estado_display': orden_trabajo.get_estado_display(),
-                'fecha_creacion': timezone.localtime(orden_trabajo.fecha_creacion).strftime("%d/%m/%Y %H:%M") if orden_trabajo.fecha_creacion else None,
+                'fecha_creacion': fmt(orden_trabajo.fecha_creacion),
                 'fecha_inicio_planeada': orden_trabajo.fecha_inicio_planeada.strftime("%d/%m/%Y") if orden_trabajo.fecha_inicio_planeada else None,
                 'fecha_fin_planeada': orden_trabajo.fecha_fin_planeada.strftime("%d/%m/%Y") if orden_trabajo.fecha_fin_planeada else None,
                 'fecha_inicio_real': orden_trabajo.fecha_inicio_real.strftime("%d/%m/%Y") if orden_trabajo.fecha_inicio_real else None,
@@ -1197,40 +1161,27 @@ def obtener_datos_relevamiento_finalizado(request, pk):
                 'codigo': colonia.codigo,
             },
             'distrito': {
-                'nombre': distrito.nombre if distrito else "Sin distrito",
-                'codigo': distrito.codigo if distrito else "",
+                'nombre': distrito.nombre if distrito else 'Sin distrito',
+                'codigo': distrito.codigo if distrito else '',
             },
             'departamento': {
-                'nombre': departamento.nombre if departamento else "Sin departamento",
-                'codigo': departamento.codigo if departamento else "",
+                'nombre': departamento.nombre if departamento else 'Sin departamento',
+                'codigo': departamento.codigo if departamento else '',
             },
             'grupo_info': grupo_info,
             'usuario_info': usuario_info,
+            'analista_info': analista_info,
             'coordinador_campo_info': coordinador_campo_info,
             'subcoordinadores_info': subcoordinadores_info,
             'encuestadores_info': encuestadores_info,
-            'estadisticas': {
-                'lotes_digitalizados': lotes_digitalizados,
-                'meta_encuestas': meta_encuestas,
-                'total_encuestas': total_relevamientos,
-                'encuestas_exitosas': encuestas_exitosas,
-                'total_mermas': total_mermas,
-                'porcentaje_exito': porcentaje_exito,
-                'ausentes': ausentes,
-                'rechazos': rechazos,
-                'conflictos': conflictos,
-            }
+            'estadisticas': estadisticas,
+            'asignacion_digitalizador': asignacion_digitalizador,
         }
-        
+
+
         return JsonResponse(data)
-        
+
     except SolicitudRelevamiento.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Solicitud no encontrada'
-        }, status=404)
+        return JsonResponse({'success': False, 'error': 'Solicitud no encontrada'}, status=404)
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': f'Error al obtener datos: {str(e)}'
-        }, status=500)
+        return JsonResponse({'success': False, 'error': f'Error al obtener datos: {str(e)}'}, status=500)

@@ -1,0 +1,96 @@
+<!-- includes/sig/tablas/detalle_solicitudes/tabla_rechazadas.html -->
+{% if solicitudes_rechazadas %}
+<div class="table-responsive">
+    <table class="beautiful-table table-hover" width="100%" cellspacing="0">
+        <thead class="table-light">
+            <tr>
+                <th class="text-center">#</th>
+                <th class="text-center">Fecha Creación</th>
+                <th class="text-center">Datos Geográficos</th>
+                <th class="text-center">Fecha Rechazo</th>
+                <th class="text-center">Motivo Rechazo</th>
+                <th class="text-center">Digitalizador Asignado</th>
+                <th class="text-center">Prioridad</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for solicitud in solicitudes_rechazadas %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">
+                    <small>{{ solicitud.fecha_creacion|date:"d/m/Y" }}</small>
+                    <br><small class="text-muted">{{ solicitud.fecha_creacion|date:"H:i" }}</small>
+                </td>
+                <td>
+                    {% with distrito=solicitud.colonia.distritos.first %}
+                        {% if distrito %}
+                            <small><strong>{{ solicitud.colonia.nombre }}</strong></small>
+                            <br><small>{{ distrito.departamento.nombre }}, {{ distrito.nombre }}</small>
+                        {% else %}
+                            <span class="text-muted">Sin ubicación</span>
+                        {% endif %}
+                    {% endwith %}
+                </td>
+                <td class="text-center">
+                    {% if solicitud.fecha_modificacion %}
+                        <small>{{ solicitud.fecha_modificacion|date:"d/m/Y" }}</small>
+                        <br><small class="text-muted">{{ solicitud.fecha_modificacion|date:"H:i" }}</small>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    <small class="text-danger">
+                        {{ solicitud.motivo_rechazo|default:"-"|truncatechars:50 }}
+                    </small>
+                </td>
+                <td class="text-center">
+                    {% if solicitud.usuario_asignado %}
+                        <span class="badge bg-primary">
+                            <i class="fas fa-user me-1"></i>
+                            {{ solicitud.usuario_asignado.username }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted">-</span>
+                    {% endif %}
+                </td>
+ 
+                <td class="text-center">
+                    <span class="badge 
+                        {% if solicitud.prioridad == 'alta' %}bg-danger
+                        {% elif solicitud.prioridad == 'media' %}bg-warning
+                        {% else %}bg-secondary{% endif %}">
+                        {{ solicitud.get_prioridad_display }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    <span class="badge bg-danger">
+                        {{ solicitud.get_estado_display }}
+                    </span>
+                </td>
+                <td class="text-center">
+                    {% if es_lider %}
+                        <button class="btn btn-sm btn-warning"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#devolverCorreccionModal"
+                                data-solicitud-id="{{ solicitud.id }}"
+                                data-colonia-nombre="{{ solicitud.colonia.nombre }}"
+                                title="Devolver para revisión">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-times-circle fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No hay solicitudes rechazadas</h5>
+        <p class="text-muted">No hay solicitudes rechazadas en tu grupo</p>
+    </div>
+{% endif %}

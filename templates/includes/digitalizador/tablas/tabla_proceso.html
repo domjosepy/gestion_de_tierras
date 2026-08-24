@@ -41,7 +41,7 @@
                 </td>
                 <td class="text-center">
                     <small class="{% if tarea.es_urgente %}text-danger fw-bold{% else %}text-muted{% endif %}">
-                        {{ tarea.obtener_tiempo_etapa_actual|format_timedelta }}
+                        {{ tarea.obtener_tiempo_digitalizacion|format_timedelta }}
                     </small>
                     {% if tarea.es_urgente %}
                         <br><small class="text-danger"><i class="fas fa-exclamation-triangle"></i> Urgente</small>

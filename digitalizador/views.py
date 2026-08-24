@@ -1,8 +1,7 @@
 import os
-from urllib import request
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseForbidden, FileResponse
+from django.http import JsonResponse, HttpResponseForbidden, FileResponse, Http404
 from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
@@ -16,6 +15,7 @@ from .forms import PrecatSubirForm
 from .models import PrecatArchivo
 from administrador.models import User
 from django.db import models
+from sig.models import AsignacionDigitalizador
 
 # digitalizador/views.py
 
@@ -96,14 +96,28 @@ def detalle_tarea(request, tarea_id):
     """
     Detalle de una tarea específica para digitalización
     """
-    qs = SolicitudRelevamiento.objects.select_related(
+    base_qs = SolicitudRelevamiento.objects.select_related(
         'colonia', 'creado_por', 'grupo_asignado'
     ).prefetch_related('precat_archivos').filter(
         pk=tarea_id
-    ).filter(
+    )
+
+    qs_asignado = base_qs.filter(
         Q(asignaciones_digitalizador__usuario_asignado=request.user) | Q(usuario_asignado=request.user)
     ).distinct()
-    tarea = get_object_or_404(qs)
+    tarea = qs_asignado.first()
+
+    # Modo solo lectura: permitir ver solicitudes aprobadas globales aunque
+    # no estén asignadas al usuario digitalizador actual.
+    solo_lectura_aprobada = False
+    if not tarea:
+        qs_solo_lectura = base_qs.filter(fecha_aprobacion_campo__isnull=False).distinct()
+        tarea = qs_solo_lectura.first()
+        if tarea:
+            solo_lectura_aprobada = True
+
+    if not tarea:
+        raise Http404("No existe la tarea o no tiene permisos para verla.")
 
     # Obtener archivos ya subidos
     archivos_precat = tarea.precat_archivos.filter(
@@ -111,18 +125,30 @@ def detalle_tarea(request, tarea_id):
     archivos_planos = tarea.precat_archivos.filter(
         tipo_archivo=PrecatArchivo.TIPO_PLANOS).last()
 
+    # Asignación específica del digitalizador (evita cruce con datos del analista)
+
+    asignacion_digitalizador = (
+        AsignacionDigitalizador.objects
+        .filter(solicitud=tarea)
+        .select_related('usuario_asignado', 'registrado_por')
+        .order_by('-fecha_asignacion')
+        .first()
+    )
+
     # Obtener y procesar auditorías
     auditorias_raw = tarea.auditorias.all().select_related('cambiado_por')[:10]
     auditorias_procesadas = procesar_auditorias(auditorias_raw)
 
     context = {
         'tarea': tarea,
+        'asignacion_digitalizador': asignacion_digitalizador,
         'archivos_precat': archivos_precat,
         'archivos_planos': archivos_planos,
         'auditorias': auditorias_procesadas,
-        'puede_iniciar': tarea.estado == 'asignado_a_digitalizador',
-        'puede_subir': tarea.estado == 'en_proceso_digitalizacion',
+        'puede_iniciar': (not solo_lectura_aprobada) and tarea.estado == 'asignado_a_digitalizador',
+        'puede_subir': (not solo_lectura_aprobada) and tarea.estado == 'en_proceso_digitalizacion',
         'puede_ver': tarea.estado in ['pendiente_revision_sig', 'pendiente_aprobacion_campo', 'aprobado_para_campo'],
+        'solo_lectura_aprobada': solo_lectura_aprobada,
     }
 
     return render(request, 'includes/digitalizador/detalle_tarea.html', context)

@@ -1,0 +1,298 @@
+<!-- Modal de Detalle de Relevamiento — Vista Análisis -->
+<div class="modal fade" id="detalleRelevAnalisisModal" tabindex="-1" aria-labelledby="detalleRelevAnalisisLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+
+      <div class="modal-header text-white" style="background: linear-gradient(135deg, #1cc88a 0%, #17a673 100%);">
+        <h5 class="modal-title fw-bold" id="detalleRelevAnalisisLabel">
+          <i class="fas fa-chart-bar me-2"></i>Detalle de Colonia Relevada
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      <div class="modal-body p-4" id="detalleRelevAnalisisContent">
+        <!-- Spinner inicial -->
+        <div class="text-center py-4">
+          <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2 text-muted small">Cargando información...</p>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i>Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function verDetalleRelevamientoAnalisis(solicitudId) {
+    function escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    // Mostrar spinner
+    document.getElementById('detalleRelevAnalisisContent').innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="mt-2 text-muted small">Cargando información...</p>
+        </div>`;
+
+    const modal = new bootstrap.Modal(document.getElementById('detalleRelevAnalisisModal'));
+    modal.show();
+
+    fetch(`/analisis/relevamiento-detalle/${solicitudId}/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+        .then(async function(r) {
+            const contentType = r.headers.get('content-type') || '';
+            const isJson = contentType.includes('application/json');
+            let payload = null;
+
+            if (isJson) {
+                payload = await r.json();
+            } else {
+                const text = await r.text();
+                throw new Error(
+                    text && text.includes('<!DOCTYPE html')
+                        ? 'La sesión expiró o no tiene permisos para ver este detalle.'
+                        : 'Respuesta no válida del servidor.'
+                );
+            }
+
+            if (!r.ok) {
+                throw new Error(payload.error || ('HTTP ' + r.status));
+            }
+
+            return payload;
+        })
+        .then(function(data) {
+            if (!data.success) throw new Error(data.error || 'Error al obtener datos');
+
+            const s   = data.solicitud;
+            const ot  = data.orden_trabajo;
+            const est = data.estadisticas;
+            const analisis = data.analista_info || {};
+
+            
+            // Nombre del digitalizador
+            let digitalizadorNombre = 'Sin digitalizador';
+            if (data.digitalizador_info && data.digitalizador_info.nombre_completo) {
+                digitalizadorNombre = data.digitalizador_info.nombre_completo;
+            }
+
+            // Nombre del coordinador de campo
+            let coordNombre = 'Sin coordinador';
+            if (data.coordinador_campo_info && data.coordinador_campo_info.nombre_completo) {
+                coordNombre = data.coordinador_campo_info.nombre_completo;
+            } else if (data.usuario_info && data.usuario_info.nombre_completo) {
+                coordNombre = data.usuario_info.nombre_completo;
+            }
+
+            // Nombre del subcoordinador de campo
+            let subcoordinadorNombre = 'Sin subcoordinador';
+            let subcoordinadorAsignado = false;
+            if (data.subcoordinadores_info && data.subcoordinadores_info.length > 0) {
+                subcoordinadorNombre = data.subcoordinadores_info.map(sc => sc.nombre_completo).join(', ');
+                subcoordinadorAsignado = true;
+            }
+            // Nombre del encuestador de campo
+            let encuestadorNombre = 'Sin encuestador';
+            let encuestadorAsignado = false;
+            if (data.encuestadores_info && data.encuestadores_info.length > 0) {
+                encuestadorNombre = data.encuestadores_info.map(enc => enc.nombre_completo).join(', ');
+                encuestadorAsignado = true;
+            }
+
+            // Información de asignación a analista
+            const analistaAsignado = !!analisis.asignada;
+            const analistaNombre = (analisis.analista && analisis.analista.nombre_completo)
+                ? analisis.analista.nombre_completo
+                : 'Sin analista asignado';
+            const estadoAnalisis = analisis.estado_display || 'Sin asignación';
+            const fechaAsignacionAnalisis = analisis.fecha_asignacion || 'Sin asignación';
+
+            // Encabezado identificación
+            let html = `
+            <div class="d-flex align-items-start justify-content-between mb-3 pb-2 border-bottom">
+                <div>
+                    <h5 class="mb-1 fw-bold text-uppercase">
+                        ${data.colonia.nombre}
+                    </h5>
+                    <small class="text-muted">
+                        <span class="me-2"><i class="fas fa-map-marker-alt text-danger me-1"></i>${data.departamento.nombre}</span>
+                        <i class="fas fa-chevron-right text-muted me-1" style="font-size:.65rem;"></i>
+                        <span>${data.distrito.nombre}</span>
+                    </small>
+                </div>
+                <!-- Tipo de estudio -->
+                
+                ${data.grupo_info
+                            ? `<small class="text-muted">Grupo: <i class="fas fa-users me-1"></i>${data.grupo_info.nombre}</small>`
+                            : ''}
+            </div>
+            
+
+            <!-- KPIs con círculos de color -->
+            <div class="row g-2 mb-3 justify-content-center">
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-3 rounded-3 bg-light h-100">
+                        <div class="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center mb-2"
+                             style="width:48px;height:48px;">
+                            <i class="fas fa-map-pin text-white"></i>
+                        </div>
+                        <div class="h4 mb-0 fw-bold text-primary">${est.lotes_digitalizados}</div>
+                        <small class="text-muted">Lotes Digitalizados</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-3 rounded-3 bg-light h-100">
+                        <div class="rounded-circle bg-info d-inline-flex align-items-center justify-content-center mb-2"
+                             style="width:48px;height:48px;">
+                            <i class="fas fa-clipboard-list text-white"></i>
+                        </div>
+                        <div class="h4 mb-0 fw-bold text-info">${est.total_encuestas}</div>
+                        <small class="text-muted">Encuestas</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-3 rounded-3 bg-light h-100">
+                        <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-2"
+                             style="width:48px;height:48px;">
+                            <i class="fas fa-check-double text-white"></i>
+                        </div>
+                        <div class="h4 mb-0 fw-bold text-success">${est.encuestas_exitosas}</div>
+                        <small class="text-muted">Exitosas</small>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="text-center p-3 rounded-3 bg-light h-100">
+                        <div class="rounded-circle bg-success d-inline-flex align-items-center justify-content-center mb-2"
+                             style="width:48px;height:48px;">
+                            <i class="fa-solid fa-seedling text-white"></i>
+                        </div>
+                        <div class="h4 mb-0 fw-bold text-success">${data.estadisticas.solicitudes_firmadas}</div>
+                        <small class="text-muted">Solicitudes Firmadas</small>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <span class="badge bg-${s.tipo === 'relevamiento' ? 'info' : 'warning'} px-3 py-2">
+                        <i class="fas fa-${s.tipo === 'relevamiento' ? 'map-marked-alt' : 'sync-alt'} me-1"></i>
+                        ${s.tipo_display}
+                    </span>
+                </div>
+            </div>
+
+            <!-- cards informacion asignaciones y fechas -->
+             
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center"
+                                 style="width:34px;height:34px;">
+                                <i class="fas fa-calendar-alt text-primary small"></i>
+                            </div>
+                            <strong class="small text-uppercase text-muted">Fechas Clave</strong>
+                        </div>
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Solicitud creada:</span>
+                                <span class="fw-bold">${s.fecha_creacion || '-'}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Inicio OT:</span>
+                                <span class="fw-bold">${ot.fecha_inicio_real || ot.fecha_inicio_planeada || '-'}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Cierre:</span>
+                                <span class="fw-bold text-success">${ot.fecha_fin_real || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="rounded-circle bg-info bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user-tie text-info small"></i>
+                            </div>
+                            <strong class="small text-uppercase text-muted">Digitalizador</strong>
+                        </div>
+                        <p class="mb-1 fw-bold">${digitalizadorNombre}</p>
+                        <div class="small">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="rounded-circle bg-info bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user-tie text-info small"></i>
+                            </div>
+                            <strong class="small text-uppercase text-muted">Coordinador de Campo</strong>
+                        </div>
+                        <p class="mb-1 fw-bold">${coordNombre}</p>
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Subcoordinador/es:</span>
+                                <span class="badge ${subcoordinadorAsignado ? 'bg-success' : 'bg-secondary'}">${subcoordinadorNombre}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Encuestador/es:</span>
+                                <span class="badge bg-${encuestadorAsignado ? 'success' : 'secondary'}">${encuestadorNombre}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 border rounded-3 h-100">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="rounded-circle ${analistaAsignado ? 'bg-success' : 'bg-secondary'} bg-opacity-10 p-2 me-2 d-flex align-items-center justify-content-center"
+                                 style="width:34px;height:34px;">
+                                <i class="fas fa-user-check ${analistaAsignado ? 'text-success' : 'text-secondary'} small"></i>
+                            </div>
+                            <strong class="small text-uppercase text-muted">Asignación a Analista</strong>
+                        </div>
+                        <p class="mb-1 fw-bold">${analistaNombre}</p>
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Estado:</span>
+                                <span class="badge ${analistaAsignado ? 'bg-success' : 'bg-secondary'}">${estadoAnalisis}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Fecha asignación:</span>
+                                <span class="badge bg-${analistaAsignado ? 'success' : 'secondary'}">${fechaAsignacionAnalisis}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>`;
+
+            document.getElementById('detalleRelevAnalisisContent').innerHTML = html;
+        })
+        .catch(function(err) {
+            const detalle = (err && err.message) ? escapeHtml(err.message) : 'No se pudo obtener el detalle.';
+            document.getElementById('detalleRelevAnalisisContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar los detalles.<br>
+                    <small>${detalle}</small>
+                </div>`;
+        });
+}
+</script>

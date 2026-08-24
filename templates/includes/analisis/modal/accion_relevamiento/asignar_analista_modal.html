@@ -1,0 +1,142 @@
+<div class="modal fade modal-primary" id="asignarAnalistaModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="asignarAnalistaForm" method="post">
+        {% csrf_token %}
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">
+            <i class="fas fa-user-plus me-2"></i>Asignar Analista
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="solicitud_id" id="solicitudIdAsignarAnalista">
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-map-marker-alt me-1"></i>Colonia
+            </label>
+            <div class="form-control bg-light" id="coloniaNombreAsignarAnalista"></div>
+          </div>
+
+          <div class="mb-3">
+            <label for="analistaAsignado" class="form-label fw-bold">
+              <i class="fas fa-user me-1"></i>Seleccionar Analista
+            </label>
+            <select class="form-select" id="analistaAsignado" name="usuario_id" required>
+              <option value="">Seleccione un analista</option>
+              {% for usuario in usuarios_grupo %}
+                <option value="{{ usuario.id }}">
+                  {{ usuario.username }}
+                  {% if usuario.get_full_name %}
+                    - {{ usuario.get_full_name }}
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="comentarioAsignacionAnalista" class="form-label">
+              <i class="fas fa-comment me-1"></i>Comentario (opcional)
+            </label>
+            <textarea class="form-control" id="comentarioAsignacionAnalista"
+                      name="comentario" rows="2"
+                      placeholder="Observaciones sobre la asignación..."></textarea>
+          </div>
+
+          <div id="asignarAnalistaError" class="text-danger small mb-3"></div>
+        </div>
+
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-outline-primary">
+            <i class="fas fa-save me-1"></i>Asignar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const asignarAnalistaModal = document.getElementById('asignarAnalistaModal');
+    if (asignarAnalistaModal) {
+        asignarAnalistaModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const solicitudId = button.getAttribute('data-solicitud-id');
+            const coloniaNombre = button.getAttribute('data-colonia-nombre');
+
+            document.getElementById('solicitudIdAsignarAnalista').value = solicitudId;
+            document.getElementById('coloniaNombreAsignarAnalista').textContent = coloniaNombre;
+
+            // Limpiar formulario
+            document.getElementById('analistaAsignado').value = '';
+            document.getElementById('comentarioAsignacionAnalista').value = '';
+            document.getElementById('asignarAnalistaError').textContent = '';
+        });
+    }
+
+    const asignarAnalistaForm = document.getElementById('asignarAnalistaForm');
+    if (asignarAnalistaForm) {
+        asignarAnalistaForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const solicitudId = formData.get('solicitud_id');
+            const usuarioId = formData.get('usuario_id');
+            const comentario = formData.get('comentario') || '';
+            const btnSubmit = this.querySelector('button[type="submit"]');
+            const originalHTML = btnSubmit.innerHTML;
+
+            if (!usuarioId) {
+                document.getElementById('asignarAnalistaError').textContent = 'Debe seleccionar un analista';
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Asignando...';
+
+            try {
+                const response = await fetch(`/analisis/solicitud/${solicitudId}/asignar-analista/`, {
+                    method: 'POST',
+                    body: JSON.stringify({ usuario_id: usuarioId, comentario: comentario }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(asignarAnalistaModal);
+                    if (modal) modal.hide();
+
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.message, 'success');
+                    }
+
+                    setTimeout(() => { location.reload(); }, 1000);
+                } else {
+                    document.getElementById('asignarAnalistaError').textContent = data.error || data.message;
+                    if (window.ToastManager) {
+                        window.ToastManager.mostrarToast(data.error || data.message, 'error');
+                    }
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = originalHTML;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('asignarAnalistaError').textContent = 'Error de conexión. Intente nuevamente.';
+                btnSubmit.disabled = false;
+                btnSubmit.innerHTML = originalHTML;
+            }
+        });
+    }
+});
+</script>

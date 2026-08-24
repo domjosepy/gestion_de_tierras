@@ -276,7 +276,6 @@ def eliminar_distrito(request, pk):
 
 class ColoniaListView(LoginRequiredMixin, ListView):
     model = Colonia
-    paginate_by = 25
     template_name = 'includes/gerencia/tablas/listar_colonias.html'
     context_object_name = 'colonias'
 
