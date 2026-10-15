@@ -1,0 +1,178 @@
+<!-- ============================================================ -->
+<!-- SECCIÓN 4: DATOS PRODUCTIVOS cultivos - ganaderia-->
+<!-- ============================================================ -->
+<div class="card mb-4">
+  <div class="card-header card-header-brown-light">
+    <i class="fas fa-tractor"></i>
+    <h2 class="mb-0">4. Datos Productivos</h2>
+  </div>
+  <div class="card-body">
+    <!-- Resumen de hectáreas 
+    <div class="row g-3 mb-3">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">{{ form.produccion_agricola_ha.label }}</label>
+        {{ form.produccion_agricola_ha }}
+        {% if form.produccion_agricola_ha.errors %}<div class="text-danger small mt-1">{{ form.produccion_agricola_ha.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">{{ form.produccion_ganadera_ha.label }}</label>
+        {{ form.produccion_ganadera_ha }}
+        {% if form.produccion_ganadera_ha.errors %}<div class="text-danger small mt-1">{{ form.produccion_ganadera_ha.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">{{ form.reforestado_ha.label }}</label>
+        {{ form.reforestado_ha }}
+        {% if form.reforestado_ha.errors %}<div class="text-danger small mt-1">{{ form.reforestado_ha.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">{{ form.bosque_natural_ha.label }}</label>
+        {{ form.bosque_natural_ha }}
+        {% if form.bosque_natural_ha.errors %}<div class="text-danger small mt-1">{{ form.bosque_natural_ha.errors }}</div>{% endif %}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">{{ form.barbecho_ha.label }}</label>
+        {{ form.barbecho_ha }}
+        {% if form.barbecho_ha.errors %}<div class="text-danger small mt-1">{{ form.barbecho_ha.errors }}</div>{% endif %}
+      </div>
+    </div>-->
+
+    <!-- Acordeón para el detalle de cultivos -->
+    <div class="accordion mt-3 inner-subsection green" id="accordionCultivos">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingCultivos">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCultivos" aria-expanded="false" aria-controls="collapseCultivos">
+            <i class="fas fa-seedling text-success me-2"></i> Detalle de Cultivos
+            <span class="badge bg-secondary ms-2" id="cultivo-count">
+                {{ cultivo_formset.total_form_count }}
+            </span>
+          </button>
+        </h2>
+        <div id="collapseCultivos" class="accordion-collapse collapse" aria-labelledby="headingCultivos" data-bs-parent="#accordionCultivos">
+          <div class="accordion-body">
+            <!-- Management form -->
+            {{ cultivo_formset.management_form }}
+
+            <div class="table-responsive">
+              <table class="beautiful-table align-middle mb-0" id="cultivos-table">
+                <thead>
+                  <tr class="text-center">
+                    <th class="text-center">Tipo de cultivo</th>
+                    <th class="text-center">Tipo de siembra</th>
+                    <th class="text-center">Hectáreas</th>   <!-- 10% del ancho -->
+                    <th class="text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="cultivos-body">
+                  {% for cultivo_form in cultivo_formset %}
+                    <tr class="cultivo-row">
+                      <td>{{ cultivo_form.tipo_cultivo }}</td>
+                      <td>{{ cultivo_form.tipo_siembra }}</td>
+                      <td>{{ cultivo_form.hectareas }}</td>
+                      <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr id="no-cultivos-msg">
+                      <td colspan="4" class="text-muted text-center">No hay cultivos registrados para este lote.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <template id="cultivos-empty-row">
+              <tr class="cultivo-row">
+                <td>{{ cultivo_formset.empty_form.tipo_cultivo }}</td>
+                <td>{{ cultivo_formset.empty_form.tipo_siembra }}</td>
+                <td>{{ cultivo_formset.empty_form.hectareas }}</td>
+                <td class="text-center">
+                  {{ cultivo_formset.empty_form.relevamiento }}
+                  {{ cultivo_formset.empty_form.pretendiente }}
+                  <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-cultivo-btn" data-prefix="cultivos">
+              <i class="fas fa-plus"></i> Agregar cultivo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- FIN DE LA SECCIÓN DE DATOS PRODUCTIVOS (CULTIVOS) -->
+     <!-- SECCIÓN DE DATOS PRODUCTIVOS (ganaderia) -->
+    <div class="accordion mt-3  inner-subsection orange" id="accordionganaderia">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingganaderia">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGanaderia" aria-expanded="false" aria-controls="collapseGanaderia">
+            <i class="fas fa-cow text-warning me-2"></i> Detalle de Ganaderia
+            <span class="badge bg-secondary ms-2" id="ganaderia-count">
+              {{ ganaderia_formset.total_form_count }}
+            </span>
+          </button>
+        </h2>
+        <div id="collapseGanaderia" class="accordion-collapse collapse" aria-labelledby="headingganaderia" data-bs-parent="#accordionganaderia">
+          <div class="accordion-body">
+            <!-- Management form: obligatorio para que Django sepa TOTAL_FORMS, etc. -->
+            {{ ganaderia_formset.management_form }}
+
+            <div class="table-responsive">
+              <table class="beautiful-table align-middle mb-0" id="ganaderia-table">
+                <thead>
+                  <tr class="text-center">
+                    <th class="text-center">Tipo de ganaderia</th>
+                    <th class="text-center">Cantidad</th>
+                    <th class="text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="ganaderia-body">
+                  {% for ganaderia_form in ganaderia_formset %}
+                    <tr class="ganaderia-row">
+                      <td>{{ ganaderia_form.tipo_ganaderia }}</td>
+                      <td>{{ ganaderia_form.cantidad }}</td>
+                      <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr id="no-ganaderia-msg">
+                      <td colspan="3" class="text-muted text-center">No hay ganaderia registrada para este lote.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Fila oculta: usa empty_form, igual que hicimos con cultivos.
+                Ya trae las choices de tipo_ganaderia y el prefijo __prefix__. -->
+            <template id="ganaderia-empty-row">
+              <tr class="ganaderia-row">
+                <td>{{ ganaderia_formset.empty_form.tipo_ganaderia }}</td>
+                <td>{{ ganaderia_formset.empty_form.cantidad }}</td>
+                <td class="text-center">
+                  {{ ganaderia_formset.empty_form.relevamiento }}
+                  {{ ganaderia_formset.empty_form.pretendiente }}
+                  <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-ganaderia-btn" data-prefix="ganaderia">
+              <i class="fas fa-plus"></i> Agregar ganaderia
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- FIN DE LA SECCIÓN DE DATOS PRODUCTIVOS (ganaderia) -->
+  </div>
+</div>
+
+

@@ -1,0 +1,48 @@
+<!-- ============================================================ -->
+<!-- SECCIÓN 5: MEJORAS E INFRAESTRUCTURA (ACORDEÓN) -->
+<!-- ============================================================ -->
+<div class="card mb-4">
+  <div class="card-header card-header-brown-light">
+    <i class="fas fa-tools"></i>
+    <h2 class="mb-0">5. Mejoras e Infraestructura</h2>
+  </div>
+  <div class="card-body">
+    <!-- Acordeón -->
+    <div class="accordion" id="accordionMejoras">
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="headingMejoras">
+          <button class="accordion-button collapsed" type="button" 
+                  data-bs-toggle="collapse" data-bs-target="#collapseMejoras" 
+                  aria-expanded="false" aria-controls="collapseMejoras">
+            <i class="fas fa-check-square me-2 text-primary"></i> 
+            Seleccione las mejoras que observe en el lote
+          </button>
+        </h2>
+        <div id="collapseMejoras" class="accordion-collapse collapse" 
+             aria-labelledby="headingMejoras" data-bs-parent="#accordionMejoras">
+          <div class="accordion-body">
+            <!-- Campo de mejoras -->
+            <div class="inner-subsection mb-0">
+
+              <div class="row row-cols-2 row-cols-md-3 g-2" id="mejoras-checkboxes">
+                {% for choice in form.mejoras %}
+                  <div class="col">
+                    <div class="form-check">
+                      {{ choice.tag }}
+                      <label class="form-check-label" for="{{ choice.id_for_label }}">
+                        {{ choice.choice_label }}
+                      </label>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if form.mejoras.errors %}
+                <div class="text-danger small mt-1">{{ form.mejoras.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

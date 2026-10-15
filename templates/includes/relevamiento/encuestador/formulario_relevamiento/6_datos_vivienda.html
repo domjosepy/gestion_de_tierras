@@ -1,0 +1,270 @@
+<!-- ============================================================ -->
+<!-- SECCIÓN: VIVIENDAS DEL LOTE (parcial reutilizable) -->
+<!--
+     Esta sección solo tiene sentido cuando:
+       - tipo_registro == 'ocupante'  (este parcial es específico de ese modo)
+       - condicion_vivienda está en ['presente', 'ausente', 'en_construccion']
+     En cualquier otro caso (sin_vivienda, servicio) no hay una vivienda física
+     que describir, así que la sección se oculta por completo vía JS
+     (ver actualizarVisibilidadViviendas() en relevamiento_form_common.js).
+-->
+<!-- ============================================================ -->
+{% load relevamiento_tags %}
+<div class="card mb-4" id="viviendas-section">
+  <div class="card-header card-header-brown-light">
+    <i class="fas fa-home"></i>
+    <h2 class="mb-0">Información de la Vivienda</h2>
+  </div>
+  <!-- ============================================================ -->
+  <!-- esta parte no esta apareciendo cuando condicion_vivienda está en ['presente', 'ausente', 
+   'en_construccion', 'desocupada'], directamente me aprece cuando hago clic en agregar vivienda adiconal-->
+  <!-- ============================================================ -->
+  <div class="card-body">
+    {{ vivienda_formset.management_form }}
+    <div id="viviendas-container">
+      {% for viv_form in vivienda_formset %}
+      <div class="vivienda-block border rounded p-3 mb-3" data-viv-index="{{ forloop.counter0 }}">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0"><i class="fas fa-home me-1"></i>Vivienda {{ forloop.counter }}</h5>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-vivienda-btn">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        {% if viv_form.errors %}
+          <div class="alert alert-danger small py-1">{{ viv_form.errors }}</div>
+        {% endif %}
+
+        <!-- FKs ocultas + checkbox DELETE del formset (hijo directo del
+             bloque, así el JS lo distingue del DELETE de un miembro anidado) -->
+        {{ viv_form.relevamiento }}
+        {{ viv_form.pretendiente }}
+        <div class="vivienda-delete-wrapper d-none">{{ viv_form.DELETE }}</div>
+
+        <!-- ── Vivienda ── -->
+        <button type="button" class="mini-accordion-header">
+          <i class="fas fa-house-user me-1"></i> Características de la Vivienda
+        </button>
+        <div class="mini-accordion-body">
+          <div class="form-check mb-2">
+            {{ viv_form.es_principal }}
+            <label class="form-check-label fw-semibold" for="{{ viv_form.es_principal.id_for_label }}">
+              Vivienda principal
+            </label>
+          </div>
+          <div class="row g-2">
+            <div class="col-md-3">
+              <label class="form-label small">{{ viv_form.paredes.label }}</label>
+              {{ viv_form.paredes }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">{{ viv_form.piso.label }}</label>
+              {{ viv_form.piso }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">{{ viv_form.techo.label }}</label>
+              {{ viv_form.techo }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">{{ viv_form.piezas.label }}</label>
+              {{ viv_form.piezas }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">{{ viv_form.agua_proviene.label }}</label>
+              {{ viv_form.agua_proviene }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">{{ viv_form.tipo_bano.label }}</label>
+              {{ viv_form.tipo_bano }}
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Equipamiento ── -->
+        <button type="button" class="mini-accordion-header">
+          <i class="fas fa-plug me-1"></i> Equipamiento
+        </button>
+        <div class="mini-accordion-body d-none">
+          <div class="row g-2">
+            {% for checkbox in viv_form.equipamientos %}
+              <div class="col-md-4 col-sm-6">
+                <div class="form-check">
+                  {{ checkbox.tag }}
+                  <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- ── Población ── -->
+        {% with miem_fs=vivienda_miembro_formsets|get_item:forloop.counter0 %}
+          {% if miem_fs %}
+          <button type="button" class="mini-accordion-header">
+            <i class="fas fa-users me-1"></i> Población
+            <span class="badge bg-secondary ms-2" id="miembros-count-{{ forloop.counter0 }}">0</span>
+          </button>
+          <div class="mini-accordion-body d-none" id="miembros-block-{{ forloop.counter0 }}" data-viv-index="{{ forloop.counter0 }}">
+            {{ miem_fs.management_form }}
+
+            {# Errores de validación de cualquier miembro, resumidos arriba de la tabla #}
+            {% for miem_form in miem_fs %}
+              {% if miem_form.errors %}
+                <div class="alert alert-danger small py-1">Miembro {{ forloop.counter }}: {{ miem_form.errors }}</div>
+              {% endif %}
+            {% endfor %}
+
+            <div class="table-responsive">
+              <table class="beautiful-table align-middle mb-0" id="miembros-table-{{ forloop.parentloop.counter0 }}">
+                <thead>
+                  <tr class="text-center">
+                    <th>Nombre y Apellido</th>
+                    <th>Cedula</th>
+                    <th>Edad</th>
+                    <th>Sexo</th>
+                    <th>Estado civil</th>
+                    <th>Parentesco</th>
+                    <th>Relación</th>
+                    <th>Escolaridad</th>
+                    <th>Grado/Año</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="miembros-forms-{{ forloop.counter0 }}">
+                  {% for miem_form in miem_fs %}
+                  <tr class="miembro-row">
+                    <td>{{ miem_form.nombre_miembro }}</td>
+                    <td>{{ miem_form.ci_miembro }}</td>
+                    <td>{{ miem_form.edad_miembro }}</td>
+                    <td>{{ miem_form.sexo_miembro }}</td>
+                    <td>{{ miem_form.estado_civil_miembro }}</td>
+                    <td>{{ miem_form.parentesco }}</td>
+                    <td>{{ miem_form.relacion_con_lote }}</td>
+                    <td>{{ miem_form.escolaridad }}</td>
+                    <td>{{ miem_form.grado_ano }}</td>
+                    <td class="text-center">
+                      {{ miem_form.vivienda }}
+                      {{ miem_form.pretendiente }}
+                      {{ miem_form.relevamiento }}
+                      <div class="miembro-delete-wrapper d-none">{{ miem_form.DELETE }}</div>
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-miembro-btn">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr id="no-miembros-msg-{{ forloop.counter0 }}">
+                    <td colspan="10" class="text-muted text-center">Sin miembros registrados.</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if forloop.counter0 == 0 %}
+            <button type="button" class="btn btn-sm btn-outline-info" id="cargar-ocupante-btn-0" style="display:none">
+              <i class="fas fa-user-check me-1"></i>Cargar datos del ocupante
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-sm btn-outline-secondary add-miembro-btn"
+                    data-viv-index="{{ forloop.counter0 }}"
+                    data-prefix="{{ miem_fs.prefix }}"
+                    data-total="{{ miem_fs.total_form_count }}">
+              <i class="fas fa-user-plus me-1"></i>Agregar miembro
+            </button>
+          </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+      {% endfor %}
+    </div>
+    <!-- Fin del bloque de viviendas -->
+
+    <!-- Plantilla oculta para clonar una vivienda nueva (usada por JS) -->
+    <div id="viviendas-empty" style="display:none">
+      {{ vivienda_formset.empty_form.relevamiento }}
+      {{ vivienda_formset.empty_form.pretendiente }}
+      <div class="vivienda-delete-wrapper d-none">{{ vivienda_formset.empty_form.DELETE }}</div>
+
+      <button type="button" class="mini-accordion-header">
+        <i class="fas fa-house-user me-1"></i> Características
+      </button>
+      <div class="mini-accordion-body">
+        <div class="form-check mb-2">
+          {{ vivienda_formset.empty_form.es_principal }}
+          <label class="form-check-label fw-semibold" for="{{ vivienda_formset.empty_form.es_principal.id_for_label }}">
+            Vivienda principal
+          </label>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small">{{ vivienda_formset.empty_form.paredes.label }}</label>
+            {{ vivienda_formset.empty_form.paredes }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">{{ vivienda_formset.empty_form.piso.label }}</label>
+            {{ vivienda_formset.empty_form.piso }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">{{ vivienda_formset.empty_form.techo.label }}</label>
+            {{ vivienda_formset.empty_form.techo }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">{{ vivienda_formset.empty_form.piezas.label }}</label>
+            {{ vivienda_formset.empty_form.piezas }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">{{ vivienda_formset.empty_form.agua_proviene.label }}</label>
+            {{ vivienda_formset.empty_form.agua_proviene }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small">{{ vivienda_formset.empty_form.tipo_bano.label }}</label>
+            {{ vivienda_formset.empty_form.tipo_bano }}
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="mini-accordion-header">
+        <i class="fas fa-plug me-1"></i> Equipamiento
+      </button>
+      <div class="mini-accordion-body d-none">
+        <div class="row g-2">
+          {% for checkbox in vivienda_formset.empty_form.equipamientos %}
+            <div class="col-md-4 col-sm-6">
+              <div class="form-check">
+                {{ checkbox.tag }}
+                <label class="form-check-label" for="{{ checkbox.id_for_label }}">{{ checkbox.choice_label }}</label>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <template id="miembro-empty-row">
+      <tr class="miembro-row">
+        <td>{{ miembro_template_formset.empty_form.nombre_miembro }}</td>
+        <td>{{ miembro_template_formset.empty_form.ci_miembro }}</td>
+        <td>{{ miembro_template_formset.empty_form.edad_miembro }}</td>
+        <td>{{ miembro_template_formset.empty_form.sexo_miembro }}</td>
+        <td>{{ miembro_template_formset.empty_form.estado_civil_miembro }}</td>
+        <td>{{ miembro_template_formset.empty_form.parentesco }}</td>
+        <td>{{ miembro_template_formset.empty_form.relacion_con_lote }}</td>
+        <td>{{ miembro_template_formset.empty_form.escolaridad }}</td>
+        <td>{{ miembro_template_formset.empty_form.grado_ano }}</td>
+        <td class="text-center">
+          {{ miembro_template_formset.empty_form.vivienda }}
+          {{ miembro_template_formset.empty_form.pretendiente }}
+          {{ miembro_template_formset.empty_form.relevamiento }}
+          <div class="miembro-delete-wrapper d-none">{{ miembro_template_formset.empty_form.DELETE }}</div>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-miembro-btn">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    </template>
+
+    <button type="button" class="btn btn-outline-secondary mt-2" id="add-vivienda-btn">
+      <i class="fas fa-plus me-1"></i>Agregar vivienda adicional
+    </button>
+  </div>
+</div>

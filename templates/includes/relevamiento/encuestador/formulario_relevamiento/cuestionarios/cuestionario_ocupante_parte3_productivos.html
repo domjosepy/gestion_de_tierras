@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta (Ocupante) — Parte 3 (Productivos){% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-clipboard-list"></i>
+        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO — Parte 3 de 4</h2>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- DATOS PRODUCTIVOS: Cultivos + Ganadería -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-tractor"></i>
+        <h2 class="mb-0">4. Datos Productivos</h2>
+      </div>
+      <div class="card-body">
+        <div class="accordion mt-3 inner-subsection green" id="accordionCultivos">
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="headingCultivos">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCultivos" aria-expanded="false" aria-controls="collapseCultivos">
+                <i class="fas fa-seedling text-success me-2"></i> Detalle de Cultivos
+                <span class="badge bg-secondary ms-2" id="cultivo-count">{{ cultivo_formset.total_form_count }}</span>
+              </button>
+            </h2>
+            <div id="collapseCultivos" class="accordion-collapse collapse" aria-labelledby="headingCultivos" data-bs-parent="#accordionCultivos">
+              <div class="accordion-body">
+                {{ cultivo_formset.management_form }}
+                <div class="table-responsive">
+                  <table class="beautiful-table align-middle mb-0" id="cultivos-table">
+                    <thead>
+                      <tr class="text-center">
+                        <th class="text-center">Tipo de cultivo</th>
+                        <th class="text-center">Tipo de siembra</th>
+                        <th class="text-center">Hectáreas</th>
+                        <th class="text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cultivos-body">
+                      {% for cultivo_form in cultivo_formset %}
+                        <tr class="cultivo-row">
+                          <td>{{ cultivo_form.tipo_cultivo }}</td>
+                          <td>{{ cultivo_form.tipo_siembra }}</td>
+                          <td>{{ cultivo_form.hectareas }}</td>
+                          <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+                          </td>
+                        </tr>
+                      {% empty %}
+                        <tr id="no-cultivos-msg">
+                          <td colspan="4" class="text-muted text-center">No hay cultivos registrados para este lote.</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                <template id="cultivos-empty-row">
+                  <tr class="cultivo-row">
+                    <td>{{ cultivo_formset.empty_form.tipo_cultivo }}</td>
+                    <td>{{ cultivo_formset.empty_form.tipo_siembra }}</td>
+                    <td>{{ cultivo_formset.empty_form.hectareas }}</td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+                    </td>
+                  </tr>
+                </template>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-cultivo-btn" data-prefix="cultivos">
+                  <i class="fas fa-plus"></i> Agregar cultivo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion mt-3 inner-subsection orange" id="accordionganaderia">
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="headingganaderia">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGanaderia" aria-expanded="false" aria-controls="collapseGanaderia">
+                <i class="fas fa-cow text-warning me-2"></i> Detalle de Ganadería
+                <span class="badge bg-secondary ms-2" id="ganaderia-count">{{ ganaderia_formset.total_form_count }}</span>
+              </button>
+            </h2>
+            <div id="collapseGanaderia" class="accordion-collapse collapse" aria-labelledby="headingganaderia" data-bs-parent="#accordionganaderia">
+              <div class="accordion-body">
+                {{ ganaderia_formset.management_form }}
+                <div class="table-responsive">
+                  <table class="beautiful-table align-middle mb-0" id="ganaderia-table">
+                    <thead>
+                      <tr class="text-center">
+                        <th class="text-center">Tipo de ganadería</th>
+                        <th class="text-center">Cantidad</th>
+                        <th class="text-center">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ganaderia-body">
+                      {% for ganaderia_form in ganaderia_formset %}
+                        <tr class="ganaderia-row">
+                          <td>{{ ganaderia_form.tipo_ganaderia }}</td>
+                          <td>{{ ganaderia_form.cantidad }}</td>
+                          <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+                          </td>
+                        </tr>
+                      {% empty %}
+                        <tr id="no-ganaderia-msg">
+                          <td colspan="3" class="text-muted text-center">No hay ganadería registrada para este lote.</td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                <template id="ganaderia-empty-row">
+                  <tr class="ganaderia-row">
+                    <td>{{ ganaderia_formset.empty_form.tipo_ganaderia }}</td>
+                    <td>{{ ganaderia_formset.empty_form.cantidad }}</td>
+                    <td class="text-center">
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+                    </td>
+                  </tr>
+                </template>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-ganaderia-btn" data-prefix="ganaderia">
+                  <i class="fas fa-plus"></i> Agregar ganadería
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MEJORAS E INFRAESTRUCTURA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-tools"></i>
+        <h2 class="mb-0">5. Mejoras e Infraestructura</h2>
+      </div>
+      <div class="card-body">
+        <div class="accordion" id="accordionMejoras">
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="headingMejoras">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMejoras" aria-expanded="false" aria-controls="collapseMejoras">
+                <i class="fas fa-check-square me-2 text-primary"></i> Seleccione las mejoras que observe en el lote
+              </button>
+            </h2>
+            <div id="collapseMejoras" class="accordion-collapse collapse" aria-labelledby="headingMejoras" data-bs-parent="#accordionMejoras">
+              <div class="accordion-body">
+                <div class="row row-cols-2 row-cols-md-3 g-2" id="mejoras-checkboxes">
+                  {% for choice in form.mejoras %}
+                    <div class="col">
+                      <div class="form-check">
+                        {{ choice.tag }}
+                        <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-between gap-2">
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger"><i class="fas fa-times me-1"></i>Cancelar</a>
+        <button type="submit" class="btn btn-primary">
+          {% if origen_resumen %}Guardar y volver al resumen{% else %}Siguiente{% endif %} 
+          <i class="fas fa-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+    {% if origen_resumen %}<input type="hidden" name="origen" value="resumen">{% endif %}
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

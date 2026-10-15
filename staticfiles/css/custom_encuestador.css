@@ -131,6 +131,46 @@
   border-left-color: #8b5e3c;
   background-color: #fcf9f3;
 }
+/* Variantes de color para inner-subsection */
+.inner-subsection.blue {
+  border-left-color: #0d6efd;
+  background-color: #f0f7ff;
+}
+
+.inner-subsection.green {
+  border-left-color: #198754 !important;
+  background-color: #f0faf4 !important;
+}
+
+.inner-subsection.red {
+  border-left-color: #dc3545;
+  background-color: #fdf0f2;
+}
+
+.inner-subsection.purple {
+  border-left-color: #6f42c1;
+  background-color: #f8f0ff;
+}
+
+.inner-subsection.orange {
+  border-left-color: #fd7e14 !important;
+  background-color: #fff8f0 !important;
+}
+
+.inner-subsection.teal {
+  border-left-color: #20c997;
+  background-color: #f0fdf8;
+}
+
+.inner-subsection.pink {
+  border-left-color: #d63384;
+  background-color: #fdf0f6;
+}
+
+.inner-subsection.gray {
+  border-left-color: #6c757d;
+  background-color: #f8f9fa;
+}
 
 /* Campos de solo lectura */
 .read-only-field {

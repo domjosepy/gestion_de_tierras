@@ -113,135 +113,135 @@
 {% endblock %}
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 1. Inicializar DataTables
-    const tablas = document.querySelectorAll('.beautiful-table');
-    tablas.forEach(tabla => {
-        if (tabla.rows.length > 1) {
-            new simpleDatatables.DataTable(tabla, {
-                perPage: 10,
-                perPageSelect: [5, 10, 20, 50],
-                labels: {
-                    placeholder: "Buscar...",
-                    perPage: "registros por página",
-                    noRows: "No se encontraron solicitudes",
-                    info: "Mostrando {start} a {end} de {rows} solicitudes"
-                }
-            });
-        }
-    });
-
-    // 2. Listeners para cuando se abre cada modal
-    const modales = {
-        'asignarDigitalizadorModal': function(event) {
-            const button = event.relatedTarget;
-            document.getElementById('solicitudIdAsignar').value = button.dataset.solicitudId;
-            document.getElementById('coloniaNombreAsignar').textContent = button.dataset.coloniaNombre;
-        },
-        'cambiarDigitalizadorModal': function(event) {
-            const button = event.relatedTarget;
-            document.getElementById('solicitudIdCambiar').value = button.dataset.solicitudId;
-            document.getElementById('coloniaNombreCambiar').textContent = button.dataset.coloniaNombre;
-            document.getElementById('digitalizadorActualCambiar').textContent = button.dataset.digitalizadorActual;
-        },
-        'devolverCorreccionModal': function(event) {
-            const button = event.relatedTarget;
-            document.getElementById('solicitudIdDevolver').value = button.dataset.solicitudId;
-            document.getElementById('coloniaNombreDevolver').textContent = button.dataset.coloniaNombre;
-        },
-        'aprobarDigitalizacionModal': function(event) {
-            const button = event.relatedTarget;
-            document.getElementById('solicitudIdAprobar').value = button.dataset.solicitudId;
-            document.getElementById('coloniaNombreAprobar').value = button.dataset.coloniaNombre;
-        },
-        'rechazarDigitalizacionModal': function(event) {
-            const button = event.relatedTarget;
-            document.getElementById('solicitudIdRechazar').value = button.dataset.solicitudId;
-            document.getElementById('coloniaNombreRechazar').value = button.dataset.coloniaNombre;
-        },
-        'eliminarAsignacionModal': function(event) {
-            const button = event.relatedTarget;
-            document.getElementById('solicitudIdEliminar').value = button.dataset.solicitudId;
-            document.getElementById('coloniaNombreEliminar').textContent = button.dataset.coloniaNombre;
-            document.getElementById('digitalizadorActualEliminar').textContent = button.dataset.digitalizador;
-        }
-    };
-
-    // Registrar listeners
-    Object.keys(modales).forEach(modalId => {
-        const modalElement = document.getElementById(modalId);
-        if (modalElement) {
-            modalElement.addEventListener('show.bs.modal', modales[modalId]);
-        }
-    });
-
-    // 3. Handlers de formularios (sin duplicación)
-    const formularios = {
-        'formAsignarDigitalizador': '/sig/solicitud/{id}/asignar-usuario/',
-        'formCambiarDigitalizador': '/sig/solicitud/{id}/cambiar-usuario/',
-        'formEliminarAsignacion': '/sig/solicitud/{id}/eliminar-asignacion/',
-        'formAprobarDigitalizacion': '/sig/solicitud/{id}/aprobar-digitalizacion/',
-        'formRechazarDigitalizacion': '/sig/solicitud/{id}/rechazar-digitalizacion/'
-    };
-
-    Object.keys(formularios).forEach(formId => {
-        const form = document.getElementById(formId);
-        if (form) {
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData(this);
-                const solicitudId = formData.get('solicitud_id');
-                const url = formularios[formId].replace('{id}', solicitudId);
-                const btnSubmit = this.querySelector('button[type="submit"]');
-                
-                // Preparar datos según el formulario
-                let data = {};
-                if (formId === 'formAsignarDigitalizador' || formId === 'formCambiarDigitalizador') {
-                    data.usuario_id = formData.get('usuario_id');
-                    data.comentario = formData.get('comentario');
-                } else if (formId === 'formRechazarDigitalizacion') {
-                    data.motivo_rechazo = formData.get('motivo_rechazo');
-                } else if (formId === 'formAprobarDigitalizacion') {
-                    data.observacion = formData.get('observacion');
-                } else if (formId === 'formEliminarAsignacion') {
-                    data.comentario = formData.get('comentario');
-                }
-                
-                btnSubmit.disabled = true;
-                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        body: JSON.stringify(data),
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                        }
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        bootstrap.Modal.getInstance(this.closest('.modal')).hide();
-                        if (window.ToastManager) {
-                            window.ToastManager.mostrarToast(result.message, 'success');
-                        }
-                        setTimeout(() => location.reload(), 500);
-                    } else {
-                        alert(result.message || 'Error en la operación');
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Inicializar DataTables
+        const tablas = document.querySelectorAll('.beautiful-table');
+        tablas.forEach(tabla => {
+            if (tabla.rows.length > 1) {
+                new simpleDatatables.DataTable(tabla, {
+                    perPage: 10,
+                    perPageSelect: [5, 10, 20, 50],
+                    labels: {
+                        placeholder: "Buscar...",
+                        perPage: "registros por página",
+                        noRows: "No se encontraron solicitudes",
+                        info: "Mostrando {start} a {end} de {rows} solicitudes"
                     }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error de conexión');
-                } finally {
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = btnSubmit.dataset.originalText || 'Confirmar';
-                }
-            });
-        }
+                });
+            }
+        });
+
+        // 2. Listeners para cuando se abre cada modal
+        const modales = {
+            'asignarDigitalizadorModal': function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('solicitudIdAsignar').value = button.dataset.solicitudId;
+                document.getElementById('coloniaNombreAsignar').textContent = button.dataset.coloniaNombre;
+            },
+            'cambiarDigitalizadorModal': function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('solicitudIdCambiar').value = button.dataset.solicitudId;
+                document.getElementById('coloniaNombreCambiar').textContent = button.dataset.coloniaNombre;
+                document.getElementById('digitalizadorActualCambiar').textContent = button.dataset.digitalizadorActual;
+            },
+            'devolverCorreccionModal': function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('solicitudIdDevolver').value = button.dataset.solicitudId;
+                document.getElementById('coloniaNombreDevolver').textContent = button.dataset.coloniaNombre;
+            },
+            'aprobarDigitalizacionModal': function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('solicitudIdAprobar').value = button.dataset.solicitudId;
+                document.getElementById('coloniaNombreAprobar').value = button.dataset.coloniaNombre;
+            },
+            'rechazarDigitalizacionModal': function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('solicitudIdRechazar').value = button.dataset.solicitudId;
+                document.getElementById('coloniaNombreRechazar').value = button.dataset.coloniaNombre;
+            },
+            'eliminarAsignacionModal': function(event) {
+                const button = event.relatedTarget;
+                document.getElementById('solicitudIdEliminar').value = button.dataset.solicitudId;
+                document.getElementById('coloniaNombreEliminar').textContent = button.dataset.coloniaNombre;
+                document.getElementById('digitalizadorActualEliminar').textContent = button.dataset.digitalizador;
+            }
+        };
+
+        // Registrar listeners
+        Object.keys(modales).forEach(modalId => {
+            const modalElement = document.getElementById(modalId);
+            if (modalElement) {
+                modalElement.addEventListener('show.bs.modal', modales[modalId]);
+            }
+        });
+
+        // 3. Handlers de formularios (sin duplicación)
+        const formularios = {
+            'formAsignarDigitalizador': '/sig/solicitud/{id}/asignar-usuario/',
+            'formCambiarDigitalizador': '/sig/solicitud/{id}/cambiar-usuario/',
+            'formEliminarAsignacion': '/sig/solicitud/{id}/eliminar-asignacion/',
+            'formAprobarDigitalizacion': '/sig/solicitud/{id}/aprobar-digitalizacion/',
+            'formRechazarDigitalizacion': '/sig/solicitud/{id}/rechazar-digitalizacion/'
+        };
+
+        Object.keys(formularios).forEach(formId => {
+            const form = document.getElementById(formId);
+            if (form) {
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    const solicitudId = formData.get('solicitud_id');
+                    const url = formularios[formId].replace('{id}', solicitudId);
+                    const btnSubmit = this.querySelector('button[type="submit"]');
+                    
+                    // Preparar datos según el formulario
+                    let data = {};
+                    if (formId === 'formAsignarDigitalizador' || formId === 'formCambiarDigitalizador') {
+                        data.usuario_id = formData.get('usuario_id');
+                        data.comentario = formData.get('comentario');
+                    } else if (formId === 'formRechazarDigitalizacion') {
+                        data.motivo_rechazo = formData.get('motivo_rechazo');
+                    } else if (formId === 'formAprobarDigitalizacion') {
+                        data.observacion = formData.get('observacion');
+                    } else if (formId === 'formEliminarAsignacion') {
+                        data.comentario = formData.get('comentario');
+                    }
+                    
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                    
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            body: JSON.stringify(data),
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                            }
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            bootstrap.Modal.getInstance(this.closest('.modal')).hide();
+                            if (window.ToastManager) {
+                                window.ToastManager.mostrarToast(result.message, 'success');
+                            }
+                            setTimeout(() => location.reload(), 500);
+                        } else {
+                            alert(result.message || 'Error en la operación');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error de conexión');
+                    } finally {
+                        btnSubmit.disabled = false;
+                        btnSubmit.innerHTML = btnSubmit.dataset.originalText || 'Confirmar';
+                    }
+                });
+            }
+        });
     });
-});
 </script>
 {% endblock %}

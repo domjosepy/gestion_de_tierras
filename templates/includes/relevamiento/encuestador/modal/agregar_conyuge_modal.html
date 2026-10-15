@@ -1,0 +1,51 @@
+<!-- ============================================================ -->
+<!-- MODAL: CÓNYUGE (parcial reutilizable) -->
+<!-- ============================================================ -->
+<div class="modal fade modal-secondary" id="modalPersona" tabindex="-1" aria-labelledby="modalPersonaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title text-white" id="modalPersonaLabel">
+            <i class="fa-solid fa-venus-mars m-2"></i>Datos del Cónyuge</h5>
+          <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">Nombre y Apellido</label>
+              <input type="text" class="form-control" id="modal_persona_nombre">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Cédula</label>
+              <input type="text" class="form-control" id="modal_persona_ci">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Sexo</label>
+              <select class="form-select" id="modal_persona_sexo">
+                <option value="">---------</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Estado Civil</label>
+              <select class="form-select" id="modal_persona_estado_civil">
+                <option value="">---------</option>
+                {% for value, text in form.estado_civil_conyuge.field.choices %}
+                  {% if value %}<option value="{{ value }}">{{ text }}</option>{% endif %}
+                {% endfor %}
+
+              </select>
+            </div>
+          </div>
+          <div class="text-danger small mt-2 d-none" id="persona-modal-error">El nombre es obligatorio.</div>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-outline-primary" id="guardar-persona-btn">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

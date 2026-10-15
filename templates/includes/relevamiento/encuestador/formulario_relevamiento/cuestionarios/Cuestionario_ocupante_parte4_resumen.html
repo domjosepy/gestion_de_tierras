@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta — Ficha de presentación{% endblock %}
+
+{% block content %}
+
+<div class="ficha-page">
+  <article class="ficha">
+
+    {# ── RAIL VERTICAL ────────────────────────────── #}
+    <div class="ficha-rail" aria-hidden="true"></div>
+
+    {# ── HEADER ───────────────────────────────────── #}
+    <header class="ficha-header">
+      <div class="ficha-status">
+        <span class="ficha-badge {% if completo %}is-done{% endif %}">
+          <span class="dot"></span>
+          {% if completo %}Finalizado{% else %}Borrador{% endif %}
+        </span>
+      </div>
+
+      <h1 class="ficha-title text-center">
+        {% if completo %}Ficha de relevamiento finalizado{% else %}Ficha de presentación{% endif %}
+      </h1>
+     
+
+      {# Mini-grid de meta — estilo ficha técnica #}
+      <dl class="ficha-meta">
+        <div>
+          <dt>Solicitud De Relevamiento</dt>
+          <dd class="mono">{{ orden.solicitud_id}}</dd>
+        </div>
+        <div>
+          <dt>Orden de trabajo</dt>
+          <dd class="mono">{{ orden.numero_orden}}</dd>
+        </div>
+        <div>
+          <dt>Fecha de Encuesta</dt>
+          <dd class="mono">{{ relevamiento.fecha_de_encuesta|date:"d/m/Y" }}</dd>
+        </div>
+      </dl>
+
+      {# Equipo en chips #}
+      <div class="ficha-team">
+        <span class="ficha-chip">
+          <i class="fas fa-user-tie"></i>
+          <span class="lbl">Coordinador</span>
+          <span class="val">{{ coordinador|default:"—" }}</span>
+        </span>
+        <span class="ficha-chip">
+          <i class="fas fa-users"></i>
+          <span class="lbl">Subcoord.</span>
+          <span class="val">{{ subcoordinadores|join:", "|default:"—" }}</span>
+        </span>
+        <span class="ficha-chip">
+          <i class="fas fa-user-edit"></i>
+          <span class="lbl">Encuestador</span>
+          <span class="val">{{ relevamiento.encuestador.get_full_name|default:relevamiento.encuestador.username }}</span>
+        </span>
+      </div>
+    </header>
+
+    {# ── CUERPO: secciones numeradas ──────────────── #}
+    <div class="ficha-body">
+      {% for sec in secciones %}
+        <section class="ficha-sec">
+          <div class="ficha-sec-head">
+            <div class="ficha-sec-title">
+              <span class="ficha-num">{{ forloop.counter|stringformat:"02d" }}</span>
+              <span class="ficha-icon tone-{{ sec.tone|default:'slate' }}">
+                <i class="fas {{ sec.icon|default:'fa-circle-dot' }}"></i>
+              </span>
+              <span class="ficha-sec-name">{{ sec.titulo }}</span>
+            </div>
+            {% if not completo %}
+              <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk sec.editar %}?origen=resumen"
+                 class="ficha-edit" title="Editar {{ sec.titulo }}">
+                <i class="fas fa-pencil-alt"></i> Editar
+              </a>
+            {% endif %}
+          </div>
+
+          <div class="ficha-grid">
+            {% for etiqueta, valor in sec.items %}
+              <div class="ficha-field">
+                <span class="lbl">{{ etiqueta }}</span>
+                <span class="val">{{ valor }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+      {% empty %}
+        <section class="ficha-sec">
+          <p class="ficha-empty">Todavía no se cargaron datos en este relevamiento.</p>
+        </section>
+      {% endfor %}
+
+      {# Fotos — última sección corporativa #}
+      {% url 'relevamiento:agregar_fotos' relevamiento.pk as url_fotos %}
+      <section class="ficha-sec ficha-sec-photos">
+        <div class="ficha-sec-head">
+          <div class="ficha-sec-title">
+            <span class="ficha-num">{{ secciones|length|add:"1"|stringformat:"02d" }}</span>
+            <span class="ficha-icon tone-slate"><i class="fas fa-camera"></i></span>
+            <span class="ficha-sec-name">Fotos</span>
+          </div>
+          {% if not completo and url_fotos %}
+            <a href="{{ url_fotos }}" class="ficha-edit">
+              <i class="fas fa-plus"></i> Agregar fotos
+            </a>
+          {% endif %}
+        </div>
+        <div class="ficha-grid">
+          <div class="ficha-field">
+            <span class="lbl">Cantidad</span>
+            <span class="val">
+              {% if cantidad_fotos %}
+                {{ cantidad_fotos }} foto{{ cantidad_fotos|pluralize }} cargada{{ cantidad_fotos|pluralize }}
+              {% else %}
+                Sin fotos cargadas
+              {% endif %}
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    {# ── PIE / ACCIONES ───────────────────────────── #}
+    <form method="post" class="ficha-actions">
+      {% csrf_token %}
+      {% if completo %}
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="f-btn f-btn-ghost">
+          <i class="fas fa-arrow-left"></i> Volver al panel
+        </a>
+        <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}" class="f-btn f-btn-primary">
+          <i class="fas fa-plus"></i> Nueva encuesta
+        </a>
+      {% else %}
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="f-btn f-btn-ghost">
+          <i class="fas fa-times"></i> Cancelar
+        </a>
+        <button type="submit" class="f-btn f-btn-success">
+          <i class="fas fa-check"></i> Confirmar y finalizar
+        </button>
+      {% endif %}
+    </form>
+
+  </article>
+</div>
+{% endblock %}

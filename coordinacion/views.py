@@ -255,13 +255,7 @@ def generar_orden_view(request, solicitud_id):
                         # Asociar equipo a la orden
                         orden.equipos_asignados.add(equipo)
                         orden.estado = 'asignada'
-                        # Antes de crear la nueva orden
-                        OrdenTrabajo.objects.filter(
-                            solicitud=solicitud, activa=True).update(activa=False)
                         orden.save()
-
-                    # 5. Auditoría adicional (puede ser manejada por signals o manual)
-                    # (Opcional: registrar en SolicitudRelevamientoAudit los cambios en los campos de equipo)
 
                     messages.success(
                         request, f'Orden {orden.numero_orden} generada exitosamente.')

@@ -1,0 +1,33 @@
+<!-- ============================================================ -->
+<!-- SECCIÓN: DOCUMENTOS ADJUNTOS (parcial reutilizable) -->
+<!-- ============================================================ -->
+<div class="card mb-4">
+  <div class="card-header card-header-brown-light">
+    <i class="fas fa-paperclip"></i>
+    <h2 class="mb-0">Documentos Adjuntos</h2>
+  </div>
+  <div class="card-body">
+    {{ documento_formset.management_form }}
+    <div id="documentos-container">
+      {% for doc_form in documento_formset %}
+      <div class="documento-block border rounded p-3 mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Documento {{ forloop.counter }}</h6>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+        </div>
+        {% if doc_form.errors %}<div class="alert alert-danger small py-1">{{ doc_form.errors }}</div>{% endif %}
+        {{ doc_form.as_p }}
+      </div>
+      {% empty %}
+      <p class="text-muted small">Sin documentos adjuntos.</p>
+      {% endfor %}
+    </div>
+    <div id="documentos-empty" style="display:none">{{ documento_formset.empty_form.as_p }}</div>
+    <button type="button" class="btn btn-outline-secondary mt-2 add-block-btn"
+            data-container="documentos-container"
+            data-prefix="{{ documento_formset.prefix }}"
+            data-total="{{ documento_formset.total_form_count }}">
+      <i class="fas fa-plus me-1"></i>Agregar documento
+    </button>
+  </div>
+</div>

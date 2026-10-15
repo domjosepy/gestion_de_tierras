@@ -51,6 +51,14 @@
 .text-orange { color: var(--color-orange) !important; }
 .bg-orange { background-color: var(--color-orange); } 
 
+/* Bloques de vivienda y miembros */
+.vivienda-block {
+  background: #fff;
+}
+.miembro-form-row {
+  background: #fdfdfd;
+}
+
 /* Hover suave */
 .text-hover:hover {
   opacity: 0.8;
@@ -65,6 +73,23 @@
 }
 .icon:hover {
   transform: scale(1.1);
+}
+
+/* Checkbox múltiple (equipamientos, mejoras): en columnas */
+.miembros-block ul,
+.vivienda-block ul {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.25rem 0.75rem;
+}
+.miembros-block ul li,
+.vivienda-block ul li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 /* ================================= */
@@ -1240,84 +1265,6 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
   transform: scale(1.1) rotate(-8deg); 
 }
 
-/* ================================ */
-/* CARD HEADER - TONOS MARRONES     */
-/* ================================ */
-.card-header-brown {
-  background: linear-gradient(
-    90deg, 
-    #5c4033 70%,   /* marrón oscuro */
-    #8b5e3c 100%   /* marrón más claro */
-  ) !important;
-  border-bottom: none !important;
-  padding: 1rem 1.25rem !important;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 3.5rem;
-}
-
-.card-header-brown h2 {
-  font-weight: 600;
-  color: #fff;
-  margin: 0;
-  font-size: 1.1rem;
-  text-shadow: 0 2px 8px rgba(92,64,51,0.15); 
-  transition: color 0.2s;
-}
-
-.card-header-brown i {
-  font-size: 1.4rem;
-  margin: 0;
-  color: #d4a373; /* tono arena/dorado para contraste */
-  filter: none;
-}
-
-.card-header-brown i:hover { 
-  color: #f0c987; 
-  transform: scale(1.1) rotate(-8deg); 
-}
-
-/* ===================================== */
-/* CARD HEADER - MARRONES SUAVES (LIGHT) */
-/* ===================================== */
-.card-header-brown-light {
-  background: linear-gradient(
-    90deg, 
-    #c4a484 70%,   /* beige/marrón claro */
-    #e0c097 100%   /* tono café con leche */
-  ) !important;
-  border-bottom: none !important;
-  padding: 1rem 1.25rem !important;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 3.5rem;
-}
-
-.card-header-brown-light h2 {
-  font-weight: 600;
-  color: #3e2f1c; /* marrón oscuro para contraste */
-  margin: 0;
-  font-size: 1.1rem;
-  text-shadow: 0 2px 6px rgba(62,47,28,0.15); 
-  transition: color 0.2s;
-}
-
-.card-header-brown-light i {
-  font-size: 1.4rem;
-  margin: 0;
-  color: #a67c52; /* marrón medio/dorado */
-  filter: none;
-}
-
-.card-header-brown-light i:hover { 
-  color: #c49b66; 
-  transform: scale(1.1) rotate(-8deg); 
-}
-
 /* ===================================== */
 /* CARD HEADER - SECONDARY (GRIS AZULADO)*/
 /* ===================================== */
@@ -1475,6 +1422,84 @@ body.sb-sidenav-toggled .sidebar .sidebar-brand-text {
 .card-header-warning i:hover {
   color: #ffd166;
   transform: scale(1.1) rotate(-8deg);
+}
+
+/* ================================ */
+/* CARD HEADER - TONOS MARRONES     */
+/* ================================ */
+.card-header-brown {
+  background: linear-gradient(
+    90deg, 
+    #5c4033 70%,   /* marrón oscuro */
+    #8b5e3c 100%   /* marrón más claro */
+  ) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-brown h2 {
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 8px rgba(92,64,51,0.15); 
+  transition: color 0.2s;
+}
+
+.card-header-brown i {
+  font-size: 1.4rem;
+  margin: 0;
+  color: #d4a373; /* tono arena/dorado para contraste */
+  filter: none;
+}
+
+.card-header-brown i:hover { 
+  color: #f0c987; 
+  transform: scale(1.1) rotate(-8deg); 
+}
+
+/* ===================================== */
+/* CARD HEADER - MARRONES SUAVES (LIGHT) */
+/* ===================================== */
+.card-header-brown-light {
+  background: linear-gradient(
+    90deg, 
+    #c4a484 70%,   /* beige/marrón claro */
+    #e0c097 100%   /* tono café con leche */
+  ) !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+
+.card-header-brown-light h2 {
+  font-weight: 600;
+  color: #3e2f1c; /* marrón oscuro para contraste */
+  margin: 0;
+  font-size: 1.1rem;
+  text-shadow: 0 2px 6px rgba(62,47,28,0.15); 
+  transition: color 0.2s;
+}
+
+.card-header-brown-light i {
+  font-size: 1.4rem;
+  margin: 0;
+  color: #a67c52; /* marrón medio/dorado */
+  filter: none;
+}
+
+.card-header-brown-light i:hover { 
+  color: #c49b66; 
+  transform: scale(1.1) rotate(-8deg); 
 }
 
 
@@ -2007,7 +2032,7 @@ table.dataTable td .dropdown-item:hover {
 /* 3. GRUPO ÉXITO / FINALIZADOS (Verde)
    Hitos positivos o fin del proceso */
 .status-dot[data-estado="aprobado_para_campo"],
-.status-dot[data-estado="finalizado"]
+.status-dot[data-estado="finalizado"],
 .status-dot[data-estado="true"] {
     background-color: #198754;
     box-shadow: 0 0 5px rgba(25, 135, 84, 0.5);
@@ -2015,8 +2040,29 @@ table.dataTable td .dropdown-item:hover {
 
 /* 4. GRUPO CRÍTICO (Rojo)
    Acciones que detienen el flujo */
-.status-dot[data-estado="rechazado"]
+.status-dot[data-estado="rechazado"],
 .status-dot[data-estado="false"] {
     background-color: #dc3545;
     box-shadow: 0 0 5px rgba(220, 53, 69, 0.5);
+}
+
+.mini-accordion-header {
+    width: 100%;
+    text-align: left;
+    background-color: #f1f3f5;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    cursor: pointer;
+    margin-top: 0.5rem;
+}
+.mini-accordion-header:hover { background-color: #e9ecef; }
+.mini-accordion-body {
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
 }

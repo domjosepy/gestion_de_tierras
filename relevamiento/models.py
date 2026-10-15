@@ -6,6 +6,8 @@ from datetime import datetime
 from django.db import transaction
 from django.db.models import Max
 from django.apps import apps
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 # ============================
 # FUNCIONES DE UTILIDAD PARA UPLOAD_TO
@@ -145,95 +147,138 @@ def path_relevamiento_fotos_upload(instance, filename):
 # CHOICES
 # ============================
 
-USO_LOTE_CHOICES = [
-    ("agropecuario_forestal", "Agropecuario/Forestal"),
-    ("forestal_nativa", "Forestal - Nativa"),
-    ("forestal_reforestado", "Forestal - Reforestado"),
-    ("barbecho_descanso", "Barbecho - Descanso"),
-    ("abandonado", "Abandonado"),
-    ("comercial", "Comercial"),
-    ("industrial", "Industrial"),
-    ("local_politico", "Local Político"),
-    ("local_recreativo", "Local Recreativo"),
-    ("local_religioso", "Local Religioso"),
-    ("sitio_vacio", "Sitio Vacío"),
-    ("solo_vivienda", "Solo Vivienda"),
-    ("institucion_organizacion", "Institución/Organización"),
-
+# ver si se puede automatizar el check, por ej. registro es igual a REGISTRO-
+USO_LOTE_OCUPANTE_CHOICES = [
+    ("agropecuario_forestal", "Agropecuario/Forestal"), ("forestal_nativa", "Forestal - Nativa"),
+    ("forestal_reforestado", "Forestal - Reforestado"), ("barbecho_descanso", "Barbecho - Descanso"),
+    ("abandonado", "Abandonado"), ("comercial", "Comercial"), ("sitio_vacio", "Sitio Vacío"), 
 ]
 
+USO_LOTE_SERVICIO_CHOICES = [
+    ("abandonado", "Abandonado"), ("comercial", "Comercial"), ("industrial", "Industrial"),
+    ("local_politico", "Local Político"), ("local_recreativo", "Local Recreativo"),
+    ("local_religioso", "Local Religioso"), ("sitio_vacio", "Sitio Vacío"), 
+    ("institucion_organizacion", "Institución/Organización"),
+]
+
+
 MEJORAS_CHOICES = [
-    ("galpon", "Galpón"),
-    ("corrales", "Corrales"),
-    ("bretes", "Bretes"),
-    ("represa", "Represa"),
-    ("sanitarios", "Instalaciones Sanitarias"),
-    ("pozo", "Pozo"),
-    ("tajamares", "Tajamares"),
-    ("mangas", "Mangas"),
-    ("cercado_perimetral", "Cercado Perimetral"),
-    ("silos", "Silos"),
-    ("canales_riego", "Canales de Irrigación"),
-    ("energia_electrica", "Energía Eléctrica"),
+    ("galpon", "Galpón"), ("corrales", "Corrales"), ("bretes", "Bretes"), ("represa", "Represa"),
+    ("sanitarios", "Instalaciones Sanitarias"), ("pozo", "Pozo"), ("tajamares", "Tajamares"),
+    ("mangas", "Mangas"), ("cercado_perimetral", "Cercado Perimetral"), ("silos", "Silos"),
+    ("canales_riego", "Canales de Irrigación"), ("energia_electrica", "Energía Eléctrica"),
     ("agua_potable", "Agua Potable"),
 ]
 
 EQUIPAMIENTOS_CHOICES = [
-    ("energia_electrica", "Energía Eléctrica"),
-    ("agua_corriente", "Agua Corriente"),
-    ("cocina", "Cocina"),
-    ("bano", "Baño"),
+    ("energia_electrica", "Energía Eléctrica"), ("agua_corriente", "Agua Corriente"),
+    ("cocina", "Cocina"), ("heladera", "Heladera"), ("lavadora", "Lavadora"), ("bano", "Baño"), 
+    ("computadora", "Computadora"), ("internet", "Internet"), ("television", "Televisión"), ("radio", "Radio"), 
     ("telefono_fijo", "Teléfono Fijo"),
-    ("internet", "Internet"),
+    ("vehiculo", "Vehículo"), ("motocicleta", "Motocicleta"),("bicicleta", "Bicicleta"),("tractor", "Tractor"),
+    ("camion", "Camión"),
+
 ]
 
-MOD_POST_CHOICES = [
+MODIFICACIONES_POSTADJUDICACION_CHOICES = [
     ("cambio_recurrente", "Cambio de Recurrente"),
     ("correccion_superficie", "Corrección de Superficie"),
     ("ampliacion", "Ampliación"),
 ]
 
+COND_VIVIENDA_CHOICES = [
+    ("presente", "Presente"),
+    ("ausente", "Ausente"),
+    ("sin_vivienda", "Sin vivienda"),
+    ("servicio", "Servicio"),
+    ("en_construccion", "En construcción"),
+    ("desocupada", "Desocupada")
+]
+
+ESTADO_CIVIL_CHOICES = [
+    ("soltero", "Soltero/a"),
+    ("casado", "Casado/a"),
+    ("concubino", "Concubino/a"),
+    ("divorciado", "Divorciado/a"),
+    ("viudo", "Viudo/a"),
+]
+
+# Tipo de registro del formulario (define el flujo/wizard a seguir)
+TIPO_REGISTRO_CHOICES = [
+    ("ocupante", "Ocupante"),
+    ("conflicto", "Conflicto"),
+    ("servicio", "Servicio"),
+    ("fraccionamiento", "Fraccionamiento"),
+]
+
+TIPO_CULTIVO_CHOICES = [
+    ("algodon", "Algodón"), ("arroz", "Arroz"), ("banano", "Banano"), ("cana_dulce", "Caña de azúcar"), ("canola", "Canola"),
+    ("cebolla", "Cebolla"), ("citricos", "Cítricos (naranja, limón, etc.)"), ("forestal", "Forestal (eucalipto, pino, etc.)"), 
+    ("forrajeras", "Forrajeras (pastura)"), ("girasol", "Girasol"), ("legumbre_batata", "Legumbre / Batata"), ("locote", "Locote"),
+    ("maiz_chipa", "Maíz Chipá"), ("maiz_tupi", "Maíz Tupí"), ("mandioca", "Mandioca"), ("mango", "Mango"), ("mani", "Maní"),
+    ("melon", "Melón"), ("pina", "Piña"), ("poroto", "Poroto"), ("sandia", "Sandía"), ("sesamo", "Sésamo"), ("soja", "Soja"),
+    ("tomate", "Tomate"), ("trigo", "Trigo"), ("yerba_mate", "Yerba Mate"), ("zapallo", "Zapallo"), ("otro", "Otro"),
+]
+
+
+TIPO_GANADERIA_CHOICES = [
+    ("bovinos", "Bovinos"), ("porcinos", "Porcinos"), ("aves", "Aves"), ("caprinos", "Caprinos"),
+    ("ovinos", "Ovinos"), ("equinos", "Equinos"), ("conejos", "Conejos"), ("patos", "Patos"), 
+    ("pavos", "Pavos"), ("otros", "Otros"),
+]
+
 
 class Relevamiento(models.Model):
-    # 1 - DATOS DEL LOTE
+
+    # 1 - DATOS GEOGRAFICOS
     departamento = models.ForeignKey(
         "core.Departamento", on_delete=models.PROTECT, null=True, blank=True)
     distrito = models.ForeignKey(
         "core.Distrito", on_delete=models.PROTECT, null=True, blank=True)
     colonia = models.ForeignKey(
         "core.Colonia", on_delete=models.PROTECT, null=True, blank=True)
-
+    # DATOS DEL LOTE
     manzana = models.CharField(max_length=50, blank=True)
     lote_indert = models.CharField(max_length=50, blank=True)
     lote_sirt = models.CharField(max_length=50, blank=True)
+    frente_aprox = models.PositiveIntegerField(null=True, blank=True, verbose_name="Frente aproximado (m)")
+    fondo_aprox = models.PositiveIntegerField(null=True, blank=True, verbose_name="Fondo aproximado (m)")
     formulario = models.IntegerField(null=True, blank=True, auto_created=True)
     observacion_encuesta = models.TextField(blank=True)
 
-    uso_lote = ArrayField(
-        base_field=models.CharField(max_length=50, choices=USO_LOTE_CHOICES),
+    #id compuesto por id del departamento, distrito, colonia, manzana y lote_indert
+    id_relevamiento = models.CharField(max_length=255, editable=False, blank=True, null=True)
+    # Tipo de registro: define el flujo (Ocupante/Conflicto/Servicio/Fraccionamiento)
+    tipo_registro = models.CharField(
+        max_length=20, choices=TIPO_REGISTRO_CHOICES, default="ocupante",
+        verbose_name="Tipo de Registro")
+
+    uso_lote_ocupante = ArrayField(
+        base_field=models.CharField(max_length=50, choices=USO_LOTE_OCUPANTE_CHOICES),
         blank=True,
         null=True,
         default=list,
     )
+    uso_lote_servicio = ArrayField(
+            base_field=models.CharField(max_length=50, choices=USO_LOTE_SERVICIO_CHOICES),
+            blank=True,
+            null=True,
+            default=list,
+        )
 
-    # 2 - DOCUMENTOS DEL LOTE
-    nro_titulo = models.CharField(max_length=200, blank=True)
-
-    # 3 - DATOS DE LA OCUPACIÓN
+    # 2 - DATOS DE LA OCUPACIÓN
     TIPO_LOTE_CHOICES = [("agricola", "Agrícola"),
                          ("quinta", "Quinta"), ("urbano", "Urbano")]
 
     tipo_lote = models.CharField(
         max_length=20, choices=TIPO_LOTE_CHOICES, blank=True)
-
-    COND_VIVIENDA_CHOICES = [
-        ("presente", "Presente"),
-        ("ausente", "Ausente"),
-        ("sin_vivienda", "Sin vivienda"),
-        ("servicio", "Servicio"),
-    ]
+    
+    superficie_ha = models.FloatField(null=True, blank=True)
+    dimensiones = models.CharField(max_length=200, blank=True)
+    vive_en_lote = models.BooleanField(default=False)
     condicion_vivienda = models.CharField(
-        max_length=20, choices=COND_VIVIENDA_CHOICES, blank=True)
+        max_length=20, choices=COND_VIVIENDA_CHOICES, default="sin_vivienda")
+
 
     COND_ENCUESTADO_CHOICES = [
         ("titular", "Titular"),
@@ -243,19 +288,42 @@ class Relevamiento(models.Model):
     ]
 
     condicion_encuestado = models.CharField(
-        max_length=20, choices=COND_ENCUESTADO_CHOICES, blank=True)
+        max_length=20, choices=COND_ENCUESTADO_CHOICES, default="ocupante")
 
-    superficie_ha = models.FloatField(null=True, blank=True)
-    dimensiones = models.CharField(max_length=200, blank=True)
-    vive_en_lote = models.BooleanField(default=False)
+    # ── Progreso del wizard ──────────────────────────────────────────────
+    ESTADO_CARGA_CHOICES = [
+        ("parte_1", "Datos geográficos y ocupante"),
+        ("parte_2", "Datos del lote"),
+        ("parte_3", "Vivienda / Datos productivos"),
+        ("parte_4", "Información de encuesta"),
+        ("completo", "Completo"),
+    ]
+    estado_carga = models.CharField(
+        max_length=20, choices=ESTADO_CARGA_CHOICES, default="parte_1",
+        verbose_name="Estado de carga"
+    )
+
+    # ── Datos del ocupante ───────────────────────────────────────────────
+    quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
+    cedula_ocupante = models.CharField(
+        max_length=8,
+        blank=True, null=True
+    )
+    sexo_ocupante = models.CharField(max_length=1, choices=[("M", "Masculino"), ("F", "Femenino")], blank=True)
+    estado_civil_ocupante = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
+
+    # Datos del conyuge
+    quien_es_el_conyuge = models.CharField(max_length=200, blank=True)
+    cedula_conyuge = models.CharField(max_length=8,blank=True, null=True)
+    sexo_conyuge = models.CharField(max_length=1, choices=[("M", "Masculino"), ("F", "Femenino")], blank=True)
+    estado_civil_conyuge = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
+           
 
     # Si no vive en el lote: datos de residencia
     residencia_manzana = models.CharField(max_length=50, blank=True)
     residencia_lote = models.CharField(max_length=50, blank=True)
-    quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
-    cedula_ocupante = models.IntegerField(blank=True, null=True)
-    sexo_ocupante = models.CharField(max_length=1, choices=[("M", "Masculino"), ("F", "Femenino")], blank=True)
     parentesco = models.CharField(max_length=200, blank=True)
+    encargado_residencia = models.CharField(max_length=200, blank=True)
 
     # 4 - USO DE LA TIERRA Y MEJORAS
     produccion_agricola_ha = models.FloatField(default=0, blank=True)
@@ -263,6 +331,15 @@ class Relevamiento(models.Model):
     reforestado_ha = models.FloatField(default=0, blank=True)
     bosque_natural_ha = models.FloatField(default=0, blank=True)
     barbecho_ha = models.FloatField(default=0, blank=True)
+
+    parent_lote = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='sub_lotes',
+        verbose_name="Lote padre (si es sub-lote)"
+    )
 
     mejoras = ArrayField(
         base_field=models.CharField(max_length=50, choices=MEJORAS_CHOICES),
@@ -285,7 +362,7 @@ class Relevamiento(models.Model):
     firmo_solicitud = models.BooleanField(default=False)
 
     modificaciones_post = ArrayField(
-        base_field=models.CharField(max_length=50, choices=MOD_POST_CHOICES),
+        base_field=models.CharField(max_length=50, choices=MODIFICACIONES_POSTADJUDICACION_CHOICES),
         blank=True,
         null=True,
         default=list,
@@ -328,15 +405,51 @@ class Relevamiento(models.Model):
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
 
+    fecha_de_encuesta = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Fecha y hora de la encuesta",
+        help_text="Se completa automáticamente al confirmar y finalizar el relevamiento."
+    )
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["departamento", "distrito", "colonia", "manzana", "lote_indert"],
+                name="unique_relevamiento"
+            )
+        ]
+    
     def __str__(self):
         return f"Relevamiento #{self.pk} - {self.colonia or 'sin colonia'}"
 
     def save(self, *args, **kwargs):
+        # Generamos el id compuesto por id del departamento, distrito, colonia, manzana y lote_indert
+        if self.departamento and self.distrito and self.colonia and self.manzana and self.lote_indert:
+            self.id_relevamiento = f"{self.departamento}-{self.distrito}-{self.colonia}-{self.manzana}_{self.lote_indert}"
+
+        #Guardamos lote_sirt igual a lote indert
+        if self.lote_indert:
+            self.lote_sirt = self.lote_indert
+
+        #Guardamos los campos quien_es_el_ocupante y quien_es_el_conyuge en mayúsculas
+        if self.quien_es_el_ocupante:
+            self.quien_es_el_ocupante = self.quien_es_el_ocupante.upper()
+        if self.quien_es_el_conyuge:
+            self.quien_es_el_conyuge = self.quien_es_el_conyuge.upper()
+
+        # Guardamos observaciones de relevamiento en mayúsculas
+        if self.observacion_encuesta:
+            self.observacion_encuesta = self.observacion_encuesta.upper()
+            
+        # Si el tipo de registro es "servicio", se establece la condición de vivienda como "servicio"
+        if self.tipo_registro == "servicio":
+            self.condicion_vivienda = "servicio"
+
         """
         Auto-asigna el campo `formulario` de forma incremental por `orden_trabajo`.
         Se usa bloqueo transaccional sobre la fila de `OrdenTrabajo` para evitar
         condiciones de carrera cuando se crean relevamientos concurrentes.
         """
+
         # Solo asignar si no está definido y existe orden_trabajo
         if (self.formulario is None or self.formulario == '') and getattr(self, 'orden_trabajo_id', None):
             with transaction.atomic():
@@ -351,6 +464,48 @@ class Relevamiento(models.Model):
                 self.formulario = 1 if last is None else (last + 1)
 
         super().save(*args, **kwargs)
+
+    def siguiente_sufijo_sublote(self):
+        """Siguiente letra secuencial (A, B, C...) para el próximo sub-lote de fraccionamiento."""
+        existentes = self.sub_lotes.count()
+        return chr(ord('A') + existentes)
+
+
+class Pretendiente(models.Model):
+    """Representa a cada reclamante en un lote en conflicto."""
+    relevamiento = models.ForeignKey(
+        Relevamiento,
+        on_delete=models.CASCADE,
+        related_name='pretendientes'
+    )
+    nombre_pretendiente = models.CharField(max_length=200)
+    ci_pretendiente = models.CharField(max_length=100, blank=True)
+    sexo_pretendiente = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], blank=True)
+    estado_civil_pretendiente = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
+    condicion_vivienda = models.CharField(max_length=20, choices=COND_VIVIENDA_CHOICES, blank=True)
+    vive_en_lote = models.BooleanField(default=False)
+    residencia_manzana = models.CharField(max_length=50, blank=True)
+    residencia_lote = models.CharField(max_length=50, blank=True)
+    quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
+    parentesco = models.CharField(max_length=200, blank=True)
+
+    produccion_agricola_ha = models.FloatField(default=0, blank=True)
+    produccion_ganadera_ha = models.FloatField(default=0, blank=True)
+    reforestado_ha = models.FloatField(default=0, blank=True)
+    bosque_natural_ha = models.FloatField(default=0, blank=True)
+    barbecho_ha = models.FloatField(default=0, blank=True)
+
+    mejoras = ArrayField(
+        base_field=models.CharField(max_length=50, choices=MEJORAS_CHOICES),
+        blank=True,
+        null=True,
+        default=list,
+    )
+
+    observaciones = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.nombre_pretendiente} (Pretendiente)"
 
 
 class Documento(models.Model):
@@ -372,6 +527,13 @@ class Documento(models.Model):
         help_text="Se guardará en: relevamiento/{depto}/{distrito}/{colonia}/{fecha_OT}/FOTOS/"
     )
     nombre_archivo = models.CharField(max_length=255, blank=True)
+    pretendiente = models.ForeignKey(
+        'Pretendiente',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='documentos'
+    )
 
     def __str__(self):
         return f"{self.tipo} - {self.nombre_archivo or (self.archivo.name if self.archivo else '')}"
@@ -380,23 +542,47 @@ class Documento(models.Model):
 class Cultivo(models.Model):
     TIPO_SIEMBRA = [("temporal", "Temporal"), ("permanente", "Permanente")]
     relevamiento = models.ForeignKey(
-        Relevamiento, on_delete=models.CASCADE, related_name="cultivos")
-    descripcion = models.CharField(max_length=200)
-    tipo_siembra = models.CharField(max_length=20, choices=TIPO_SIEMBRA)
+        Relevamiento,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="cultivos"
+    )
+    pretendiente = models.ForeignKey(
+        'Pretendiente',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='cultivos'
+    )
+    tipo_cultivo = models.CharField(max_length=50, choices=TIPO_CULTIVO_CHOICES)
+    tipo_siembra = models.CharField(max_length=20, choices=TIPO_SIEMBRA, blank=True)
     hectareas = models.FloatField()
 
     def __str__(self):
-        return f"{self.descripcion} ({self.hectareas} Ha)"
+        return f"{self.get_tipo_cultivo_display()} ({self.hectareas} Ha)"
 
 
 class ProduccionGanadera(models.Model):
     relevamiento = models.ForeignKey(
-        Relevamiento, on_delete=models.CASCADE, related_name="producciones_ganaderas")
-    descripcion = models.CharField(max_length=200)
+        Relevamiento,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="producciones_ganaderas"
+    )
+    pretendiente = models.ForeignKey(
+        'Pretendiente',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='producciones_ganaderas'
+    )
+    tipo_ganaderia = models.CharField(max_length=50, choices=TIPO_GANADERIA_CHOICES)
     cantidad = models.IntegerField()
 
     def __str__(self):
-        return f"{self.descripcion} x {self.cantidad}"
+        return f"{self.get_tipo_ganaderia_display()} x {self.cantidad}"
 
 
 class Vivienda(models.Model):
@@ -411,8 +597,22 @@ class Vivienda(models.Model):
     BANO = [("letrina", "Letrina"), ("pozo_ciego", "Baño con Pozo Ciego"),
             ("alcantarillado", "Baño con Alcantarillado"), ("no_tiene", "No Tiene")]
 
-    relevamiento = models.OneToOneField(
-        Relevamiento, on_delete=models.CASCADE, related_name="vivienda", null=True, blank=True)
+    relevamiento = models.ForeignKey(
+        Relevamiento,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='viviendas'
+    )
+    pretendiente = models.ForeignKey(
+        'Pretendiente',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='viviendas'
+    )
+    es_principal = models.BooleanField(default=False, verbose_name="Es vivienda principal")
+    numero = models.PositiveSmallIntegerField(default=1, verbose_name="Número de vivienda")
     paredes = models.CharField(max_length=20, choices=PAREDES, blank=True)
     piso = models.CharField(max_length=20, choices=PISOS, blank=True)
     techo = models.CharField(max_length=20, choices=TECHOS, blank=True)
@@ -429,25 +629,59 @@ class Vivienda(models.Model):
         help_text="Lista de equipamientos: energia, agua, cocina, baño, telefono, internet",
     )
 
+    def clean(self):
+        # Ya NO validamos acá. Esto corría en cada is_valid() del formset,
+        # incluso cuando el Relevamiento/Pretendiente padre todavía no
+        # existía (se crea en el mismo POST, después de la validación).
+        # La validación real se hace en save() — ver abajo — que sí se
+        # ejecuta en el momento correcto, después de asignar la FK real.
+        pass
+
+    def save(self, *args, **kwargs):
+        if not self.relevamiento_id and not self.pretendiente_id:
+            raise ValidationError("La vivienda debe estar asociada a un relevamiento o a un pretendiente.")
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Vivienda Relevamiento #{self.relevamiento_id}"
+        owner = self.relevamiento or self.pretendiente
+        return f"Vivienda #{self.numero} — {owner}"
 
-
+# MANEJO DE MIEMBROS DE LA FAMILIA / POBLACION
 class Miembro(models.Model):
     relevamiento = models.ForeignKey(
-        Relevamiento, on_delete=models.CASCADE, related_name="miembros")
-    nombre = models.CharField(max_length=200)
-    ci = models.CharField(max_length=100, blank=True)
-    edad = models.IntegerField(null=True, blank=True)
+        Relevamiento,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="miembros"
+    )
+    vivienda = models.ForeignKey(
+        'Vivienda',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='miembros'
+    )
+    pretendiente = models.ForeignKey(
+        'Pretendiente',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='miembros'
+    )
+    nombre_miembro = models.CharField(max_length=200)
+    ci_miembro = models.CharField(max_length=100, blank=True)
+    edad_miembro = models.IntegerField(null=True, blank=True)
     SEXO = [("M", "Masculino"), ("F", "Femenino")]
-    sexo = models.CharField(max_length=1, choices=SEXO, blank=True)
+    sexo_miembro = models.CharField(max_length=1, choices=SEXO, blank=True)
+    estado_civil_miembro = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
     parentesco = models.CharField(max_length=100, blank=True)
     relacion_con_lote = models.CharField(max_length=200, blank=True)
     escolaridad = models.CharField(max_length=200, blank=True)
     grado_ano = models.CharField(max_length=100, blank=True)
 
     def __str__(self):
-        return self.nombre
+        return self.nombre_miembro
 
 
 class ProblemaSalud(models.Model):
@@ -457,7 +691,7 @@ class ProblemaSalud(models.Model):
     lugar_atencion = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
-        return f"{self.nombre} - {self.miembro.nombre}"
+        return f"{self.nombre_miembro} - {self.miembro.nombre_miembro}"
 
 
 class OcupanteAnterior(models.Model):
@@ -517,6 +751,13 @@ class FotoRelevamiento(models.Model):
         related_name='fotos_tomadas',
         verbose_name="Encuestador"
     )
+    vivienda = models.ForeignKey(
+        'Vivienda',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='fotos'
+    )
     fecha_captura = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Fecha de Captura"
@@ -547,6 +788,34 @@ class FotoRelevamiento(models.Model):
         return f"{self.get_tipo_foto_display()} - {self.relevamiento}"
 
 
+
+
+class InstitucionEnLote(models.Model):
+    """Institución u organización ubicada dentro del lote de un ocupante o pretendiente."""
+    relevamiento = models.ForeignKey(
+        Relevamiento,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='instituciones'
+    )
+    pretendiente = models.ForeignKey(
+        'Pretendiente',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='instituciones'
+    )
+    nombre_servicio = models.CharField(max_length=200)
+    ruc_servicio = models.CharField(max_length=50, blank=True)
+    descripcion_servicio = models.TextField(blank=True)
+
+    def clean(self):
+        if not self.relevamiento_id and not self.pretendiente_id:
+            raise ValidationError("La institución debe estar asociada a un relevamiento o a un pretendiente.")
+
+    def __str__(self):
+        return self.nombre_servicio
 
 
 ### SUBCOORDINADOR
@@ -586,3 +855,5 @@ class ArchivoSubcoordinador(models.Model):
     
     def __str__(self):
         return f"{self.nombre_archivo} - {self.fecha_subida.strftime('%d/%m/%Y')}"
+
+

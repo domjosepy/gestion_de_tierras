@@ -267,43 +267,41 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar DataTable
-    new simpleDatatables.DataTable('#solicitudesTable', {
-        perPage: 10,
-        labels: {
-            placeholder: "Buscar...",
-            perPage: "Registros por página",
-            noRows: "No se encontraron solicitudes",
-            info: "Mostrando {start} a {end} de {rows} solicitudes"
-        }
-    });
-    
-    // Colorear badges de estado automáticamente
-    document.querySelectorAll('.estado-badge').forEach(badge => {
-        const estado = badge.getAttribute('data-estado');
-        let color = 'bg-secondary';
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar DataTable
+        new simpleDatatables.DataTable('#solicitudesTable', {
+            perPage: 10,
+            labels: {
+                placeholder: "Buscar...",
+                perPage: "Registros por página",
+                noRows: "No se encontraron solicitudes",
+                info: "Mostrando {start} a {end} de {rows} solicitudes"
+            }
+        });
         
-        if (estado.includes('pendiente')) color = 'bg-warning';
-        if (estado.includes('asignado')) color = 'bg-info';
-        if (estado.includes('proceso')) color = 'bg-primary';
-        if (estado.includes('revision')) color = 'bg-purple';
-        if (estado.includes('analisis')) color = 'bg-indigo';
-        if (estado.includes('aprobado')) color = 'bg-success';
-        if (estado.includes('rechazado')) color = 'bg-danger';
-        if (estado.includes('ejecucion')) color = 'bg-orange';
-        if (estado.includes('finalizado')) color = 'bg-dark';
+        // Colorear badges de estado automáticamente
+        document.querySelectorAll('.estado-badge').forEach(badge => {
+            const estado = badge.getAttribute('data-estado');
+            let color = 'bg-secondary';
+            
+            if (estado.includes('pendiente')) color = 'bg-warning';
+            if (estado.includes('asignado')) color = 'bg-info';
+            if (estado.includes('proceso')) color = 'bg-primary';
+            if (estado.includes('revision')) color = 'bg-purple';
+            if (estado.includes('analisis')) color = 'bg-indigo';
+            if (estado.includes('aprobado')) color = 'bg-success';
+            if (estado.includes('rechazado')) color = 'bg-danger';
+            if (estado.includes('ejecucion')) color = 'bg-orange';
+            if (estado.includes('finalizado')) color = 'bg-dark';
+            
+            badge.classList.add(color);
+        });
         
-        badge.classList.add(color);
+        // Inicializar tooltips
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+            new bootstrap.Tooltip(el);
+        });
     });
-    
-    // Inicializar tooltips
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-        new bootstrap.Tooltip(el);
-    });
-});
-
-
 </script>
 
 {% endblock %}

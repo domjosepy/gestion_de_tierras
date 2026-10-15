@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta (Ocupante) — Parte 2{% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>{{ form.non_field_errors }}</div>
+      </div>
+    {% endif %}
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-clipboard-list"></i>
+        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO — Parte 2 de 4</h2>
+      </div>
+    </div>
+
+    <!-- Necesario para que las reglas automáticas de JS (toggleResidencia,
+         aplicarReglaCondicionVivienda) funcionen igual que en el resto del
+         formulario — ese script busca estos ids puntuales. -->
+    <input type="hidden" name="tipo_registro" id="id_tipo_registro" value="ocupante">
+
+    <div class="card mb-4">
+      <div class="card-header-brown-light">
+        <i class="fas fa-ruler-combined"></i>
+        <h2 class="mb-0">3. Datos del Lote</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 justify-content-between">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">{{ form.condicion_vivienda.label }}</label>
+            {{ form.condicion_vivienda }}
+            {% if form.condicion_vivienda.errors %}<div class="text-danger small mt-1">{{ form.condicion_vivienda.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3 form-check form-switch text-left">
+            <div class="d-flex align-items-center">
+              <input type="checkbox" class="form-check-input" id="{{ form.vive_en_lote.id_for_label }}"
+                name="{{ form.vive_en_lote.name }}"
+                {% if form.vive_en_lote.value %}checked{% endif %}>
+              <label class="form-check-label ms-2 fw-semibold" for="{{ form.vive_en_lote.id_for_label }}" id="label-vive-en-lote">
+                {% if form.vive_en_lote.value %}Reside en el inmueble{% else %}No reside en el inmueble{% endif %}
+              </label>
+            </div>
+          </div>
+        </div>
+        <hr>
+        <div class="row g-3 mt-1" id="residencia-fields-row">
+          <label class="form-label fw-semibold"><i class="fas fa-info-circle me-2 text-success"></i>Información de la residencia</label>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Manzana</label>
+            {{ form.residencia_manzana }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Lote</label>
+            {{ form.residencia_lote }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Encargado</label>
+            {{ form.encargado_residencia }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Parentesco</label>
+            {{ form.parentesco }}
+          </div>
+        </div>
+        <div class="inner-subsection mt-2 col-md-8">
+          <div class="accordion" id="accordionUsoLote">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingUsoLote">
+                <button class="accordion-button collapsed btn-sm" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#collapseUsoLote" aria-expanded="false" aria-controls="collapseUsoLote">
+                  <i class="fa-solid fa-bars m-2 text-primary"></i>
+                  <label class="form-label fw-semibold mb-0">Uso de lote</label>
+                </button>
+              </h2>
+              <div id="collapseUsoLote" class="accordion-collapse collapse" aria-labelledby="headingUsoLote" data-bs-parent="#accordionUsoLote">
+                <div class="accordion-body">
+                  <div class="row row-cols-2 row-cols-md-3 g-2">
+                    {% for choice in form.uso_lote_ocupante %}
+                      <div class="col">
+                        <div class="form-check">
+                          {{ choice.tag }}
+                          <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-between gap-2">
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+          {% if origen_resumen %}Guardar y volver al resumen{% else %}Siguiente{% endif %} 
+          <i class="fas fa-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+    {% if origen_resumen %}<input type="hidden" name="origen" value="resumen">{% endif %}
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

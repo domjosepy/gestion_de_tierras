@@ -67,6 +67,23 @@
   transform: scale(1.1);
 }
 
+/* Checkbox múltiple (equipamientos, mejoras): en columnas */
+.miembros-block ul,
+.vivienda-block ul {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.25rem 0.75rem;
+}
+.miembros-block ul li,
+.vivienda-block ul li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 /* ================================= */
 /* NAVBAR PARA BOOTSTRAP 5 */
 /* ================================= */
@@ -1955,15 +1972,12 @@ table.dataTable td .dropdown-item:hover {
     font-weight: 500;
 }
 
-
 /* Estilo opcional para el texto */
 .status-text {
     font-size: 0.9rem;
     font-weight: 500;
     color: #495057;
 }
-
-
 
 /* Estilo base del círculo */
 .status-dot {

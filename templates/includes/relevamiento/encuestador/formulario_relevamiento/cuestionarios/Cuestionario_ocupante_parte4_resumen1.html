@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta — Confirmación final{% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <div class="card mb-4">
+    <div class="card-header-brown text-center">
+      <h2 class="mb-0">RESUMEN DE LA INFORMACIÓN RELEVADA</h2>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-body d-flex flex-wrap gap-2 justify-content-center">
+      <span class="badge bg-primary fs-6">Solicitud: {{ orden.solicitud_id|default:"—" }}</span>
+      <span class="badge bg-primary fs-6">Orden de Trabajo: {{ orden.numero_orden }}</span>
+      <span class="badge bg-primary fs-6">ID Relevamiento: {{ relevamiento.id_relevamiento|default:relevamiento.pk }}</span>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header-brown-light"><i class="fas fa-users me-1"></i>Datos del Equipo</div>
+    <div class="card-body row g-3">
+      <div class="col-md-4"><strong>Coordinador:</strong><br>{{ coordinador|default:"—" }}</div>
+      <div class="col-md-4"><strong>Subcoordinador(es):</strong><br>{{ subcoordinadores|join:", "|default:"—" }}</div>
+      <div class="col-md-4"><strong>Encuestador:</strong><br>{{ relevamiento.encuestador.get_full_name|default:relevamiento.encuestador.username }}</div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header-brown-light d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-map-marker-alt me-1"></i>Información del Lote Ocupado</span>
+      <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk 'identificacion' %}?origen=resumen" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-pencil-alt"></i> Editar
+      </a>
+    </div>
+    <div class="card-body row g-3">
+      <div class="col-md-3"><strong>Fecha de relevamiento:</strong><br>{{ relevamiento.creado_en|date:"d/m/Y" }}</div>
+      <div class="col-md-2"><strong>Manzana:</strong><br>{{ relevamiento.manzana|default:"—" }}</div>
+      <div class="col-md-2"><strong>Lote:</strong><br>{{ relevamiento.lote_indert|default:"—" }}</div>
+      <div class="col-md-2"><strong>Dimensión:</strong><br>{{ relevamiento.dimensiones|default:"—" }}</div>
+      <div class="col-md-2"><strong>Superficie (ha):</strong><br>{{ relevamiento.superficie_ha|default:"—" }}</div>
+      <div class="col-md-1"><strong>Tipo:</strong><br>{{ relevamiento.get_tipo_lote_display|default:"—" }}</div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header-brown-light d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-user me-1"></i>Datos del Ocupante{% if tiene_conyuge %} y Cónyuge{% endif %}</span>
+      <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk 'identificacion' %}?origen=resumen" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-pencil-alt"></i> Editar
+      </a>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4"><strong>Ocupante:</strong><br>{{ relevamiento.quien_es_el_ocupante|default:"—" }}</div>
+        <div class="col-md-4"><strong>CI:</strong><br>{{ relevamiento.cedula_ocupante|default:"—" }}</div>
+        <div class="col-md-4"><strong>Estado civil:</strong><br>{{ relevamiento.get_estado_civil_ocupante_display|default:"—" }}</div>
+      </div>
+      {% if tiene_conyuge %}
+      <hr>
+      <div class="row g-3">
+        <div class="col-md-4"><strong>Cónyuge:</strong><br>{{ relevamiento.quien_es_el_conyuge }}</div>
+        <div class="col-md-4"><strong>CI:</strong><br>{{ relevamiento.cedula_conyuge|default:"—" }}</div>
+        <div class="col-md-4"><strong>Estado civil:</strong><br>{{ relevamiento.get_estado_civil_conyuge_display|default:"—" }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header-brown-light d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-ruler-combined me-1"></i>Condición de la vivienda y lote</span>
+      <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk 'lote' %}?origen=resumen" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-pencil-alt"></i> Editar
+      </a>
+    </div>
+    <div class="card-body">
+      <strong>Condición de vivienda:</strong> {{ relevamiento.get_condicion_vivienda_display }}
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header-brown-light d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-home me-1"></i>Vivienda / Datos productivos</span>
+      {% if relevamiento.condicion_vivienda == 'sin_vivienda' %}
+        <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk 'productivos' %}?origen=resumen" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-pencil-alt"></i> Editar
+        </a>
+      {% else %}
+        <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk 'vivienda' %}?origen=resumen" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-pencil-alt"></i> Editar
+        </a>
+      {% endif %}
+    </div>
+    <div class="card-body text-muted small">
+      Viviendas, población, instituciones, cultivos y ganadería ya cargados en pasos anteriores.
+    </div>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-between gap-2">
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-success btn-lg">
+          <i class="fas fa-check-circle me-1"></i>Confirmar y Finalizar Relevamiento
+        </button>
+      </div>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

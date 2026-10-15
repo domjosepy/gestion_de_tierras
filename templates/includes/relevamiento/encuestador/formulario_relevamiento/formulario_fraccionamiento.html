@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load relevamiento_tags %}
+
+{% block title %}Encuesta (Fraccionamiento){% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>{{ form.non_field_errors }}</div>
+      </div>
+    {% endif %}
+
+    {% if orden %}
+    <div class="alert alert-primary d-flex align-items-start gap-3 mb-4 shadow-sm" role="alert">
+      <i class="fas fa-file-invoice fa-lg mt-1"></i>
+      <div>
+        <strong>Orden de Trabajo:</strong> {{ orden.numero_orden }}<br>
+        <span class="small text-muted">
+          Colonia:&nbsp;<strong>{{ datos_geo.colonia.nombre|default:'—' }}</strong>
+          &nbsp;|&nbsp;Período:&nbsp;{{ orden.fecha_inicio_planeada|date:"d/m/Y" }} — {{ orden.fecha_fin_planeada|date:"d/m/Y" }}
+          &nbsp;|&nbsp;Estado:&nbsp;<strong>{{ orden.get_estado_display }}</strong>
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-clipboard-list"></i>
+        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO</h2>
+      </div>
+    </div>
+
+    <input type="hidden" name="tipo_registro" value="fraccionamiento">
+
+    {% if orden and not relevamiento %}
+    <div class="d-flex gap-2 mb-4 justify-content-center">
+      <a href="?modo=ocupante" class="btn btn-sm btn-outline-primary"><i class="fas fa-user me-1"></i>Ocupante</a>
+      <a href="?modo=conflicto" class="btn btn-sm btn-outline-primary"><i class="fas fa-users me-1"></i>Conflicto</a>
+      <a href="?modo=servicio" class="btn btn-sm btn-outline-primary"><i class="fas fa-building me-1"></i>Servicio</a>
+      <a href="?modo=fraccionamiento" class="btn btn-sm btn-primary"><i class="fas fa-cut me-1"></i>Fraccionamiento</a>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 1: DATOS GEOGRÁFICOS -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-map-marker-alt"></i>
+        <h2 class="mb-0">1. Datos Geográficos</h2>
+      </div>
+      <div class="card-body">
+        {% if datos_geo.departamento %}
+          <input type="hidden" name="departamento" value="{{ datos_geo.departamento.pk }}">
+        {% endif %}
+        {% if datos_geo.distrito %}
+          <input type="hidden" name="distrito" value="{{ datos_geo.distrito.pk }}">
+        {% endif %}
+        {% if datos_geo.colonia %}
+          <input type="hidden" name="colonia" value="{{ datos_geo.colonia.pk }}">
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-map-marked-alt me-1 text-info"></i>Departamento
+            </label>
+            <div class="read-only-field">{{ datos_geo.departamento.nombre }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-map me-1 text-success"></i>Distrito
+            </label>
+            <div class="read-only-field">{{ datos_geo.distrito.nombre }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-tractor me-1 text-warning"></i>Colonia
+            </label>
+            <div class="read-only-field">{{ datos_geo.colonia.nombre }}</div>
+          </div>
+        </div>
+        <hr>
+        <!-- Información del Lote -->
+        <label class="form-label fw-semibold">
+          <i class="fas fa-info-circle me-2 text-info"></i>Información del Lote
+        </label>
+        <div class="row g-3 mt-1 justify-content-between">
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.manzana.label }}</label>
+            {{ form.manzana }}
+            {% if form.manzana.errors %}<div class="text-danger small mt-1">{{ form.manzana.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Lote</label>
+            {{ form.lote_indert}}
+            {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
+          </div>
+          <!--LOTE_INDERT == LOTE_SIRT
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.lote_sirt.label }}</label>
+            {{ form.lote_sirt }}
+            {% if form.lote_sirt.errors %}<div class="text-danger small mt-1">{{ form.lote_sirt.errors }}</div>{% endif %}
+          </div>-->
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.tipo_lote.label }}</label>
+            {{ form.tipo_lote }}
+            {% if form.tipo_lote.errors %}
+                <div class="text-danger small mt-1">{{ form.tipo_lote.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.superficie_ha.label }}</label>
+            {{ form.superficie_ha }}
+            {% if form.superficie_ha.errors %}
+                <div class="text-danger small mt-1">{{ form.superficie_ha.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.dimensiones.label }}</label>
+            {{ form.dimensiones }}
+            {% if form.dimensiones.errors %}
+                <div class="text-danger small mt-1">{{ form.dimensiones.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 2: DATOS DEL OCUPANTE -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown-light">
+        <i class="fas fa-user"></i>
+        <h2 class="mb-0">2. Datos del Ocupante</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 justify-content-between">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Nombre y Apellido</label>
+            {{ form.quien_es_el_ocupante }}
+            {% if form.quien_es_el_ocupante.errors %}
+                <div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2 me-4">
+            <label class="form-label fw-semibold">Cédula</label>
+            {{ form.cedula_ocupante }}
+            {% if form.cedula_ocupante.errors %}
+                <div class="text-danger small mt-1">{{ form.cedula_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2 me-4">
+            <label class="form-label fw-semibold">Sexo</label>
+            {{ form.sexo_ocupante }}
+            {% if form.sexo_ocupante.errors %}
+                <div class="text-danger small mt-1">{{ form.sexo_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2 me-4">
+            <label class="form-label fw-semibold">Estado Civil</label>
+            {{ form.estado_civil_ocupante }}
+            {% if form.estado_civil_ocupante.errors %}
+                <div class="text-danger small mt-1">{{ form.estado_civil_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2 d-flex align-items-end me-3">
+            <button type="button" class="btn btn-outline-warning w-100"
+                    data-bs-toggle="modal" data-bs-target="#modalConyuge" data-conyuge-target="0">
+              <i class="fas fa-plus fa-user-friends"><i class="fas fa-user-friends me-1"></i></i> Agregar Cónyuge
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 3: DATOS DEL LOTE -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown-light">
+        <i class="fas fa-ruler-combined"></i>
+        <h2 class="mb-0">3. Datos del Lote</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 justify-content-between">
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.nro_titulo.label }}</label>
+            {{ form.nro_titulo }}
+            {% if form.nro_titulo.errors %}
+                <div class="text-danger small mt-1">{{ form.nro_titulo.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.condicion_vivienda.label }}</label>
+            {{ form.condicion_vivienda }}
+            {% if form.condicion_vivienda.errors %}
+                <div class="text-danger small mt-1">{{ form.condicion_vivienda.errors }}</div>
+            {% endif %}
+          </div>
+          <!-- SE OCULTA, YA VIENE POR DEFECTO "OCUPANTE" SERIA EL L07 DEL FORMULARIO-->
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.condicion_encuestado.label }}</label>
+            {{ form.condicion_encuestado }}
+            {% if form.condicion_encuestado.errors %}
+                <div class="text-danger small mt-1">{{ form.condicion_encuestado.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2 form-check form-switch text-left">
+            <div class="d-flex align-items-center">
+
+              <input type="checkbox" class="form-check-input" id="{{ form.vive_en_lote.id_for_label }}" 
+                name="{{ form.vive_en_lote.name }}"
+                {% if form.vive_en_lote.value %}checked{% endif %}>
+              <label class="form-check-label ms-2 fw-semibold" for="{{ form.vive_en_lote.id_for_label }}" id="label-vive-en-lote">
+                {% if form.vive_en_lote.value %}
+                  Vive en el lote
+                {% else %}
+                  No vive en el lote
+                {% endif %}
+              </label>
+            </div>
+          </div>
+        </div>
+        <hr>
+        <!-- Residencia: visible solo si el ocupante no vive en el lote -->
+        <div class="row g-3 mt-1" id="residencia-fields-row">
+          <!-- Información de la residencia -->
+          <label class="form-label fw-semibold">
+            <i class="fas fa-info-circle me-2 text-success"></i>Información de la residencia
+          </label>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Manzana</label>
+            {{ form.residencia_manzana }}
+            {% if form.residencia_manzana.errors %}
+                <div class="text-danger small mt-1">{{ form.residencia_manzana.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Lote</label>
+            {{ form.residencia_lote }}
+            {% if form.residencia_lote.errors %}
+                <div class="text-danger small mt-1">{{ form.residencia_lote.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Encargado</label>
+            {{ form.encargado_residencia }}
+            {% if form.encargado_residencia.errors %}
+                <div class="text-danger small mt-1">{{ form.encargado_residencia.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Parentesco</label>
+            {{ form.parentesco }}
+            {% if form.parentesco.errors %}
+                <div class="text-danger small mt-1">{{ form.parentesco.errors }}</div>
+            {% endif %}
+          </div>
+          <hr>
+        </div>
+        <!-- USO DE LOTE acordeon -->
+        <div class="inner-subsection mt-2 col-md-8">
+          <div class="accordion" id="accordionUsoLote">
+            <div class="accordion-item">
+              <h2 class="accordion-header" id="headingUsoLote">
+                <button class="accordion-button collapsed btn-sm" type="button" data-bs-toggle="collapse" 
+                  data-bs-target="#collapseUsoLote" aria-expanded="false" aria-controls="collapseUsoLote">
+                  <i class="fa-solid fa-bars m-2 text-primary"></i>
+                  <label class="form-label fw-semibold mb-0">Uso de lote</label>
+                </button>
+              </h2>
+              <div id="collapseUsoLote" class="accordion-collapse collapse" 
+                  aria-labelledby="headingUsoLote" data-bs-parent="#accordionUsoLote">
+                <div class="accordion-body">
+                  <div class="row row-cols-2 row-cols-md-3 g-2">
+                    {% for choice in form.uso_lote_ocupante %}
+                      <div class="col">
+                        <div class="form-check">
+                          {{ choice.tag }}
+                          <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                  {% if form.uso_lote_ocupante.errors %}
+                    <div class="text-danger small mt-1">{{ form.uso_lote_ocupante.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 6: CULTIVOS - GANADERÍA -->
+    <!-- ============================================================ -->
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/4_datos_productivos.html' %}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/5_mejoras_infraestructura.html' %}
+    
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 6: INFORMACIÓN DE LA ENCUESTA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-success">
+        <i class="fas fa-file-alt"></i>
+        <h2 class="mb-0">Información de la Encuesta</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.formulario.label }}</label>
+            {{ form.formulario }}
+            {% if form.formulario.errors %}<div class="text-danger small mt-1">{{ form.formulario.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
+            {{ form.estado_entrevista }}
+            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.firmo_solicitud.label }}</label>
+            {{ form.firmo_solicitud }}
+            {% if form.firmo_solicitud.errors %}<div class="text-danger small mt-1">{{ form.firmo_solicitud.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
+            {{ form.observacion_encuesta }}
+            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_viviendas_section.html' %}
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN: CULTIVOS -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-seedling"></i>
+        <h2 class="mb-0">Cultivos</h2>
+      </div>
+      <div class="card-body">
+        {{ cultivo_formset.management_form }}
+        <div id="cultivos-container">
+          {% for cult_form in cultivo_formset %}
+          <div class="cultivo-block border rounded p-3 mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Cultivo {{ forloop.counter }}</h6>
+              <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+            </div>
+            {% if cult_form.errors %}<div class="alert alert-danger small py-1">{{ cult_form.errors }}</div>{% endif %}
+            {{ cult_form.as_p }}
+          </div>
+          {% empty %}
+          <p class="text-muted small">Sin cultivos registrados.</p>
+          {% endfor %}
+        </div>
+        <div id="cultivos-empty" style="display:none">{{ cultivo_formset.empty_form.as_p }}</div>
+        <button type="button" class="btn btn-outline-secondary mt-2 add-block-btn"
+                data-container="cultivos-container"
+                data-prefix="{{ cultivo_formset.prefix }}"
+                data-total="{{ cultivo_formset.total_form_count }}">
+          <i class="fas fa-plus me-1"></i>Agregar cultivo
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN: PRODUCCIÓN GANADERA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-horse"></i>
+        <h2 class="mb-0">Producción Ganadera</h2>
+      </div>
+      <div class="card-body">
+        {{ produccion_formset.management_form }}
+        <div id="ganaderia-container">
+          {% for prod_form in produccion_formset %}
+          <div class="ganaderia-block border rounded p-3 mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Ganado {{ forloop.counter }}</h6>
+              <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
+            </div>
+            {% if prod_form.errors %}<div class="alert alert-danger small py-1">{{ prod_form.errors }}</div>{% endif %}
+            {{ prod_form.as_p }}
+          </div>
+          {% empty %}
+          <p class="text-muted small">Sin producción ganadera.</p>
+          {% endfor %}
+        </div>
+        <div id="ganaderia-empty" style="display:none">{{ produccion_formset.empty_form.as_p }}</div>
+        <button type="button" class="btn btn-outline-secondary mt-2 add-block-btn"
+                data-container="ganaderia-container"
+                data-prefix="{{ produccion_formset.prefix }}"
+                data-total="{{ produccion_formset.total_form_count }}">
+          <i class="fas fa-plus me-1"></i>Agregar ganado
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN: FRACCIONAMIENTO (sub-lotes) -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header card-header-brown-light">
+        <i class="fas fa-cut"></i>
+        <h2 class="mb-0">Fraccionamiento</h2>
+      </div>
+      <div class="card-body">
+        {% if relevamiento %}
+          {% if relevamiento.sub_lotes.all %}
+          <ul class="list-group mb-3">
+            {% for sub in relevamiento.sub_lotes.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Sub-lote {{ sub.lote_indert }}
+              <a href="{% url 'relevamiento:edit' sub.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-edit me-1"></i>Editar
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted small">Sin sub-lotes generados aún.</p>
+          {% endif %}
+          <form method="post" action="{% url 'relevamiento:crear_sublote' relevamiento.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning">
+              <i class="fas fa-cut me-1"></i>Realizar Fraccionamiento
+            </button>
+          </form>
+        {% else %}
+          <p class="text-muted small">
+            <i class="fas fa-info-circle me-1"></i>Guarde el relevamiento primero para poder generar sub-lotes.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_instituciones_section.html' %}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_documentos_section.html' %}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_botones_accion.html' %}
+
+  </form>
+
+  {% include 'includes/relevamiento/encuestador/modal/agregar_conyuge.html' %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}"></script>
+{% endblock %}

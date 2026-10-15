@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load relevamiento_tags %}
+
+{% block title %}Encuesta (Servicio){% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>{{ form.non_field_errors }}</div>
+      </div>
+    {% endif %}
+
+    {% if orden %}
+    <div class="alert alert-primary d-flex align-items-start gap-3 mb-4 shadow-sm" role="alert">
+      <i class="fas fa-file-invoice fa-lg mt-1"></i>
+      <div>
+        <strong>Orden de Trabajo:</strong> {{ orden.numero_orden }}<br>
+        <span class="small text-muted">
+          Colonia:&nbsp;<strong>{{ datos_geo.colonia.nombre|default:'—' }}</strong>
+          &nbsp;|&nbsp;Período:&nbsp;{{ orden.fecha_inicio_planeada|date:"d/m/Y" }} — {{ orden.fecha_fin_planeada|date:"d/m/Y" }}
+          &nbsp;|&nbsp;Estado:&nbsp;<strong>{{ orden.get_estado_display }}</strong>
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-clipboard-list"></i>
+        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO </h2>
+      </div>
+    </div>
+
+    <input type="hidden" name="tipo_registro" value="servicio">
+
+    {% if orden and not relevamiento %}
+    <div class="d-flex gap-2 mb-4 justify-content-center">
+      <a href="?modo=ocupante" class="btn btn-sm btn-outline-primary"><i class="fas fa-user me-1"></i>Ocupante</a>
+      <a href="?modo=conflicto" class="btn btn-sm btn-outline-primary"><i class="fas fa-users me-1"></i>Conflicto</a>
+      <a href="?modo=servicio" class="btn btn-sm btn-primary"><i class="fas fa-building me-1"></i>Servicio</a>
+      <a href="?modo=fraccionamiento" class="btn btn-sm btn-outline-primary"><i class="fas fa-cut me-1"></i>Fraccionamiento</a>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 1: DATOS GEOGRÁFICOS -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-map-marker-alt"></i>
+        <h2 class="mb-0">1. Datos Geográficos</h2>
+      </div>
+      <div class="card-body">
+        {% if datos_geo.departamento %}
+          <input type="hidden" name="departamento" value="{{ datos_geo.departamento.pk }}">
+        {% endif %}
+        {% if datos_geo.distrito %}
+          <input type="hidden" name="distrito" value="{{ datos_geo.distrito.pk }}">
+        {% endif %}
+        {% if datos_geo.colonia %}
+          <input type="hidden" name="colonia" value="{{ datos_geo.colonia.pk }}">
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-map-marked-alt me-1 text-info"></i>Departamento
+            </label>
+            <div class="read-only-field">{{ datos_geo.departamento.nombre }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-map me-1 text-success"></i>Distrito
+            </label>
+            <div class="read-only-field">{{ datos_geo.distrito.nombre }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">
+              <i class="fas fa-tractor me-1 text-warning"></i>Colonia
+            </label>
+            <div class="read-only-field">{{ datos_geo.colonia.nombre }}</div>
+          </div>
+        </div>
+        <hr>
+        <!-- Información del Lote -->
+        <label class="form-label fw-semibold">
+          <i class="fas fa-info-circle me-2 text-info"></i>Información del Lote
+        </label>
+        <div class="row g-3 mt-1 justify-content-between">
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.manzana.label }}</label>
+            {{ form.manzana }}
+            {% if form.manzana.errors %}<div class="text-danger small mt-1">{{ form.manzana.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Lote</label>
+            {{ form.lote_indert}}
+            {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
+          </div>
+          <!--LOTE_INDERT == LOTE_SIRT
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.lote_sirt.label }}</label>
+            {{ form.lote_sirt }}
+            {% if form.lote_sirt.errors %}<div class="text-danger small mt-1">{{ form.lote_sirt.errors }}</div>{% endif %}
+          </div>-->
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.tipo_lote.label }}</label>
+            {{ form.tipo_lote }}
+            {% if form.tipo_lote.errors %}
+                <div class="text-danger small mt-1">{{ form.tipo_lote.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.superficie_ha.label }}</label>
+            {{ form.superficie_ha }}
+            {% if form.superficie_ha.errors %}
+                <div class="text-danger small mt-1">{{ form.superficie_ha.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.dimensiones.label }}</label>
+            {{ form.dimensiones }}
+            {% if form.dimensiones.errors %}
+                <div class="text-danger small mt-1">{{ form.dimensiones.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 2: DATOS DEL LOTE (uso_lote preseleccionado: Institución/Organización) --> 
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown-light">
+        <i class="fas fa-ruler-combined"></i>
+        <h2 class="mb-0">2. Datos del Lote</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">{{ form.nro_titulo.label }}</label>
+            {{ form.nro_titulo }}
+            {% if form.nro_titulo.errors %}<div class="text-danger small mt-1">{{ form.nro_titulo.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.condicion_vivienda.label }}</label>
+            {{ form.condicion_vivienda }}
+            {% if form.condicion_vivienda.errors %}
+                <div class="text-danger small mt-1">{{ form.condicion_vivienda.errors }}</div>
+            {% endif %}
+          </div>
+          <!-- SE OCULTA, YA VIENE POR DEFECTO "OCUPANTE" SERIA EL L07 DEL FORMULARIO-->
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.condicion_encuestado.label }}</label>
+            {{ form.condicion_encuestado }}
+            {% if form.condicion_encuestado.errors %}
+                <div class="text-danger small mt-1">{{ form.condicion_encuestado.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="inner-subsection mt-3">
+          <label class="form-label fw-semibold mb-2">
+            <i class="fas fa-check-square me-1 text-primary"></i>{{ form.uso_lote_servicio.label }}
+          </label>
+          <div class="row row-cols-2 row-cols-md-3 g-2">
+            {% for choice in form.uso_lote_servicio %}
+              <div class="col">
+                <div class="form-check">
+                  {{ choice.tag }}
+                  <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% if form.uso_lote_servicio.errors %}<div class="text-danger small mt-1">{{ form.uso_lote_servicio.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_instituciones_section.html' %}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_documentos_section.html' %}
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN: INFORMACIÓN DE LA ENCUESTA -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-success">
+        <i class="fas fa-file-alt"></i>
+        <h2 class="mb-0">Información de la Encuesta</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.formulario.label }}</label>
+            {{ form.formulario }}
+            {% if form.formulario.errors %}<div class="text-danger small mt-1">{{ form.formulario.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
+            {{ form.estado_entrevista }}
+            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.firmo_solicitud.label }}</label>
+            {{ form.firmo_solicitud }}
+            {% if form.firmo_solicitud.errors %}<div class="text-danger small mt-1">{{ form.firmo_solicitud.errors }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
+            {{ form.observacion_encuesta }}
+            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_botones_accion.html' %}
+
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}"></script>
+{% endblock %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const tipoSelect = document.querySelector('#id_tipo_registro');
+      const condicionSelect = document.querySelector('#id_condicion_vivienda');
+      
+      // Si los campos no existen, salir (por si acaso)
+      if (!tipoSelect || !condicionSelect) return;
+
+      // Buscar el contenedor del campo (el div.col-md-2) para mostrar mensaje dinámico
+      const container = condicionSelect.closest('.col-md-2') || condicionSelect.parentElement;
+      let dynamicHelp = null;
+
+      function actualizarCondicion() {
+          if (tipoSelect.value === 'servicio') {
+              // Forzar valor y deshabilitar el campo
+              condicionSelect.value = 'servicio';
+              condicionSelect.disabled = true;
+              // Añadir mensaje informativo (opcional)
+              if (!dynamicHelp) {
+                  dynamicHelp = document.createElement('small');
+                  dynamicHelp.className = 'text-muted d-block mt-1';
+                  dynamicHelp.textContent = '✅ Condición fijada automáticamente a "Servicio"';
+                  container.appendChild(dynamicHelp);
+              }
+          } else {
+              // Habilitar el campo para que el usuario elija
+              condicionSelect.disabled = false;
+              // Eliminar mensaje dinámico si existe
+              if (dynamicHelp) {
+                  dynamicHelp.remove();
+                  dynamicHelp = null;
+              }
+              // Opcional: limpiar el valor o dejarlo como está
+              // condicionSelect.value = '';
+          }
+      }
+
+      // Escuchar cambios en el selector de tipo
+      tipoSelect.addEventListener('change', actualizarCondicion);
+      
+      // Ejecutar al cargar la página para sincronizar estado inicial
+      actualizarCondicion();
+  });
+</script>

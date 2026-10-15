@@ -1,0 +1,31 @@
+<div class="modal fade modal-secondary" id="modalInstitucion" tabindex="-1" aria-labelledby="modalInstitucionLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalInstitucionLabel"><i class="fas fa-landmark me-2"></i>Institución / Servicio</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Nombre del servicio</label>
+            <input type="text" class="form-control" id="modal_institucion_nombre">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">RUC</label>
+            <input type="text" class="form-control" id="modal_institucion_ruc">
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="form-label fw-semibold">Descripción</label>
+          <textarea class="form-control" id="modal_institucion_descripcion" rows="3"></textarea>
+        </div>
+        <div class="text-danger small mt-2 d-none" id="institucion-modal-error">El nombre es obligatorio.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="guardar-institucion-btn">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>

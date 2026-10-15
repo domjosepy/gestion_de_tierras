@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta (Ocupante) — Parte 1{% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger d-flex align-items-center gap-2 mb-3">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>{{ form.non_field_errors }}</div>
+      </div>
+    {% endif %}
+
+    <div class="alert alert-primary d-flex align-items-start gap-3 mb-4 shadow-sm" role="alert">
+      <i class="fas fa-file-invoice fa-lg mt-1"></i>
+      <div>
+        <strong>Orden de Trabajo:</strong> {{ orden.numero_orden }}<br>
+        <span class="small text-muted">
+          Colonia:&nbsp;<strong>{{ datos_geo.colonia.nombre|default:'—' }}</strong>
+        </span>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-clipboard-list"></i>
+        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO — Parte 1 de 4</h2>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4 justify-content-center">
+      <span class="btn btn-sm btn-primary disabled"><i class="fas fa-user me-1"></i>Ocupante</span>
+      <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}?modo=conflicto" class="btn btn-sm btn-outline-primary"><i class="fas fa-users me-1"></i>Conflicto</a>
+      <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}?modo=servicio" class="btn btn-sm btn-outline-primary"><i class="fas fa-building me-1"></i>Servicio</a>
+      <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}?modo=fraccionamiento" class="btn btn-sm btn-outline-primary"><i class="fas fa-cut me-1"></i>Fraccionamiento</a>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 1: DATOS GEOGRÁFICOS -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-map-marker-alt"></i>
+        <h2 class="mb-0">1. Datos Geográficos</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold"><i class="fas fa-map-marked-alt me-1 text-info"></i>Departamento</label>
+            <div class="read-only-field">{{ datos_geo.departamento.nombre }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold"><i class="fas fa-map me-1 text-success"></i>Distrito</label>
+            <div class="read-only-field">{{ datos_geo.distrito.nombre }}</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold"><i class="fas fa-tractor me-1 text-warning"></i>Colonia</label>
+            <div class="read-only-field">{{ datos_geo.colonia.nombre }}</div>
+          </div>
+        </div>
+        <hr>
+        <label class="form-label fw-semibold"><i class="fas fa-info-circle me-2 text-info"></i>Información del Lote</label>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">{{ form.manzana.label }}</label>
+            {{ form.manzana }}
+            {% if form.manzana.errors %}<div class="text-danger small mt-1">{{ form.manzana.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Lote</label>
+            {{ form.lote_indert }}
+            {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
+          </div>
+
+          {{ form.dimensiones }}
+          {{ form.superficie_ha }}
+          {{ form.tipo_lote }}
+
+          <div class="col-md-2" id="agregar-dimension-row"
+               {% if form.frente_aprox.value and form.fondo_aprox.value %}style="display:none"{% endif %}>
+            <button type="button" class="btn btn-outline-primary btn-sm m-2" id="agregar-dimension-btn"
+                    data-bs-toggle="modal" data-bs-target="#modalDimension">
+              <i class="fas fa-plus me-1"></i>Agregar dimensión
+            </button>
+          </div>
+
+          <div id="dimension-summary-row"
+               style="display:{% if form.frente_aprox.value and form.fondo_aprox.value %}contents{% else %}none{% endif %}">
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Dimensión</label>
+              <div class="read-only-field m-1" id="dimension-display">
+                {% if form.frente_aprox.value and form.fondo_aprox.value %}{{ form.frente_aprox.value }}x{{ form.fondo_aprox.value }}{% endif %}
+              </div>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Superficie (ha)</label>
+              <div class="read-only-field m-1" id="superficie-display">{{ form.superficie_ha.value|default:'' }}</div>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Tipo de lote</label>
+              <div class="read-only-field m-1" id="tipo-lote-display">{{ form.tipo_lote.value|default:'' }}</div>
+            </div>
+            <div class="col-md-1 d-flex align-items-end m-2">
+              <button type="button" class="btn btn-outline-warning btn-sm" id="edit-dimension-btn"
+                      data-bs-toggle="modal" data-bs-target="#modalDimension" title="Editar dimensión">
+                <i class="fas fa-pencil-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SECCIÓN 2: DATOS DEL OCUPANTE -->
+    <!-- ============================================================ -->
+    <div class="card mb-4">
+      <div class="card-header-brown-light">
+        <i class="fas fa-user"></i>
+        <h2 class="mb-0">2. Datos del Ocupante</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Nombre y Apellido</label>
+            {{ form.quien_es_el_ocupante }}
+            {% if form.quien_es_el_ocupante.errors %}
+              <div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Cédula</label>
+            {{ form.cedula_ocupante }}
+            {% if form.cedula_ocupante.errors %}
+              <div class="text-danger small mt-1">{{ form.cedula_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Sexo</label>
+            {{ form.sexo_ocupante }}
+            {% if form.sexo_ocupante.errors %}
+              <div class="text-danger small mt-1">{{ form.sexo_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Estado Civil</label>
+            {{ form.estado_civil_ocupante }}
+            {% if form.estado_civil_ocupante.errors %}
+              <div class="text-danger small mt-1">{{ form.estado_civil_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div id="conyuge-add-btn-wrap">
+              <button type="button" class="btn btn-outline-primary btn-sm" id="agregar-conyuge-btn"
+                      data-bs-toggle="modal" data-bs-target="#modalPersona">
+                <i class="fas fa-user-friends me-1"></i>Agregar Cónyuge
+              </button>
+            </div>
+            <div id="conyuge-summary" class="d-none border rounded p-2 d-flex justify-content-between align-items-center">
+              <div><i class="fas fa-user-friends me-1 text-primary"></i><span id="conyuge-summary-text"></span></div>
+              <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="editar-conyuge-btn"
+                        data-bs-toggle="modal" data-bs-target="#modalPersona" title="Editar">
+                  <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" id="eliminar-conyuge-btn" title="Eliminar">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        {{ form.quien_es_el_conyuge }}
+        {{ form.cedula_conyuge }}
+        {{ form.sexo_conyuge }}
+        {{ form.estado_civil_conyuge }}
+      </div>
+    </div>
+
+    {% include 'includes/relevamiento/encuestador/modal/dimension_campos_modal.html' %}
+    {% include 'includes/relevamiento/encuestador/modal/agregar_conyuge_modal.html' %}
+
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-between gap-2">
+        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary">
+          Siguiente <i class="fas fa-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}
+<script>
+  window.ESTADO_CIVIL_LABELS = {
+    {% for value, text in form.estado_civil_ocupante.field.choices %}
+      {% if value %}"{{ value }}": "{{ text }}",{% endif %}
+    {% endfor %}
+  };
+</script>
+
+{% block scripts %}
+
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
+
+{% endblock %}
