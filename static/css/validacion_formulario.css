@@ -1,0 +1,173 @@
+/**
+ * Estilos para validación de formularios
+ */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CAMPOS CON ERROR
+   ───────────────────────────────────────────────────────────────────────────── */
+
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: #dc3545 !important;
+    background-color: #fff5f5;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+}
+
+input.is-invalid:focus,
+select.is-invalid:focus,
+textarea.is-invalid:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Feedback visual de campo con error */
+.error-mensaje-inline {
+    display: block !important;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    animation: slideIn 0.2s ease-out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CAMPOS CON ADVERTENCIA (mientras se escribe)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+input.is-warning {
+    border-color: #ffc107;
+    background-color: #fffbf0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ANIMACIONES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Animación de error en tiempo real */
+input.is-invalid:focus {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ALERTAS DE VALIDACIÓN GENERALES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.alert-validacion {
+    border-left: 4px solid #dc3545;
+    background-color: #f8d7da;
+    color: #721c24;
+    border-radius: 0.25rem;
+}
+
+.alert-validacion i {
+    color: #dc3545;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CAMPOS VÁLIDOS (efecto positivo)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+input.is-valid,
+select.is-valid,
+textarea.is-valid {
+    border-color: #28a745;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MEJORAS VISUALES EN CAMPOS DE FORMULARIO
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.form-control:not(.is-invalid):not(.is-valid) {
+    border-color: #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:not(.is-invalid):not(.is-valid):focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
+}
+
+.form-select:not(.is-invalid):not(.is-valid) {
+    border-color: #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-select:not(.is-invalid):not(.is-valid):focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ICONOS DE VALIDACIÓN
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.validacion-icono {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+}
+
+.validacion-icono.error {
+    color: #dc3545;
+}
+
+.validacion-icono.success {
+    color: #28a745;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONTENEDOR DE CAMPOS CON VALIDACIÓN
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.campo-validado {
+    position: relative;
+}
+
+.campo-validado .form-control,
+.campo-validado .form-select {
+    padding-right: 35px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   FEEDBACK DE CARACTERES NO PERMITIDOS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.caracter-invalido {
+    animation: shake 0.3s;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ESTILOS PARA MODAL DE VALIDACIÓN
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.validacion-modal-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.25rem;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.validacion-modal-error i {
+    color: #dc3545;
+    margin-right: 0.5rem;
+}

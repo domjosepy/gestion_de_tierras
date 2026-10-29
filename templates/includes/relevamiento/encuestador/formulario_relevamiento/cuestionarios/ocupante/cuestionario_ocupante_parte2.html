@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Encuesta (Ocupante) — Parte 2{% endblock %}
+{% block title %}Encuesta (Ocupante){% endblock %}
 
 {% block content %}
 <div class="container mt-4 fade-in encuestador-form">
@@ -23,9 +23,6 @@
       </div>
     </div>
 
-    <!-- Necesario para que las reglas automáticas de JS (toggleResidencia,
-         aplicarReglaCondicionVivienda) funcionen igual que en el resto del
-         formulario — ese script busca estos ids puntuales. -->
     <input type="hidden" name="tipo_registro" id="id_tipo_registro" value="ocupante">
 
     <div class="card mb-4">

@@ -1,0 +1,65 @@
+<!--CUESTIONARIO_SERVICIO_CIERRE.HTML-->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta (Servicio){% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-clipboard-check"></i>
+        <h2 class="mb-0 text-center">Instituciones, mejoras e información de la encuesta</h2>
+      </div>
+    </div>
+
+    {# Ajustá este nombre al parcial de instituciones que ya usás en el cierre de Conflicto. #}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/extras/datos_instituciones.html' %}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/extras/datos_mejoras_infraestructura.html' %}
+
+    <div class="card mb-4">
+      <div class="card-header-success">
+        <i class="fas fa-file-alt"></i>
+        <h2 class="mb-0">Información de la Encuesta</h2>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
+            {{ form.estado_entrevista }}
+            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+              {{ form.firmo_solicitud }}
+              <label class="form-check-label fw-semibold" for="{{ form.firmo_solicitud.id_for_label }}">{{ form.firmo_solicitud.label }}</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
+            {{ form.observacion_encuesta }}
+            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-between gap-2">
+        <a href="{% url 'relevamiento:continuar_servicio' relevamiento.pk 'lote' %}" class="btn btn-outline-danger">
+          <i class="fas fa-arrow-left me-1"></i>Datos del lote
+        </a>
+        <button type="submit" class="btn btn-primary">Ver resumen <i class="fas fa-arrow-right ms-1"></i></button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
+{% endblock %}

@@ -104,12 +104,6 @@
             {{ form.lote_indert}}
             {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
           </div>
-          <!--LOTE_INDERT == LOTE_SIRT
-          <div class="col-md-2">
-            <label class="form-label fw-semibold">{{ form.lote_sirt.label }}</label>
-            {{ form.lote_sirt }}
-            {% if form.lote_sirt.errors %}<div class="text-danger small mt-1">{{ form.lote_sirt.errors }}</div>{% endif %}
-          </div>-->
           <div class="col-md-2">
             <label class="form-label fw-semibold">{{ form.tipo_lote.label }}</label>
             {{ form.tipo_lote }}
@@ -186,9 +180,7 @@
       </div>
     </div>
 
-    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_instituciones_section.html' %}
-    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_documentos_section.html' %}
-
+    
     <!-- ============================================================ -->
     <!-- SECCIÓN: INFORMACIÓN DE LA ENCUESTA -->
     <!-- ============================================================ -->
@@ -222,8 +214,6 @@
         </div>
       </div>
     </div>
-
-    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/_botones_accion.html' %}
 
   </form>
 </div>

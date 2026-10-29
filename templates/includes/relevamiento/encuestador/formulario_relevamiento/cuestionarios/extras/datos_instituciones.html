@@ -1,0 +1,39 @@
+<div class="card mb-4">
+  <div class="card-header card-header-brown-light">
+    <i class="fas fa-landmark"></i>
+    <h2 class="mb-0">Instituciones / Servicios en el Lote</h2>
+  </div>
+  <div class="card-body">
+    {{ institucion_formset.management_form }}
+    <!-- Campos REALES de cada institución, ocultos — se editan vía modal. -->
+    <div id="instituciones-container" style="display:none">
+      {% for inst_form in institucion_formset %}
+          <div class="institucion-row" data-idx="{{ forloop.counter0 }}">
+            {{ inst_form.id }}
+            {{ inst_form.nombre_servicio }}
+            {{ inst_form.ruc_servicio }}
+            {{ inst_form.descripcion_servicio }}
+            {{ inst_form.DELETE }}
+          </div>
+      {% endfor %}
+    </div>
+
+    <template id="institucion-empty-row">
+      <div class="institucion-row" data-idx="__prefix__">
+          {{ institucion_formset.empty_form.nombre_servicio }}
+          {{ institucion_formset.empty_form.ruc_servicio }}
+          {{ institucion_formset.empty_form.descripcion_servicio }}
+          {{ institucion_formset.empty_form.DELETE }}
+      </div>
+    </template>
+    <div id="instituciones-lista" class="mb-2"></div>
+    <p class="text-muted small mb-2" id="instituciones-vacio">Sin instituciones registradas.</p>
+
+    <button type="button" class="btn btn-outline-primary btn-sm" id="agregar-institucion-btn"
+            data-bs-toggle="modal" data-bs-target="#modalInstitucion">
+      <i class="fas fa-plus me-1"></i>Agregar institución/servicio
+    </button>
+  </div>
+</div>
+
+{% include 'includes/relevamiento/encuestador/modal/agregar_institucion_modal.html' %}

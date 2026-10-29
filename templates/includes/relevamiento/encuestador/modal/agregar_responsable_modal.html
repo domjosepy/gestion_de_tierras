@@ -1,0 +1,29 @@
+<!-- MODAL DEL RESPONSABLE -->
+    <div class="modal fade" id="modalResponsable" tabindex="-1" aria-labelledby="modalResponsableLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header card-header-brown-light text-white">
+            <h5 class="modal-title" id="modalResponsableLabel"><i class="fas fa-user-tie me-2"></i>Datos del Responsable</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }}</label>
+                {{ form.quien_es_el_ocupante }}
+                {% if form.quien_es_el_ocupante.errors %}<div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">{{ form.cedula_ocupante.label }}</label>
+                {{ form.cedula_ocupante }}
+                {% if form.cedula_ocupante.errors %}<div class="text-danger small mt-1">{{ form.cedula_ocupante.errors }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="guardar-responsable-btn" data-bs-dismiss="modal">Aceptar</button>
+          </div>
+        </div>
+      </div>
+    </div>

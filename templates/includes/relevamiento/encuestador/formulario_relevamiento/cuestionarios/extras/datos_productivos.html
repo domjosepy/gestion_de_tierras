@@ -1,24 +1,6 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Encuesta (Ocupante) — Parte 3 (Productivos){% endblock %}
-
-{% block content %}
-<div class="container mt-4 fade-in encuestador-form">
-
-  <form method="post">
-    {% csrf_token %}
-
-    <div class="card mb-4">
-      <div class="card-header-brown">
-        <i class="fas fa-clipboard-list"></i>
-        <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO — Parte 3 de 4</h2>
-      </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- DATOS PRODUCTIVOS: Cultivos + Ganadería -->
-    <!-- ============================================================ -->
+<!-- ============================================================ -->
+<!-- DATOS PRODUCTIVOS: Cultivos + Ganadería -->
+<!-- ============================================================ -->
     <div class="card mb-4">
       <div class="card-header card-header-brown-light">
         <i class="fas fa-tractor"></i>
@@ -53,6 +35,8 @@
                           <td>{{ cultivo_form.tipo_siembra }}</td>
                           <td>{{ cultivo_form.hectareas }}</td>
                           <td class="text-center">
+                            {{ cultivo_form.id }}
+                            <div class="d-none">{{ cultivo_form.DELETE }}</div>
                             <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
                           </td>
                         </tr>
@@ -108,6 +92,8 @@
                           <td>{{ ganaderia_form.tipo_ganaderia }}</td>
                           <td>{{ ganaderia_form.cantidad }}</td>
                           <td class="text-center">
+                             {{ ganaderia_form.id }}
+                            <div class="d-none">{{ ganaderia_form.DELETE }}</div>
                             <button type="button" class="btn btn-sm btn-outline-danger remove-block-btn"><i class="fas fa-trash"></i></button>
                           </td>
                         </tr>
@@ -137,56 +123,3 @@
         </div>
       </div>
     </div>
-
-    <!-- ============================================================ -->
-    <!-- MEJORAS E INFRAESTRUCTURA -->
-    <!-- ============================================================ -->
-    <div class="card mb-4">
-      <div class="card-header card-header-brown-light">
-        <i class="fas fa-tools"></i>
-        <h2 class="mb-0">5. Mejoras e Infraestructura</h2>
-      </div>
-      <div class="card-body">
-        <div class="accordion" id="accordionMejoras">
-          <div class="accordion-item">
-            <h2 class="accordion-header" id="headingMejoras">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMejoras" aria-expanded="false" aria-controls="collapseMejoras">
-                <i class="fas fa-check-square me-2 text-primary"></i> Seleccione las mejoras que observe en el lote
-              </button>
-            </h2>
-            <div id="collapseMejoras" class="accordion-collapse collapse" aria-labelledby="headingMejoras" data-bs-parent="#accordionMejoras">
-              <div class="accordion-body">
-                <div class="row row-cols-2 row-cols-md-3 g-2" id="mejoras-checkboxes">
-                  {% for choice in form.mejoras %}
-                    <div class="col">
-                      <div class="form-check">
-                        {{ choice.tag }}
-                        <label class="form-check-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
-                      </div>
-                    </div>
-                  {% endfor %}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card mb-4">
-      <div class="card-body d-flex justify-content-between gap-2">
-        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger"><i class="fas fa-times me-1"></i>Cancelar</a>
-        <button type="submit" class="btn btn-primary">
-          {% if origen_resumen %}Guardar y volver al resumen{% else %}Siguiente{% endif %} 
-          <i class="fas fa-arrow-right ms-1"></i>
-        </button>
-      </div>
-    </div>
-    {% if origen_resumen %}<input type="hidden" name="origen" value="resumen">{% endif %}
-  </form>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
-{% endblock %}

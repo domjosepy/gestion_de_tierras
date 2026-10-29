@@ -74,10 +74,8 @@
               <span class="ficha-sec-name">{{ sec.titulo }}</span>
             </div>
             {% if not completo %}
-              <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk sec.editar %}?origen=resumen"
-                 class="ficha-edit" title="Editar {{ sec.titulo }}">
-                <i class="fas fa-pencil-alt"></i> Editar
-              </a>
+              <a href="{% if sec.url %}{{ sec.url }}{% else %}{% url 'relevamiento:continuar_encuesta' relevamiento.pk sec.editar %}?origen=resumen{% endif %}"
+                class="editar btn-outline-warning" title="Editar"><i class="fas fa-pencil-alt"></i></a>
             {% endif %}
           </div>
 

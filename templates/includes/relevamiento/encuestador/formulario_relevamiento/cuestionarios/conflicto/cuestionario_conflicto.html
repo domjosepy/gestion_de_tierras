@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta (Conflicto){% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  <div class="card mb-4">
+    <div class="card-header-brown">
+      <i class="fas fa-clipboard-list"></i>
+      <h2 class="mb-0 text-center">FORMULARIO DE RELEVAMIENTO — Conflicto</h2>
+    </div>
+  </div>
+
+  <div class="alert alert-primary shadow-sm py-2 mb-4">
+    <strong>Orden:</strong> {{ orden.numero_orden }} ·
+    <strong>Manzana:</strong> {{ relevamiento.manzana|default:"—" }} ·
+    <strong>Lote:</strong> {{ relevamiento.lote_indert|default:"—" }} ·
+    <strong>Dimensión:</strong> {{ relevamiento.dimensiones|default:"—" }}
+  </div>
+
+  {# -------------------- PRETENDIENTES -------------------- #}
+  <div class="card mb-4">
+    <div class="card-header card-header-warning d-flex justify-content-between align-items-center">
+      <span class="d-flex align-items-center text-white">
+        <i class="fas fa-balance-scale m-2"></i>
+        <span class="badge bg-danger m-2">{{ pretendientes|length }}</span>
+        Pretendientes para el lote: {{ relevamiento.lote_indert }} - Manzana {{ relevamiento.manzana }}
+      </span>
+    </div>
+    <div class="card-body">
+      {% if pretendientes|length < 2 %}
+        <div class="alert alert-danger py-2 small">
+          <i class="fas fa-exclamation-triangle me-1"></i>
+          Un conflicto suele tener al menos dos pretendientes.
+        </div>
+      {% endif %}
+
+      {% for p in pretendientes %}
+        <div class="border rounded p-3 mb-2 d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-semibold">{{ p.nombre_pretendiente }}{% if p.ci_pretendiente %}, CI {{ p.ci_pretendiente }} · {% endif %} </div>
+            <div class="small text-muted">
+              {% if p.estado_civil_pretendiente %}{{ p.get_estado_civil_pretendiente_display }} · {% endif %}
+              Vivienda: {{ p.get_condicion_vivienda_display|default:"—" }}
+            </div>
+            <div class="small text-muted">
+              <i class="fas fa-home me-1 text-info"></i>{{ p.viviendas.count }} vivienda(s) ·
+              <i class="fas fa-users me-1 text-purple"></i>{{ p.miembros.count }} miembro(s) ·
+              <i class="fas fa-seedling me-1 text-success"></i>{{ p.cultivos.count }} cultivo(s) ·
+              <i class="fas fa-cow me-1 text-orange"></i>{{ p.producciones_ganaderas.count }} ganadería(s)
+            </div>
+            {% if p.observaciones %}<div class="small">Observaciones: {{ p.observaciones }}</div>{% endif %}
+            {% if p.residencia_manzana %}
+              <span class="small">Reside en la Manzana: {{ p.residencia_manzana }} - Lote {{ p.residencia_lote }}</span>
+            {% endif %}
+            {% if p.encargado_residencia %}
+              <span class="small">Encargado de la residencia {{ p.encargado_residencia }}</span>
+            {% endif %}
+          </div>
+          <div class="ms-2 flex-shrink-0 d-flex gap-1">
+            {% if p.condicion_vivienda != 'sin_vivienda' %}
+              <a href="{% url 'relevamiento:pretendiente_vivienda' relevamiento.pk p.pk %}"
+                 class="btn btn-sm btn-outline-info" title="Vivienda y población">
+                <i class="fas fa-home m-1"></i><i class="fas fa-pencil-alt"></i>
+              </a>
+            {% endif %}
+            <a href="{% url 'relevamiento:pretendiente_produccion' relevamiento.pk p.pk %}"
+               class="btn btn-sm btn-outline-success" title="Producción y mejoras">
+              <i class="fas fa-seedling m-1"></i><i class="fas fa-pencil-alt"></i>
+            </a>
+            <a href="{% url 'relevamiento:pretendiente_editar' relevamiento.pk p.pk %}"
+               class="btn btn-sm btn-outline-secondary" title="Editar datos del pretendiente">
+              <i class="fas fa-user m-1"></i><i class="fas fa-pencil-alt"></i>
+            </a>
+            <form method="post" id="delete-form-{{ p.pk }}" action="{% url 'relevamiento:pretendiente_eliminar' relevamiento.pk p.pk %}">
+              {% csrf_token %}
+              <button type="button"
+                      class="btn btn-sm btn-outline-danger btn-abrir-modal-eliminar"
+                      title="Eliminar"
+                      data-bs-toggle="modal"
+                      data-bs-target="#modalEliminarPretendiente"
+                      data-nombre="{{ p.nombre_pretendiente|escapejs }}"
+                      data-form-id="delete-form-{{ p.pk }}">
+                <i class="fas fa-trash m-1"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-muted small text-center mb-0">Todavía no hay pretendientes cargados.</p>
+      {% endfor %}
+
+      <div class="text-center mt-2">
+        <a href="{% url 'relevamiento:pretendiente_nuevo' relevamiento.pk %}" class="btn btn-sm btn-outline-warning">
+          <i class="fa-solid fa-object-ungroup me-1"></i>Agregar Pretendiente
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# -------------------- FORM ÚNICO -------------------- #}
+  <form method="post" id="form-conflicto">
+    {% csrf_token %}
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/extras/datos_instituciones.html' %}
+
+    <div class="d-flex justify-content-end gap-2 mb-4">
+      {% if puede_volver_al_resumen %}
+        <a href="{% url 'relevamiento:continuar_encuesta' relevamiento.pk 'encuesta' %}" class="btn btn-outline-secondary">
+          <i class="fas fa-list-check me-1"></i>Volver al resumen
+        </a>
+      {% endif %}
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalInfoEncuesta"
+              {% if not pretendientes %}disabled{% endif %}>
+        Siguiente <i class="fas fa-arrow-right ms-1"></i>
+      </button>
+    </div>
+
+    {# Modal de Información de la Encuesta — DENTRO del form para que viajen sus inputs #}
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/extras/cierre_cuestionario.html' %}
+  </form>
+
+</div>
+
+{% include 'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/modal/eliminar_pretendiente_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var debeAbrir = {% if abrir_modal %}true{% else %}false{% endif %};
+    {% if form.errors or institucion_formset.errors %}debeAbrir = true;{% endif %}
+    if (debeAbrir) {
+      var el = document.getElementById('modalInfoEncuesta');
+      if (el && window.bootstrap) new bootstrap.Modal(el).show();
+    }
+  });
+</script>
+{% endblock %}

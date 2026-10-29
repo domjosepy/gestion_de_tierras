@@ -1,0 +1,51 @@
+{# -------- Modal de Información de la Encuesta -------- #}
+<div class="modal fade" id="modalInfoEncuesta" tabindex="-1" aria-labelledby="modalInfoEncuestaLabel" aria-hidden="true">
+<div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+        <div class="modal-header card-header-success text-white">
+        <h5 class="modal-title" id="modalInfoEncuestaLabel">
+            <i class="fas fa-file-alt me-2"></i>Información de la Encuesta
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+            <label class="form-label fw-semibold">{{ form.estado_entrevista.label }}</label>
+            {{ form.estado_entrevista }}
+            {% if form.estado_entrevista.errors %}<div class="text-danger small mt-1">{{ form.estado_entrevista.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check">
+                {{ form.firmo_solicitud }}
+                <label class="form-check-label fw-semibold" for="{{ form.firmo_solicitud.id_for_label }}">{{ form.firmo_solicitud.label }}</label>
+            </div>
+            </div>
+            <div class="col-12">
+            <label class="form-label fw-semibold">{{ form.observacion_encuesta.label }}</label>
+            {{ form.observacion_encuesta }}
+            {% if form.observacion_encuesta.errors %}<div class="text-danger small mt-1">{{ form.observacion_encuesta.errors }}</div>{% endif %}
+            </div>
+        </div>
+        </div>
+        <div class="modal-footer justify-content-between">
+            <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">
+                Guardar y continuar <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+        </div>
+    </div>
+    </div>
+</div>
+<script>
+  // Auto-abrir el modal si venimos del lápiz "Instituciones y cierre"
+  // o si el POST falló con errores.
+  document.addEventListener('DOMContentLoaded', function () {
+    var debeAbrir = {% if abrir_modal %}true{% else %}false{% endif %};
+    {% if form.errors %}debeAbrir = true;{% endif %}
+    if (debeAbrir) {
+      var el = document.getElementById('modalInfoEncuesta');
+      if (el && window.bootstrap) new bootstrap.Modal(el).show();
+    }
+  });
+</script>

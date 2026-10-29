@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Encuesta (Conflicto){% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in encuestador-form">
+
+  {# El botón "Cargar datos" de Población lee estos datos. Acá el titular es el pretendiente. #}
+  <script>
+    window.ROL_TITULAR = 'Pretendiente';
+    window.DATOS_OCUPANTE_CONYUGE = {
+      ocupante: {
+        nombre: "{{ pretendiente.nombre_pretendiente|escapejs }}",
+        ci: "{{ pretendiente.ci_pretendiente|escapejs }}",
+        sexo: "{{ pretendiente.sexo_pretendiente|escapejs }}",
+        estado_civil: "{{ pretendiente.estado_civil_pretendiente|escapejs }}"
+      },
+      conyuge: { nombre: "", ci: "", sexo: "", estado_civil: "" }
+    };
+  </script>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="card mb-4">
+      <div class="card-header-brown">
+        <i class="fas fa-home"></i>
+        <h2 class="mb-0 text-center">Vivienda de {{ pretendiente.nombre_pretendiente }}</h2>
+      </div>
+    </div>
+
+    {% include 'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/extras/datos_vivienda.html' %}
+
+    <div class="card mb-4">
+      <div class="card-body d-flex justify-content-between gap-2">
+        <a href="{% url 'relevamiento:continuar_conflicto' relevamiento.pk 'pretendientes' %}" class="btn btn-outline-danger">
+          <i class="fas fa-times me-1"></i>Cancelar
+        </a>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Guardar vivienda</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/relevamiento/relevamiento_form_common.js' %}?v={% now 'U' %}"></script>
+{% endblock %}
