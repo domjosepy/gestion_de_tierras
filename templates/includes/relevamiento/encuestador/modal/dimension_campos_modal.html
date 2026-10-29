@@ -10,18 +10,21 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+          <div class="validacion-modal-error d-none" id="dimension-modal-error" role="alert">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="dimension-modal-error-text">Cargue frente y fondo (números mayores a 0).</span>
+          </div>
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ form.frente_aprox.label }}</label>
+              <label class="form-label fw-semibold">{{ form.frente_aprox.label }} <span class="text-danger">*</span></label>
               {{ form.frente_aprox }}
+              <small class="text-muted d-block mt-1">En metros</small>
             </div>
             <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ form.fondo_aprox.label }}</label>
+              <label class="form-label fw-semibold">{{ form.fondo_aprox.label }} <span class="text-danger">*</span></label>
               {{ form.fondo_aprox }}
+              <small class="text-muted d-block mt-1">En metros</small>
             </div>
-          </div>
-          <div class="text-danger small mt-2 d-none" id="dimension-modal-error">
-            Cargá frente y fondo (números mayores a 0).
           </div>
         </div>
         <div class="modal-footer justify-content-between">

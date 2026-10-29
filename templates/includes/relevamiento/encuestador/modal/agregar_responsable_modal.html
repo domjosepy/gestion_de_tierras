@@ -7,15 +7,21 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
           </div>
           <div class="modal-body">
+            <div class="validacion-modal-error d-none" id="responsable-modal-error" role="alert">
+              <i class="fas fa-exclamation-circle"></i>
+              <span id="responsable-modal-error-text">Por favor, corrija los errores.</span>
+            </div>
             <div class="row g-3">
               <div class="col-12">
-                <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }}</label>
+                <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }} <span class="text-danger">*</span></label>
                 {{ form.quien_es_el_ocupante }}
+                <small class="text-muted d-block mt-1">Solo letras, espacios y Ñ</small>
                 {% if form.quien_es_el_ocupante.errors %}<div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>{% endif %}
               </div>
               <div class="col-12">
                 <label class="form-label fw-semibold">{{ form.cedula_ocupante.label }}</label>
                 {{ form.cedula_ocupante }}
+                <small class="text-muted d-block mt-1">Solo números, máximo 8 dígitos</small>
                 {% if form.cedula_ocupante.errors %}<div class="text-danger small mt-1">{{ form.cedula_ocupante.errors }}</div>{% endif %}
               </div>
             </div>
@@ -27,3 +33,77 @@
         </div>
       </div>
     </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalResponsable = document.getElementById('modalResponsable');
+    const inputNombre = document.getElementById('id_quien_es_el_ocupante');
+    const inputCi = document.getElementById('id_cedula_ocupante');
+    const errorDiv = document.getElementById('responsable-modal-error');
+    const errorText = document.getElementById('responsable-modal-error-text');
+
+    // Validar nombre en tiempo real (solo letras y Ñ)
+    if (inputNombre) {
+        inputNombre.addEventListener('input', function() {
+            const original = this.value;
+            this.value = original.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, '');
+        });
+    }
+
+    // Validar cédula en tiempo real (solo números, máximo 8)
+    if (inputCi) {
+        inputCi.addEventListener('input', function() {
+            this.value = this.value.replace(/[^\d]/g, '');
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
+            }
+        });
+    }
+
+    // Validar al guardar
+    document.getElementById('guardar-responsable-btn')?.addEventListener('click', function(e) {
+        const nombre = inputNombre?.value.trim() || '';
+        const ci = inputCi?.value.trim() || '';
+        let errores = [];
+
+        // Validar nombre obligatorio
+        if (!nombre) {
+            errores.push('El nombre del responsable es obligatorio.');
+        } else {
+            // Validar nombre solo letras
+            const soloLetras = /^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$/;
+            if (!soloLetras.test(nombre)) {
+                errores.push('El nombre debe contener solo letras y Ñ.');
+            }
+        }
+
+        // Validar cédula si existe
+        if (ci && !/^\d+$/.test(ci)) {
+            errores.push('La cédula debe contener solo números.');
+        }
+
+        if (ci && ci.length > 8) {
+            errores.push('La cédula no debe tener más de 8 dígitos.');
+        }
+
+        if (errores.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            errorText.textContent = errores.join(' ');
+            errorDiv.classList.remove('d-none');
+            if (inputNombre && !nombre) {
+                inputNombre.focus();
+            } else if (inputCi && ci && ci.length > 8) {
+                inputCi.focus();
+            }
+        } else {
+            errorDiv.classList.add('d-none');
+        }
+    });
+
+    // Limpiar errores al abrir el modal
+    modalResponsable?.addEventListener('show.bs.modal', function() {
+        errorDiv?.classList.add('d-none');
+    });
+});
+</script>

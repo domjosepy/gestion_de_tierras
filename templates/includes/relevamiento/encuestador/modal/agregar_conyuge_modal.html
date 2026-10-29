@@ -10,14 +10,20 @@
         <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div class="validacion-modal-error d-none" id="persona-modal-error" role="alert">
+          <i class="fas fa-exclamation-circle"></i>
+          <span id="persona-modal-error-text">El nombre es obligatorio.</span>
+        </div>
         <div class="row g-3">
           <div class="col-12">
-            <label class="form-label fw-semibold">Nombre y Apellido</label>
-            <input type="text" class="form-control" id="modal_persona_nombre">
+            <label class="form-label fw-semibold">Nombre y Apellido <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="modal_persona_nombre" placeholder="Ingrese nombre y apellido">
+            <small class="text-muted d-block mt-1">Solo letras, espacios y Ñ</small>
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">Cédula</label>
-            <input type="text" class="form-control" id="modal_persona_ci">
+            <input type="text" class="form-control" id="modal_persona_ci" placeholder="Ej: 12345678" maxlength="8">
+            <small class="text-muted d-block mt-1">Máximo 8 dígitos</small>
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">Sexo</label>
@@ -37,12 +43,90 @@
             </select>
           </div>
         </div>
-        <div class="text-danger small mt-2 d-none" id="persona-modal-error">El nombre es obligatorio.</div>
       </div>
       <div class="modal-footer justify-content-between">
         <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-outline-primary" id="guardar-persona-btn">Guardar</button>
-      </div> 
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalPersona = document.getElementById('modalPersona');
+    const inputNombre = document.getElementById('modal_persona_nombre');
+    const inputCi = document.getElementById('modal_persona_ci');
+    const errorDiv = document.getElementById('persona-modal-error');
+    const errorText = document.getElementById('persona-modal-error-text');
+
+    // Validar nombre en tiempo real (solo letras y Ñ)
+    if (inputNombre) {
+        inputNombre.addEventListener('input', function() {
+            const original = this.value;
+            this.value = original.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]/g, '');
+        });
+    }
+
+    // Validar cédula en tiempo real (solo números, máximo 8)
+    if (inputCi) {
+        inputCi.addEventListener('input', function() {
+            this.value = this.value.replace(/[^\d]/g, '');
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 8);
+            }
+        });
+    }
+
+    // Validar al guardar
+    document.getElementById('guardar-persona-btn')?.addEventListener('click', function() {
+        const nombre = inputNombre?.value.trim() || '';
+        const ci = inputCi?.value.trim() || '';
+
+        // Validar nombre obligatorio
+        if (!nombre) {
+            errorText.textContent = 'El nombre es obligatorio.';
+            errorDiv.classList.remove('d-none');
+            inputNombre?.focus();
+            return;
+        }
+
+        // Validar nombre solo letras
+        const soloLetras = /^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$/;
+        if (!soloLetras.test(nombre)) {
+            errorText.textContent = 'El nombre debe contener solo letras y Ñ.';
+            errorDiv.classList.remove('d-none');
+            inputNombre?.focus();
+            return;
+        }
+
+        // Validar cédula si existe
+        if (ci && !/^\d+$/.test(ci)) {
+            errorText.textContent = 'La cédula debe contener solo números.';
+            errorDiv.classList.remove('d-none');
+            inputCi?.focus();
+            return;
+        }
+
+        if (ci && ci.length > 8) {
+            errorText.textContent = 'La cédula no debe tener más de 8 dígitos.';
+            errorDiv.classList.remove('d-none');
+            inputCi?.focus();
+            return;
+        }
+
+        // Si todo es válido, limpiar error y guardar
+        errorDiv.classList.add('d-none');
+
+        // Llamar a la función guardarConyuge del script común
+        if (typeof guardarConyuge === 'function') {
+            guardarConyuge();
+        }
+    });
+
+    // Limpiar errores al abrir el modal
+    modalPersona?.addEventListener('show.bs.modal', function() {
+        errorDiv?.classList.add('d-none');
+    });
+});
+</script>
