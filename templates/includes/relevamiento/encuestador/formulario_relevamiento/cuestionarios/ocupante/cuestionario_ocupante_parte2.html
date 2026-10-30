@@ -49,7 +49,7 @@
           </div>
         </div>
         <hr>
-        <div class="row g-3 mt-1" id="residencia-fields-row">
+        <div class="row g-3 mt-1 justify-content-center" id="residencia-fields-row">
           <label class="form-label fw-semibold"><i class="fas fa-info-circle me-2 text-success"></i>Información de la residencia</label>
           <div class="col-md-2">
             <label class="form-label fw-semibold">Manzana</label>
@@ -67,8 +67,9 @@
             <label class="form-label fw-semibold">Parentesco</label>
             {{ form.parentesco }}
           </div>
+          <hr>
         </div>
-        <div class="inner-subsection mt-2 col-md-8">
+        <div class="inner-subsection justify-content-center">
           <div class="accordion" id="accordionUsoLote">
             <div class="accordion-item">
               <h2 class="accordion-header" id="headingUsoLote">
@@ -97,12 +98,8 @@
         </div>
       </div>
     </div>
-
     <div class="card mb-4">
-      <div class="card-body d-flex justify-content-between gap-2">
-        <a href="{% url 'relevamiento:encuestador_dashboard' %}" class="btn btn-outline-danger">
-          <i class="fas fa-times me-1"></i>Cancelar
-        </a>
+      <div class="card-body d-flex justify-content-end gap-2">
         <button type="submit" class="btn btn-primary">
           {% if origen_resumen %}Guardar y volver al resumen{% else %}Siguiente{% endif %} 
           <i class="fas fa-arrow-right ms-1"></i>

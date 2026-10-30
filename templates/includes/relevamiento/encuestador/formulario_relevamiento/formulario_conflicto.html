@@ -258,13 +258,20 @@
                     {% for pmiem_form in pmiem_fs %}
                       {% if pmiem_form.errors %}<div class="alert alert-danger small py-1">Miembro {{ forloop.counter }}: {{ pmiem_form.errors }}</div>{% endif %}
                     {% endfor %}
-                    <div class="table-responsive">
-                      <table class="beautiful-table align-middle mb-0" id="pret-miembros-table-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}">
+                    <div class="table-responsive" style="max-width: 100%; overflow-x: auto;">
+                      <table class="beautiful-table align-middle mb-0" id="pret-miembros-table-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}" style="min-width: 1300px;">
                         <thead>
                           <tr class="text-center">
-                            <th>Nombre y Apellido</th><th>Cedula</th><th>Edad</th><th>Sexo</th>
-                            <th>Estado civil</th><th>Parentesco</th><th>Relación</th>
-                            <th>Escolaridad</th><th>Grado/Año</th><th>Acción</th>
+                            <th style="min-width: 150px;">Nombre y Apellido</th>
+                            <th style="min-width: 100px;">Cédula</th>
+                            <th style="min-width: 80px;">Edad</th>
+                            <th style="min-width: 80px;">Sexo</th>
+                            <th style="min-width: 110px;">Estado civil</th>
+                            <th style="min-width: 110px;">Parentesco</th>
+                            <th style="min-width: 100px;">Relación</th>
+                            <th style="min-width: 120px;">Escolaridad</th>
+                            <th style="min-width: 100px;">Grado/Año</th>
+                            <th style="min-width: 60px;">Acción</th>
                           </tr>
                         </thead>
                         <tbody id="pret-miembros-forms-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}">
@@ -277,7 +284,18 @@
                             <td>{{ pmiem_form.estado_civil_miembro }}</td>
                             <td>{{ pmiem_form.parentesco }}</td>
                             <td>{{ pmiem_form.relacion_con_lote }}</td>
-                            <td>{{ pmiem_form.escolaridad }}</td>
+                            <td>
+                              <select
+                                name="{{ pmiem_form.escolaridad.name }}"
+                                id="{{ pmiem_form.escolaridad.id_for_label }}"
+                                class="form-select form-select-sm">
+                                {% for value, label in pmiem_form.escolaridad.field.choices %}
+                                  <option value="{{ value }}" {% if pmiem_form.escolaridad.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                  </option>
+                                {% endfor %}
+                              </select>
+                            </td>
                             <td>{{ pmiem_form.grado_ano }}</td>
                             <td class="text-center">
                               {{ pmiem_form.vivienda }}

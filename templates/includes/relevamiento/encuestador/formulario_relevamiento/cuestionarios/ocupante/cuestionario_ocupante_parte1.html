@@ -69,12 +69,12 @@
         
         <div class="row g-3 align-items-end">
           <div class="col-md-2">
-            <label class="form-label fw-semibold">{{ form.manzana.label }}</label>
+            <label class="form-label fw-semibold"><span class="text-danger">* </span>{{ form.manzana.label }}</label>
             {{ form.manzana }}
-            
+            {% if form.manzana.errors %}<div class="text-danger small mt-1">{{ form.manzana.errors }}</div>{% endif %}
           </div>
           <div class="col-md-2">
-            <label class="form-label fw-semibold">Lote</label>
+            <label class="form-label fw-semibold"><span class="text-danger">* </span>Lote</label>
             {{ form.lote_indert }}
             {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
           </div>
@@ -94,7 +94,7 @@
           <div id="dimension-summary-row"
                style="display:{% if form.frente_aprox.value and form.fondo_aprox.value %}contents{% else %}none{% endif %}">
             <div class="col-md-2">
-              <label class="form-label fw-semibold">Dimensión</label>
+              <label class="form-label fw-semibold">Dimensión aproximada</label>
               <div class="read-only-field m-1" id="dimension-display">
                 {% if form.frente_aprox.value and form.fondo_aprox.value %}{{ form.frente_aprox.value }}x{{ form.fondo_aprox.value }}{% endif %}
               </div>
@@ -113,19 +113,7 @@
                 <i class="fas fa-pencil-alt"></i>
               </button>
             </div>
-          </div>
-          <!-- Errores de manzana y lote -->
-          {% if form.manzana.errors or form.lote_indert.errors %}
-            <div class="alert alert-danger d-flex align-items-start gap-3 mb-4 shadow-sm" role="alert">
-              {% if form.manzana.errors %}
-                  <div class="text-danger small mt-1">{{ form.manzana.errors }}</div>
-              {% endif %}
-              {% if form.lote_indert.errors %}
-                  <div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>
-              {% endif %}
-            </div>
-          {% endif %}
-          
+          </div>          
         </div>
       </div>
     </div>
@@ -144,7 +132,7 @@
             <label class="form-label fw-semibold">Nombre y Apellido</label>
             {{ form.quien_es_el_ocupante }}
             {% if form.quien_es_el_ocupante.errors %}
-              <div class="text-danger small mt-1 text-uppercase">{{ form.quien_es_el_ocupante.errors }}</div>
+              <div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>
             {% endif %}
           </div>
           <div class="col-md-2">

@@ -12,18 +12,16 @@
       <div class="modal-body">
         <div class="validacion-modal-error d-none" id="persona-modal-error" role="alert">
           <i class="fas fa-exclamation-circle"></i>
-          <span id="persona-modal-error-text">El nombre es obligatorio.</span>
+          <span id="persona-modal-error-text">El nombre es obligatorio. Si no sabe canele la operación.</span>
         </div>
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label fw-semibold">Nombre y Apellido <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="modal_persona_nombre" placeholder="Ingrese nombre y apellido">
-            <small class="text-muted d-block mt-1">Solo letras, espacios y Ñ</small>
+            <input type="text" class="form-control" id="modal_persona_nombre">            
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">Cédula</label>
-            <input type="text" class="form-control" id="modal_persona_ci" placeholder="Ej: 12345678" maxlength="8">
-            <small class="text-muted d-block mt-1">Máximo 8 dígitos</small>
+            <input type="text" class="form-control" id="modal_persona_ci" maxlength="8">
           </div>
           <div class="col-md-4">
             <label class="form-label fw-semibold">Sexo</label>
@@ -85,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Validar nombre obligatorio
         if (!nombre) {
-            errorText.textContent = 'El nombre es obligatorio.';
+            errorText.textContent = 'El nombre es obligatorio. Si no sabe cancele la operación.';
             errorDiv.classList.remove('d-none');
             inputNombre?.focus();
             return;
