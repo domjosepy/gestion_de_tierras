@@ -87,13 +87,14 @@ document.addEventListener('DOMContentLoaded', function () {
 // reales del Relevamiento — ya no se crea ninguna fila de Miembro acá.
 document.addEventListener('DOMContentLoaded', function () {
     const ocSexo = document.getElementById('id_sexo_ocupante');
+    const ocEstadoCivil = document.getElementById('id_estado_civil_ocupante');
 
     const cjNombre = document.getElementById('id_quien_es_el_conyuge');
     const cjCi = document.getElementById('id_cedula_conyuge');
     const cjSexo = document.getElementById('id_sexo_conyuge');
     const cjEstadoCivil = document.getElementById('id_estado_civil_conyuge');
 
-    if (!cjNombre) return; // esta página no tiene sección de cónyuge
+    if (!cjNombre) return;
 
     function hayConyugeCargado() {
         return !!cjNombre.value.trim();
@@ -123,7 +124,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('modalPersona')?.addEventListener('show.bs.modal', function () {
         document.getElementById('modal_persona_nombre').value = cjNombre.value || '';
         document.getElementById('modal_persona_ci').value = cjCi.value || '';
-        document.getElementById('modal_persona_estado_civil').value = cjEstadoCivil.value || '';
+        // Estado civil del cónyuge: si todavía no se cargó uno propio, se
+        // precarga con el del ocupante (p. ej. "casado"), pero queda editable.
+        document.getElementById('modal_persona_estado_civil').value =
+            cjEstadoCivil.value || (ocEstadoCivil ? ocEstadoCivil.value : '') || '';
 
         // Sexo del cónyuge: siempre el opuesto del ocupante, sin poder cambiarlo.
         const sexoInput = document.getElementById('modal_persona_sexo');
@@ -525,8 +529,11 @@ function copiarPersonaAPoblacion(parentesco, datos) {
     if (!tbody) return;
 
     let filaViv = Array.from(tbody.querySelectorAll('tr.miembro-row')).find(row => {
-        const par = row.querySelector('input[name$="-relacion_con_lote"]');
-        return par && par.value === parentesco;
+        // Buscar por select o input (para compatibilidad)
+        const selectRelacion = row.querySelector('select[name$="-relacion_con_lote"]');
+        const inputRelacion = row.querySelector('input[name$="-relacion_con_lote"]');
+        const value = selectRelacion?.value || inputRelacion?.value;
+        return value === parentesco;
     });
 
     if (!filaViv) {
@@ -550,13 +557,21 @@ function copiarPersonaAPoblacion(parentesco, datos) {
     filaViv.querySelector('input[name$="-ci_miembro"]').value = datos.ci;
     filaViv.querySelector('select[name$="-sexo_miembro"]').value = datos.sexo;
     filaViv.querySelector('select[name$="-estado_civil_miembro"]').value = datos.estado_civil;
-    const parInput = filaViv.querySelector('input[name$="-relacion_con_lote"]');
-    if (parInput) parInput.value = parentesco;
+
+    // Establecer relacion_con_lote (puede ser select o input)
+    const selectRelacion = filaViv.querySelector('select[name$="-relacion_con_lote"]');
+    const inputRelacion = filaViv.querySelector('input[name$="-relacion_con_lote"]');
+    if (selectRelacion) {
+        selectRelacion.value = parentesco;
+    } else if (inputRelacion) {
+        inputRelacion.value = parentesco;
+    }
 }
 
 document.addEventListener('click', function (e) {
     if (!e.target.closest('#cargar-ocupante-btn-0')) return;
     const datos = window.DATOS_OCUPANTE_CONYUGE || {};
+    const rol = window.ROL_TITULAR || 'Ocupante'; // Pretendiente en modo conflicto
     copiarPersonaAPoblacion('Ocupante', datos.ocupante);
     copiarPersonaAPoblacion('Cónyuge', datos.conyuge);
     updateMiembrosBadge('0');
@@ -599,9 +614,6 @@ document.getElementById('add-pretendiente-btn')?.addEventListener('click', funct
     <input type="hidden" name="${miemPrefix}-MIN_NUM_FORMS" id="id_${miemPrefix}-MIN_NUM_FORMS" value="0">
     <input type="hidden" name="${miemPrefix}-MAX_NUM_FORMS" id="id_${miemPrefix}-MAX_NUM_FORMS" value="1000">`;
 
-  // ⚠️ PENDIENTE (ver nota debajo): sigo sin el fragmento real de
-  // "pret-vivienda-empty-template", así que este .replace() puede tener
-  // el mismo bug de doble-prefijo que identificamos hace unas pasadas.
   const vivHtml = emptyViv
     ? emptyViv.innerHTML.replace(/viviendas_pret_0-__prefix__/g, `${vivPrefix}-0`)
     : '';
@@ -856,7 +868,7 @@ document.addEventListener('DOMContentLoaded', function () {
         refrescarListaInstituciones();
     });
 
-    refrescarListaInstituciones(); // estado inicial, por si ya hay instituciones guardadas
+    refrescarListaInstituciones(); 
 });
 
 // ── Inicialización común ─────────────────────────────────────────────────────
@@ -894,18 +906,6 @@ document.addEventListener('DOMContentLoaded', function () {
   if (viveCheck) {viveCheck.addEventListener('change', toggleResidencia);
   }
 
-  function actualizarCondicion() {
-    if (tipoSelect.value === 'servicio') {
-        condicionSelect.value = 'servicio';
-        condicionSelect.disabled = true;
-        // agregar mensaje dinámico...
-    } else {
-        condicionSelect.disabled = false;
-        // quitar mensaje...
-    }
-    // Disparar evento change para que las reglas de vive_en_lote se activen
-    condicionSelect.dispatchEvent(new Event('change'));
-  }
   // Actualiza el estado del botón "Cargar datos del ocupante" según vive_en_lote
   window.actualizarBotonCargarOcupante = function () {
      if (!viveCheck) return;
@@ -1002,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (cb !== e.target) cb.checked = false;
             });
         } else {
-            e.target.checked = true; // no se permite quedar sin ninguna principal
+            e.target.checked = true;
         }
     });
     asegurarPrincipalPorDefecto();
@@ -1044,16 +1044,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function actualizarCondicion() {
         if (tipoSelect.value === 'servicio') {
-            // Forzar valor y deshabilitar el campo
             condicionSelect.value = 'servicio';
             condicionSelect.disabled = true;
-            // Añadir mensaje informativo (opcional)
-            if (!dynamicHelp) {
-                dynamicHelp = document.createElement('small');
-                dynamicHelp.className = 'text-muted d-block mt-1';
-                dynamicHelp.textContent = 'Condición fijada automáticamente a "Servicio"';
-                container.appendChild(dynamicHelp);
-            }
         } else {
             // Habilitar el campo para que el usuario elija
             condicionSelect.disabled = false;
@@ -1093,7 +1085,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const template = document.getElementById('cultivos-empty-row');
 
     if (!addBtn || !tbody || !template) {
-        console.warn('Formset de cultivos: elementos no encontrados.');
         return;
     }
 
@@ -1217,7 +1208,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const template = document.getElementById('ganaderia-empty-row');
 
     if (!addBtn || !tbody || !template) {
-        console.warn('Formset de ganadería: elementos no encontrados.');
         return;
     }
 
