@@ -283,7 +283,18 @@
                             <td>{{ pmiem_form.sexo_miembro }}</td>
                             <td>{{ pmiem_form.estado_civil_miembro }}</td>
                             <td>{{ pmiem_form.parentesco }}</td>
-                            <td>{{ pmiem_form.relacion_con_lote }}</td>
+                            <td>
+                              <select
+                                name="{{ pmiem_form.relacion_con_lote.name }}"
+                                id="{{ pmiem_form.relacion_con_lote.id_for_label }}"
+                                class="form-select form-select-sm">
+                                {% for value, label in pmiem_form.relacion_con_lote.field.choices %}
+                                  <option value="{{ value }}" {% if pmiem_form.relacion_con_lote.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                  </option>
+                                {% endfor %}
+                              </select>
+                            </td>
                             <td>
                               <select
                                 name="{{ pmiem_form.escolaridad.name }}"

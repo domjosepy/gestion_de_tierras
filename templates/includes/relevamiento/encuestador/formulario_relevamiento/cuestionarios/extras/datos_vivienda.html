@@ -67,15 +67,15 @@
               <table class="beautiful-table align-middle mb-0" style="min-width: 1200px;">
                 <thead>
                   <tr class="text-center">
-                    <th style="min-width: 150px;">Nombre y Apellido</th>
-                    <th style="min-width: 100px;">Cédula</th>
-                    <th style="min-width: 80px;">Edad</th>
-                    <th style="min-width: 80px;">Sexo</th>
-                    <th style="min-width: 110px;">Estado civil</th>
-                    <th style="min-width: 100px;">Relación</th>
-                    <th style="min-width: 120px;">Escolaridad</th>
-                    <th style="min-width: 100px;">Grado/Año</th>
-                    <th style="min-width: 60px;">Acción</th>
+                    <th>Nombre y Apellido</th>
+                    <th>Cédula</th>
+                    <th>Edad</th>
+                    <th>Sexo</th>
+                    <th>Estado civil</th>
+                    <th>Relación</th>
+                    <th>Escolaridad</th>
+                    <th>Grado/Año</th>
+                    <th>Acción</th>
                   </tr>
                 </thead>
                 <tbody id="miembros-forms-{{ forloop.counter0 }}">
@@ -86,7 +86,18 @@
                     <td>{{ miem_form.edad_miembro }}</td>
                     <td>{{ miem_form.sexo_miembro }}</td>
                     <td>{{ miem_form.estado_civil_miembro }}</td>
-                    <td>{{ miem_form.relacion_con_lote }}</td>
+                    <td>
+                      <select
+                        name="{{ miem_form.relacion_con_lote.name }}"
+                        id="{{ miem_form.relacion_con_lote.id_for_label }}"
+                        class="form-select form-select-sm">
+                        {% for value, label in miem_form.relacion_con_lote.field.choices %}
+                          <option value="{{ value }}" {% if miem_form.relacion_con_lote.value == value %}selected{% endif %}>
+                            {{ label }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </td>
                     <td>
                       <select
                         name="{{ miem_form.escolaridad.name }}"
@@ -167,7 +178,16 @@
         <td>{{ miembro_template_formset.empty_form.edad_miembro }}</td>
         <td>{{ miembro_template_formset.empty_form.sexo_miembro }}</td>
         <td>{{ miembro_template_formset.empty_form.estado_civil_miembro }}</td>
-        <td>{{ miembro_template_formset.empty_form.relacion_con_lote }}</td>
+        <td>
+          <select
+            name="{{ miembro_template_formset.empty_form.relacion_con_lote.name }}"
+            id="{{ miembro_template_formset.empty_form.relacion_con_lote.id_for_label }}"
+            class="form-select form-select-sm">
+            {% for value, label in miembro_template_formset.empty_form.relacion_con_lote.field.choices %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </td>
         <td>
           <select
             name="{{ miembro_template_formset.empty_form.escolaridad.name }}"
