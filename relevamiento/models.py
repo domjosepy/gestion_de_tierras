@@ -4,32 +4,15 @@ import os
 import re
 from datetime import datetime
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Max, Q
 from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
+from .utils import limpiar_nombre_carpeta
 
 # ============================
 # FUNCIONES DE UTILIDAD PARA UPLOAD_TO
 # ============================
-
-def limpiar_nombre_carpeta(nombre):
-    """
-    Limpia un nombre de carpeta eliminando caracteres especiales y espacios.
-    Convierte espacios a guiones bajos y elimina caracteres no alfanuméricos.
-    """
-    if not nombre:
-        return 'sin_nombre'
-    # Convertir a string y eliminar espacios al inicio/final
-    nombre = str(nombre).strip()
-    # Reemplazar espacios por guiones bajos
-    nombre = nombre.replace(' ', '_')
-    # Eliminar caracteres especiales, mantener solo alfanuméricos, guiones y guiones bajos
-    nombre = re.sub(r'[^\w\-]', '', nombre)
-    # Convertir a minúsculas para consistencia
-    nombre = nombre.lower()
-    return nombre or 'sin_nombre'
-
 
 def path_relevamiento_upload(instance, filename):
     """
@@ -146,8 +129,6 @@ def path_relevamiento_fotos_upload(instance, filename):
 # ============================
 # CHOICES
 # ============================
-
-# ver si se puede automatizar el check, por ej. registro es igual a REGISTRO-
 USO_LOTE_OCUPANTE_CHOICES = [
     ("agropecuario_forestal", "Agropecuario/Forestal"), ("forestal_nativa", "Forestal - Nativa"),
     ("forestal_reforestado", "Forestal - Reforestado"), ("barbecho_descanso", "Barbecho - Descanso"),
@@ -172,12 +153,35 @@ MEJORAS_CHOICES = [
 
 EQUIPAMIENTOS_CHOICES = [
     ("energia_electrica", "Energía Eléctrica"), ("agua_corriente", "Agua Corriente"),
-    ("cocina", "Cocina"), ("heladera", "Heladera"), ("lavadora", "Lavadora"), ("bano", "Baño"), 
+    ("cocina", "Cocina"), ("heladera", "Heladera"), ("lavarropas", "Lavarropas"), ("bano", "Baño"), 
     ("computadora", "Computadora"), ("internet", "Internet"), ("television", "Televisión"), ("radio", "Radio"), 
-    ("telefono_fijo", "Teléfono Fijo"),
-    ("vehiculo", "Vehículo"), ("motocicleta", "Motocicleta"),("bicicleta", "Bicicleta"),("tractor", "Tractor"),
-    ("camion", "Camión"),
+    ("telefono_fijo", "Teléfono Fijo"),("vehiculo", "Vehículo"), 
+    ("motocicleta", "Motocicleta"),("tractor", "Tractor"),("camion", "Camión"),
+]
+RELACION_CON_LOTE_CHOICES = [
+    ("ocupante", "Ocupante"), ("conyuge", "Cónyuge"),
+    ("padre", "Padre"), ("madre", "Madre"), ("abuelo", "Abuelo/a"),
+    ("hijo", "Hijo/a"), ("hermano", "Hermano/a"),
+    ("tio", "Tío/a"), ("primo", "Primo/a"),
+    ("sobrino", "Sobrino/a"), ("nieto", "Nieto/a"),
+    ("cunado", "Cuñado/a"), ("ahijado", "Ahijado/a"), ("otro", "Otro")
+]
 
+ESCOLARIDAD_CHOICES = [
+    ("sin_educacion_escolar", "Sin Escolaridad"),
+    ("inicial", "Educación Inicial"),
+    ("primaria_incompleta", "Primaria incompleta"),
+    ("primaria_completa", "Primaria completa (6to grado)"),
+    ("ebi_incompleta", "EBI incompleta (7mo a 9no)"),
+    ("ebi_completa", "EBI completa (9no grado)"),
+    ("bachiller_incompleto", "Bachillerato incompleto"),
+    ("bachiller_completo", "Bachillerato completo"),
+    ("tecnico", "Técnico"),
+    ("universitario_incompleto", "Universitario incompleto"),
+    ("universitario_completo", "Universitario completo"),
+    ("postgrado", "Postgrado/Maestría/Doctorado"),
+    ("no_aplica", "No aplica (menor de 3 años)"),
+    ("no_responde", "No responde"),
 ]
 
 MODIFICACIONES_POSTADJUDICACION_CHOICES = [
@@ -227,8 +231,28 @@ TIPO_GANADERIA_CHOICES = [
     ("pavos", "Pavos"), ("otros", "Otros"),
 ]
 
+class UpperCaseMixin:
+    """
+    Uppercasea los CharField/TextField de texto libre en save().
+    NO toca los campos con choices (son enums internos: 'ocupante',
+    'parte_1', etc., y deben respetar el case definido en choices).
+    NO toca tampoco manzana/lote — esos los normalizás a mano en save().
+    """
+    def save(self, *args, **kwargs):
+        for field in self._meta.fields:
+            # 1. Solo CharField y TextField
+            if not isinstance(field, (models.CharField, models.TextField)):
+                continue
+            # 2. Saltar campos con choices (enums internos)
+            if field.choices:
+                continue
+            # 3. Uppercasear el valor si es str
+            value = getattr(self, field.attname, None)
+            if isinstance(value, str) and value:
+                setattr(self, field.attname, value.strip().upper())
+        super().save(*args, **kwargs)
 
-class Relevamiento(models.Model):
+class Relevamiento(UpperCaseMixin, models.Model):
 
     # 1 - DATOS GEOGRAFICOS
     departamento = models.ForeignKey(
@@ -254,13 +278,13 @@ class Relevamiento(models.Model):
         verbose_name="Tipo de Registro")
 
     uso_lote_ocupante = ArrayField(
-        base_field=models.CharField(max_length=50, choices=USO_LOTE_OCUPANTE_CHOICES),
+        base_field=models.CharField(max_length=50),
         blank=True,
         null=True,
         default=list,
     )
     uso_lote_servicio = ArrayField(
-            base_field=models.CharField(max_length=50, choices=USO_LOTE_SERVICIO_CHOICES),
+            base_field=models.CharField(max_length=50),
             blank=True,
             null=True,
             default=list,
@@ -278,7 +302,6 @@ class Relevamiento(models.Model):
     vive_en_lote = models.BooleanField(default=False)
     condicion_vivienda = models.CharField(
         max_length=20, choices=COND_VIVIENDA_CHOICES, default="sin_vivienda")
-
 
     COND_ENCUESTADO_CHOICES = [
         ("titular", "Titular"),
@@ -311,19 +334,23 @@ class Relevamiento(models.Model):
     )
     sexo_ocupante = models.CharField(max_length=1, choices=[("M", "Masculino"), ("F", "Femenino")], blank=True)
     estado_civil_ocupante = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
-
+    telefono_ocupante = models.CharField(max_length=20, blank=True)
     # Datos del conyuge
     quien_es_el_conyuge = models.CharField(max_length=200, blank=True)
     cedula_conyuge = models.CharField(max_length=8,blank=True, null=True)
     sexo_conyuge = models.CharField(max_length=1, choices=[("M", "Masculino"), ("F", "Femenino")], blank=True)
     estado_civil_conyuge = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
            
-
     # Si no vive en el lote: datos de residencia
     residencia_manzana = models.CharField(max_length=50, blank=True)
     residencia_lote = models.CharField(max_length=50, blank=True)
-    parentesco = models.CharField(max_length=200, blank=True)
     encargado_residencia = models.CharField(max_length=200, blank=True)
+    relacion_con_lote = models.CharField(
+        max_length=200,
+        choices=RELACION_CON_LOTE_CHOICES,
+        blank=True,
+        verbose_name="Relación con el lote"
+    )
 
     # 4 - USO DE LA TIERRA Y MEJORAS
     produccion_agricola_ha = models.FloatField(default=0, blank=True)
@@ -348,8 +375,6 @@ class Relevamiento(models.Model):
         default=list,
     )
 
-    # 5 - DATOS DE LA VIVIENDA (se agrupan en un submodelo)
-
     # 7 - FINAL DE LA ENTREVISTA
     ESTADO_ENTREVISTA = [
         ("completa", "Completa"),
@@ -360,6 +385,7 @@ class Relevamiento(models.Model):
     estado_entrevista = models.CharField(
         max_length=20, choices=ESTADO_ENTREVISTA, blank=True)
     firmo_solicitud = models.BooleanField(default=False)
+
 
     modificaciones_post = ArrayField(
         base_field=models.CharField(max_length=50, choices=MODIFICACIONES_POSTADJUDICACION_CHOICES),
@@ -396,6 +422,7 @@ class Relevamiento(models.Model):
         verbose_name="Archivo del Subcoordinador",
         help_text="Archivo comprimido (.zip, .rar, .7z, etc.) - Se organiza en: relevamiento/{depto}/{distrito}/{colonia}/{fecha_OT}/"
     )
+
     fecha_subida_archivo = models.DateTimeField(
         null=True,
         blank=True,
@@ -412,63 +439,109 @@ class Relevamiento(models.Model):
     )
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["departamento", "distrito", "colonia", "manzana", "lote_indert"],
-                name="unique_relevamiento"
-            )
+             models.UniqueConstraint(
+                fields=["colonia", "manzana", "lote_indert"],
+                name="unique_relevamiento_por_colonia",
+                condition=Q(colonia__isnull=False, manzana__gt="", lote_indert__gt=""),
+            ),
         ]
-    
+
+    def normalizar_lote(self):
+        """Normaliza manzana/lote para que 'a1' y 'A1' no se tomen como distintos."""
+        if self.manzana:
+            self.manzana = self.manzana.strip().upper()
+        if self.lote_indert:
+            self.lote_indert = self.lote_indert.strip().upper()
+
+    def derivar_geografia(self):
+        """Completa distrito/departamento a partir de la colonia cuando es
+        inequívoco, y departamento a partir del distrito cuando está seteado.
+
+        Reglas:
+        - Si `distrito` no está seteado y la colonia tiene 1 distrito → se asigna.
+        - Si `distrito` no está seteado y la colonia tiene 0 o 2+ distritos → no
+            se toca (el form Parte 1 lo pide al usuario cuando hay 2+).
+        - Si `distrito` está seteado → `departamento` se deriva de ese distrito.
+        """
+        # 1. Distrito desde colonia (solo si es inequívoco)
+        if self.colonia_id and not self.distrito_id:
+            distritos = list(self.colonia.distritos.all())
+            if len(distritos) == 1:
+                self.distrito_id = distritos[0].id
+
+        # 2. Departamento desde distrito (si hay distrito seteado)
+        if self.distrito_id:
+            # PROTECT garantiza que el distrito existe si hay id
+            depto_id = self.distrito.departamento_id
+            if depto_id and self.departamento_id != depto_id:
+                self.departamento_id = depto_id
+
+    def clean(self):
+        super().clean()
+        self.derivar_geografia()
+        self.normalizar_lote()
+
+        # Solo validamos si tenemos la clave mínima
+        if not (self.colonia_id and self.manzana and self.lote_indert):
+            return
+
+        qs = Relevamiento.objects.filter(
+            colonia_id=self.colonia_id,
+            manzana=self.manzana,
+            lote_indert=self.lote_indert,
+        )
+        if self.pk:
+            qs = qs.exclude(pk=self.pk)
+
+        if qs.exists():
+            existente = qs.first()
+            raise ValidationError({
+                'manzana': (
+                    f"Ya existe un relevamiento en la colonia {self.colonia} "
+                    f"con manzana {self.manzana} y lote {self.lote_indert} "
+                    f"(id: {existente.id_relevamiento or existente.pk})."
+                )
+            })
+
     def __str__(self):
         return f"Relevamiento #{self.pk} - {self.colonia or 'sin colonia'}"
 
     def save(self, *args, **kwargs):
-        # Generamos el id compuesto por id del departamento, distrito, colonia, manzana y lote_indert
-        if self.departamento and self.distrito and self.colonia and self.manzana and self.lote_indert:
-            self.id_relevamiento = f"{self.departamento}-{self.distrito}-{self.colonia}-{self.manzana}_{self.lote_indert}"
 
-        #Guardamos lote_sirt igual a lote indert
+        # 1. Derivar geografía PRIMERO (colonia → distrito → departamento)
+        self.derivar_geografia()
+
+        # 2. Normalizar ANTES de generar ID / lote_sirt
+        self.normalizar_lote()
+
+        # 3. ID compuesto con valores YA normalizados
+        if self.colonia_id and self.manzana and self.lote_indert:
+            self.id_relevamiento = f"{self.colonia_id}-{self.manzana}_{self.lote_indert}"
+
+        # 4. lote_sirt = lote_indert (también normalizado)
         if self.lote_indert:
             self.lote_sirt = self.lote_indert
 
-        #Guardamos los campos quien_es_el_ocupante y quien_es_el_conyuge en mayúsculas
-        if self.quien_es_el_ocupante:
-            self.quien_es_el_ocupante = self.quien_es_el_ocupante.upper()
-        if self.quien_es_el_conyuge:
-            self.quien_es_el_conyuge = self.quien_es_el_conyuge.upper()
-
-        # Guardamos observaciones de relevamiento en mayúsculas
-        if self.observacion_encuesta:
-            self.observacion_encuesta = self.observacion_encuesta.upper()
-            
-        # Si el tipo de registro es "servicio", se establece la condición de vivienda como "servicio"
-        if self.tipo_registro == "servicio":
-            self.condicion_vivienda = "servicio"
-
-        """
-        Auto-asigna el campo `formulario` de forma incremental por `orden_trabajo`.
-        Se usa bloqueo transaccional sobre la fila de `OrdenTrabajo` para evitar
-        condiciones de carrera cuando se crean relevamientos concurrentes.
-        """
-
-        # Solo asignar si no está definido y existe orden_trabajo
-        if (self.formulario is None or self.formulario == '') and getattr(self, 'orden_trabajo_id', None):
-            with transaction.atomic():
-                # Bloquear la fila de OrdenTrabajo para esta orden
+        # 5. Formulario secuencial con lock — INSERT ADENTRO del atomic
+        with transaction.atomic():
+            if (self.formulario in (None, '')) and self.orden_trabajo_id:
                 OrdenTrabajo = apps.get_model('coordinacion', 'OrdenTrabajo')
                 OrdenTrabajo.objects.select_for_update().get(pk=self.orden_trabajo_id)
-
-                # Calcular el máximo formulario actual y asignar siguiente número
                 last = Relevamiento.objects.filter(
                     orden_trabajo_id=self.orden_trabajo_id
                 ).aggregate(m=Max('formulario'))['m']
-                self.formulario = 1 if last is None else (last + 1)
+                self.formulario = 1 if last is None else last + 1
 
-        super().save(*args, **kwargs)
+            super().save(*args, **kwargs)
 
     def siguiente_sufijo_sublote(self):
-        """Siguiente letra secuencial (A, B, C...) para el próximo sub-lote de fraccionamiento."""
         existentes = self.sub_lotes.count()
-        return chr(ord('A') + existentes)
+        if existentes < 26:
+            return chr(ord('A') + existentes)
+        # AA, AB, ... AZ, BA, ...
+        primero  = chr(ord('A') + (existentes // 26) - 1)
+        segundo  = chr(ord('A') + (existentes % 26))
+        return f"{primero}{segundo}"
 
 
 class Pretendiente(models.Model):
@@ -482,13 +555,19 @@ class Pretendiente(models.Model):
     ci_pretendiente = models.CharField(max_length=100, blank=True)
     sexo_pretendiente = models.CharField(max_length=1, choices=[('M', 'Masculino'), ('F', 'Femenino')], blank=True)
     estado_civil_pretendiente = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
+    telefono_pretendiente = models.CharField(max_length=20, blank=True)
     condicion_vivienda = models.CharField(max_length=20, choices=COND_VIVIENDA_CHOICES, blank=True)
     vive_en_lote = models.BooleanField(default=False)
     residencia_manzana = models.CharField(max_length=50, blank=True)
     residencia_lote = models.CharField(max_length=50, blank=True)
     quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
-    parentesco = models.CharField(max_length=200, blank=True)
-
+    encargado_residencia = models.CharField(max_length=200, blank=True)
+    relacion_con_lote = models.CharField(
+        max_length=200,
+        choices=RELACION_CON_LOTE_CHOICES,
+        blank=True,
+        verbose_name="Relación con el lote"
+    )
     produccion_agricola_ha = models.FloatField(default=0, blank=True)
     produccion_ganadera_ha = models.FloatField(default=0, blank=True)
     reforestado_ha = models.FloatField(default=0, blank=True)
@@ -629,12 +708,15 @@ class Vivienda(models.Model):
         help_text="Lista de equipamientos: energia, agua, cocina, baño, telefono, internet",
     )
 
+    
+    def normalizar_lote(self):
+        """Normaliza manzana/lote para que 'a1' y 'A1' no se tomen como distintos."""
+        if self.manzana:
+            self.manzana = self.manzana.strip().upper()
+        if self.lote_indert:
+            self.lote_indert = self.lote_indert.strip().upper()
+
     def clean(self):
-        # Ya NO validamos acá. Esto corría en cada is_valid() del formset,
-        # incluso cuando el Relevamiento/Pretendiente padre todavía no
-        # existía (se crea en el mismo POST, después de la validación).
-        # La validación real se hace en save() — ver abajo — que sí se
-        # ejecuta en el momento correcto, después de asignar la FK real.
         pass
 
     def save(self, *args, **kwargs):
@@ -645,6 +727,7 @@ class Vivienda(models.Model):
     def __str__(self):
         owner = self.relevamiento or self.pretendiente
         return f"Vivienda #{self.numero} — {owner}"
+
 
 # MANEJO DE MIEMBROS DE LA FAMILIA / POBLACION
 class Miembro(models.Model):
@@ -675,13 +758,31 @@ class Miembro(models.Model):
     SEXO = [("M", "Masculino"), ("F", "Femenino")]
     sexo_miembro = models.CharField(max_length=1, choices=SEXO, blank=True)
     estado_civil_miembro = models.CharField(max_length=20, choices=ESTADO_CIVIL_CHOICES, blank=True)
-    parentesco = models.CharField(max_length=100, blank=True)
-    relacion_con_lote = models.CharField(max_length=200, blank=True)
-    escolaridad = models.CharField(max_length=200, blank=True)
-    grado_ano = models.CharField(max_length=100, blank=True)
+    relacion_con_lote = models.CharField(
+        max_length=200,
+        choices=RELACION_CON_LOTE_CHOICES,
+        blank=True,
+        verbose_name="Relación con el lote"
+    )
+    escolaridad = models.CharField(
+        max_length=30,
+        choices=ESCOLARIDAD_CHOICES,
+        blank=True,
+        verbose_name="Nivel educativo",
+    )
+    grado_ano = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Grado/Año en curso o último aprobado",
+    )
+
 
     def __str__(self):
         return self.nombre_miembro
+
+    def save(self, *args, **kwargs):
+        self.nombre_miembro = self.nombre_miembro.upper() if self.nombre_miembro else self.nombre_miembro
+        super().save(*args, **kwargs)
 
 
 class ProblemaSalud(models.Model):
@@ -786,8 +887,6 @@ class FotoRelevamiento(models.Model):
     
     def __str__(self):
         return f"{self.get_tipo_foto_display()} - {self.relevamiento}"
-
-
 
 
 class InstitucionEnLote(models.Model):

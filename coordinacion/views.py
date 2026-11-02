@@ -159,7 +159,7 @@ def solicitudes_canceladas(request):
 
 @login_required
 @coordinacion_required
-def generar_orden_view(request, solicitud_id):
+def generar_orden_trabajo(request, solicitud_id):
     solicitud = get_object_or_404(SolicitudRelevamiento, id=solicitud_id)
 
     if solicitud.estado != 'asignado_coordinacion':
@@ -285,7 +285,7 @@ def generar_orden_view(request, solicitud_id):
 
 @login_required
 @coordinacion_required
-def ordenes_trabajo(request):
+def detalle_ordenes_trabajo(request):
     """
     Lista simplificada de órdenes
     """

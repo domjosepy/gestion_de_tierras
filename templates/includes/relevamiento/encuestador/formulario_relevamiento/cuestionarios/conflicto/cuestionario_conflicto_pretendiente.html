@@ -42,6 +42,12 @@
           <div class="col-md-2">
             <label class="form-label fw-semibold">Estado civil</label>
             {{ form.estado_civil_pretendiente }}
+            {% if form.estado_civil_pretendiente.errors %}<div class="text-danger small mt-1">{{ form.estado_civil_pretendiente.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Teléfono</label>
+            {{ form.telefono_pretendiente }}
+            {% if form.telefono_pretendiente.errors %}<div class="text-danger small mt-1">{{ form.telefono_pretendiente.errors }}</div>{% endif %}
           </div>
         </div>
       </div>

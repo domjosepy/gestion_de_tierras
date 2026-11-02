@@ -69,12 +69,12 @@
         
         <div class="row g-3 align-items-end">
           <div class="col-md-2">
-            <label class="form-label fw-semibold"><span class="text-danger">* </span>{{ form.manzana.label }}</label>
+            <label class="form-label fw-semibold">{{ form.manzana.label }} <span class="text-danger"> *</span></label>
             {{ form.manzana }}
             {% if form.manzana.errors %}<div class="text-danger small mt-1">{{ form.manzana.errors }}</div>{% endif %}
           </div>
           <div class="col-md-2">
-            <label class="form-label fw-semibold"><span class="text-danger">* </span>Lote</label>
+            <label class="form-label fw-semibold">{{ form.lote_indert.label }} <span class="text-danger"> *</span></label>
             {{ form.lote_indert }}
             {% if form.lote_indert.errors %}<div class="text-danger small mt-1">{{ form.lote_indert.errors }}</div>{% endif %}
           </div>
@@ -129,7 +129,7 @@
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label fw-semibold">Nombre y Apellido</label>
+            <label class="form-label fw-semibold">Nombre y Apellido<span class="text-danger"> *</span></label>
             {{ form.quien_es_el_ocupante }}
             {% if form.quien_es_el_ocupante.errors %}
               <div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>
@@ -154,6 +154,13 @@
             {{ form.estado_civil_ocupante }}
             {% if form.estado_civil_ocupante.errors %}
               <div class="text-danger small mt-1">{{ form.estado_civil_ocupante.errors }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Teléfono</label>
+            {{ form.telefono_ocupante }}
+            {% if form.telefono_ocupante.errors %}
+              <div class="text-danger small mt-1">{{ form.telefono_ocupante.errors }}</div>
             {% endif %}
           </div>
         </div>

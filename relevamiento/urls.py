@@ -8,6 +8,9 @@ from relevamiento.views import (
     subcoordinador_dashboard, subcoordinador_upload, 
     #Encuestador
     encuestador_dashboard, formulario_desde_orden, ocupante_parte1, continuar_encuesta,
+    conflicto_datos_lote, continuar_conflicto, pretendiente_vivienda, pretendiente_produccion, 
+    pretendiente_editar, pretendiente_eliminar,
+    cuestionario_servicio, continuar_servicio, servicio_editar_lote, servicio_cierre,
     editar_encuesta_relevamiento, resumen_relevamiento, agregar_fotos,
     mis_encuestas, crear_sublote_fraccionamiento,
 )
@@ -37,6 +40,17 @@ urlpatterns = [
     path("orden/<int:orden_id>/nueva-encuesta/", formulario_desde_orden, name="formulario_desde_orden"),
     path("orden/<int:orden_id>/nueva-encuesta/ocupante/parte1/", ocupante_parte1, name="ocupante_parte1"),
     path("encuesta/<int:pk>/continuar/<str:parte>/", continuar_encuesta, name="continuar_encuesta"),
+    path('orden/<int:orden_id>/nueva-encuesta/conflicto/parte1/', conflicto_datos_lote, name='conflicto_datos_lote'),
+    path('conflicto/<int:pk>/<str:parte>/', continuar_conflicto, name='continuar_conflicto'),
+    path('conflicto/<int:pk>/pretendiente/nuevo/', pretendiente_editar, name='pretendiente_nuevo'),
+    path('conflicto/<int:pk>/pretendiente/<int:pret_id>/vivienda/', pretendiente_vivienda, name='pretendiente_vivienda'),
+    path('conflicto/<int:pk>/pretendiente/<int:pret_id>/produccion/', pretendiente_produccion, name='pretendiente_produccion'),
+    path('conflicto/<int:pk>/pretendiente/<int:pret_id>/',pretendiente_editar, name='pretendiente_editar'),
+    path('conflicto/<int:pk>/pretendiente/<int:pret_id>/eliminar/', pretendiente_eliminar, name='pretendiente_eliminar'),
+
+    # Servicios
+    path('orden/<int:orden_id>/nueva-encuesta/servicio/parte1/', cuestionario_servicio, name='cuestionario_servicio'),
+    path('servicio/<int:pk>/<str:parte>/', continuar_servicio, name='continuar_servicio'),
 
     # Editar relevamiento existente
     path("<int:pk>/editar/", editar_encuesta_relevamiento, name="edit"),

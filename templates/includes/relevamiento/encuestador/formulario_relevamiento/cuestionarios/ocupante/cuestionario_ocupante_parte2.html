@@ -64,16 +64,8 @@
             {{ form.encargado_residencia }}
           </div>
           <div class="col-md-2">
-            <label class="form-label fw-semibold">Parentesco</label>
-            {{ form.parentesco }}
-          </div>
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">{{ form.relacion_con_lote.label }}</label>
+            <label class="form-label fw-semibold">Relación</label>
             {{ form.relacion_con_lote }}
-          </div>
-          <div class="col-md-2">
-            <label class="form-label fw-semibold">Relación con lote</label>
-            {{ miem_form.relacion_con_lote }}
           </div>
           <hr>
         </div>
@@ -114,7 +106,10 @@
         </button>
       </div>
     </div>
-    {% if origen_resumen %}<input type="hidden" name="origen" value="resumen">{% endif %}
+    {% if origen_resumen %}
+      {# Solo mantener origen=resumen si NO cambió a vivienda presente #}
+      <input type="hidden" name="origen" value="resumen" id="origen-field">
+    {% endif %}
   </form>
 </div>
 {% endblock %}

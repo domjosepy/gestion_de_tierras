@@ -11,8 +11,9 @@ from django import forms
 from django.forms import inlineformset_factory
 
 from .models import (
-    EQUIPAMIENTOS_CHOICES, MODIFICACIONES_POSTADJUDICACION_CHOICES, TIPO_GANADERIA_CHOICES, USO_LOTE_OCUPANTE_CHOICES, MEJORAS_CHOICES,
-    TIPO_CULTIVO_CHOICES, TIPO_GANADERIA_CHOICES, USO_LOTE_SERVICIO_CHOICES,
+    EQUIPAMIENTOS_CHOICES, TIPO_CULTIVO_CHOICES, TIPO_GANADERIA_CHOICES,
+    TIPO_GANADERIA_CHOICES, USO_LOTE_OCUPANTE_CHOICES,
+    MEJORAS_CHOICES,USO_LOTE_SERVICIO_CHOICES, MODIFICACIONES_POSTADJUDICACION_CHOICES,
     Relevamiento, Pretendiente, Vivienda, Miembro,
     Cultivo, ProduccionGanadera, InstitucionEnLote, Documento, FotoRelevamiento,
 )
@@ -54,7 +55,7 @@ class RelevamientoParte1Form(forms.ModelForm):
             "manzana", "lote_indert",
             "frente_aprox", "fondo_aprox",
             "superficie_ha", "dimensiones", "tipo_lote",
-            "quien_es_el_ocupante", "cedula_ocupante", "sexo_ocupante", "estado_civil_ocupante",
+            "quien_es_el_ocupante", "cedula_ocupante", "sexo_ocupante", "estado_civil_ocupante", "telefono_ocupante",
             "quien_es_el_conyuge", "cedula_conyuge", "sexo_conyuge", "estado_civil_conyuge",
         ]
         widgets = {
@@ -137,6 +138,16 @@ class RelevamientoParte1Form(forms.ModelForm):
                 raise forms.ValidationError("La cédula no debe tener más de 8 dígitos.")
         return data
 
+    def clean_telefono_ocupante(self):
+        data = self.cleaned_data.get('telefono_ocupante')
+        if data:
+            data = data.strip()
+            if not data.isdigit():
+                raise forms.ValidationError("El teléfono debe contener solo números.")
+            if len(data) > 10:
+                raise forms.ValidationError("El teléfono no debe tener más de 10 dígitos.")
+        return data
+
     def clean_quien_es_el_conyuge(self):
         data = self.cleaned_data.get('quien_es_el_conyuge')
         return self._validar_nombre_letras_enie(data, "nombre del cónyuge")
@@ -181,7 +192,7 @@ class RelevamientoParte2Form(forms.ModelForm):
         model = Relevamiento
         fields = [
             "condicion_vivienda", "vive_en_lote", "uso_lote_ocupante",
-            "residencia_manzana", "residencia_lote", "encargado_residencia", "parentesco",
+            "residencia_manzana", "residencia_lote", "encargado_residencia", "relacion_con_lote",
         ]
 
     def __init__(self, *args, **kwargs):
@@ -189,7 +200,7 @@ class RelevamientoParte2Form(forms.ModelForm):
         for name, field in self.fields.items():
             widget = field.widget
             existing = widget.attrs.get("class", "")
-            if isinstance(widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple)):
+            if isinstance(widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple, forms.SelectMultiple, forms.CharField)):
                 widget.attrs["class"] = (existing + " form-check-input").strip()
             elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
                 widget.attrs["class"] = (existing + " form-select").strip()
@@ -204,18 +215,6 @@ class RelevamientoParte2Form(forms.ModelForm):
 
     def clean_uso_lote_ocupante(self):
         return list(self.cleaned_data.get("uso_lote_ocupante", []))
-
-    def clean(self):
-        cleaned_data = super().clean()
-        condicion = cleaned_data.get("condicion_vivienda")
-        if condicion == ("presente", "ausente"):
-            cleaned_data["vive_en_lote"] = True
-        elif condicion in ("sin_vivienda", "en_construccion", "desocupada"):
-            cleaned_data["vive_en_lote"] = False
-        else:
-            cleaned_data["vive_en_lote"] = False
-        
-        return cleaned_data
 
 ##################################
 # MANEJO DE RELEVAMIENTO CONFLICTO
@@ -247,17 +246,16 @@ class PretendienteIdentificacionForm(forms.ModelForm):
         model = Pretendiente
         fields = [
             "nombre_pretendiente", "ci_pretendiente",
-            "sexo_pretendiente", "estado_civil_pretendiente",
-            "encargado_residencia", "parentesco",
-            "condicion_vivienda", "vive_en_lote", 
+            "sexo_pretendiente", "estado_civil_pretendiente", "telefono_pretendiente",
+            "encargado_residencia",            "condicion_vivienda", "vive_en_lote", 
             "residencia_manzana", "residencia_lote",
             "observaciones",
         ]
         labels = {
             "nombre_pretendiente": "Nombre y Apellido",
             "ci_pretendiente": "Cédula",
+            "telefono_pretendiente": "Teléfono",
             "encargado_residencia": "Encargado del lote",
-            "parentesco": "Relación con el encargado",
         }
         widgets = {"observaciones": forms.Textarea(attrs={"rows": 3})}
 
@@ -297,6 +295,16 @@ class PretendienteIdentificacionForm(forms.ModelForm):
             raise forms.ValidationError("La cédula debe contener solo números.")
         if len(data) > 8:
             raise forms.ValidationError("La cédula no debe tener más de 8 dígitos.")
+        return data
+
+    def clean_telefono_pretendiente(self):
+        data = self.cleaned_data.get('telefono_pretendiente')
+        if data:
+            data = data.strip()
+            if not data.isdigit():
+                raise forms.ValidationError("El teléfono debe contener solo números.")
+            if len(data) > 10:
+                raise forms.ValidationError("El teléfono no debe tener más de 10 dígitos.")
         return data
 
     def clean(self):
@@ -422,6 +430,7 @@ class ViviendaForm(forms.ModelForm):
 ##################################
 # MANEJO DE POBLACION
 ##################################
+
 class MiembroForm(forms.ModelForm):
     class Meta:
         model = Miembro
@@ -434,7 +443,8 @@ class MiembroForm(forms.ModelForm):
             "vivienda": forms.HiddenInput(),
             "pretendiente": forms.HiddenInput(),
             "relevamiento": forms.HiddenInput(),
-
+            "relacion_con_lote": forms.Select(),
+            "escolaridad": forms.Select(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -445,13 +455,17 @@ class MiembroForm(forms.ModelForm):
                 continue
             existing = widget.attrs.get("class", "")
             if isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                widget.attrs["class"] = (existing + " form-select").strip()
+                widget.attrs["class"] = (existing + " form-select form-select-sm").strip()
             else:
                 widget.attrs["class"] = (existing + " form-control").strip()
 
-##################################
-# MANEJO DE INSTITUCION/SERVICIOS
-##################################
+    def clean_nombre_miembro(self):
+        data = self.cleaned_data.get("nombre_miembro")
+        if data:
+            return data.strip().upper()
+        return data
+
+
 class InstitucionEnLoteForm(forms.ModelForm):
     class Meta:
         model = InstitucionEnLote
@@ -594,8 +608,7 @@ class RelevamientoForm(forms.ModelForm):
             "quien_es_el_conyuge", "cedula_conyuge", "sexo_conyuge", "estado_civil_conyuge",
             "condicion_vivienda", "condicion_encuestado",
             "vive_en_lote", "uso_lote_ocupante", "uso_lote_servicio", "parent_lote",
-            "residencia_manzana", "residencia_lote", "encargado_residencia", "parentesco",
-            "produccion_agricola_ha","produccion_ganadera_ha",
+            "residencia_manzana", "residencia_lote", "encargado_residencia",            "produccion_agricola_ha","produccion_ganadera_ha",
             "reforestado_ha", "bosque_natural_ha", "barbecho_ha", "mejoras",
             "estado_entrevista",
             "firmo_solicitud",
@@ -667,7 +680,6 @@ class RelevamientoForm(forms.ModelForm):
         tipo_registro = self.cleaned_data.get("tipo_registro")
         if condicion_encuestado == "ocupante":
             return []
-        
         return list(self.cleaned_data.get("uso_lote_ocupante", []))
 
     def clean_mejoras(self):
@@ -823,8 +835,7 @@ class PretendienteForm(forms.ModelForm):
             "nombre_pretendiente", "ci_pretendiente", "sexo_pretendiente", "estado_civil_pretendiente",
             "condicion_vivienda", "vive_en_lote",
             "residencia_manzana", "residencia_lote",
-            "quien_es_el_ocupante", "parentesco",
-            "produccion_agricola_ha", "produccion_ganadera_ha",
+            "quien_es_el_ocupante",            "produccion_agricola_ha", "produccion_ganadera_ha",
             "reforestado_ha", "bosque_natural_ha", "barbecho_ha",
             "mejoras", "observaciones",
         ]

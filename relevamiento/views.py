@@ -9,27 +9,30 @@ from django.forms import inlineformset_factory
 from .models import (
     Relevamiento, Documento,
     Pretendiente, Vivienda, Miembro, Cultivo, ProduccionGanadera,
-    InstitucionEnLote, FotoRelevamiento,
-    ArchivoSubcoordinador,
+    InstitucionEnLote, ArchivoSubcoordinador, FotoRelevamiento,
+    USO_LOTE_OCUPANTE_CHOICES, MEJORAS_CHOICES, EQUIPAMIENTOS_CHOICES,
+    RELACION_CON_LOTE_CHOICES, USO_LOTE_SERVICIO_CHOICES
 )
 from .forms import (
     RelevamientoForm, RelevamientoParte1Form, RelevamientoParte2Form,
-    RelevamientoMejorasForm,
-    PretendienteForm, ViviendaForm, MiembroForm,
+    RelevamientoMejorasForm,RelevamientoConflictoParte1Form, PretendienteIdentificacionForm,
+    PretendienteMejorasForm, RelevamientoCierreForm, 
+    PretendienteForm, 
+    RelevamientoServicioParte1Form,
+    ViviendaForm, MiembroForm,
     CultivoForm, ProduccionGanaderaForm, InstitucionEnLoteForm,
     DocumentoForm, FotosRelevamientoForm,
     ViviendaPretendienteFormSet,
 )
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from gerencia.models import SolicitudRelevamientoAudit, SolicitudRelevamiento
 from administrador.models import Grupo
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseForbidden, request
 from django.views.decorators.http import require_POST
-import os
-import re
-import json
-
+from django.urls import reverse
+import os, re, json, logging, sys
+logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 # DASHBOARD COORDINADOR DE CAMPO
 # ─────────────────────────────────────────────
@@ -64,7 +67,7 @@ def coordinador_campo_dashboard(request):
     ordenes_context = []
     for orden in ordenes:
         # Obtener datos geográficos
-        datos_geo = _datos_geograficos_desde_orden(orden)
+        datos_geo = datos_geograficos_desde_orden(orden)
         
         # Contar personal asignado
         equipos = orden.equipos_asignados.all()
@@ -177,7 +180,6 @@ def habilitar_formulario_relevamiento(request, orden_id):
     
     return redirect('relevamiento:coordinador_dashboard')
 
-
 @login_required
 @coordinador_campo_required
 def finalizar_orden_campo(request, orden_id):
@@ -281,7 +283,6 @@ def finalizar_orden_campo(request, orden_id):
     
     return redirect('relevamiento:coordinador_dashboard')
 
-
 @login_required
 @coordinador_campo_required
 def detalle_relevamiento_coordinador(request, orden_id):
@@ -301,7 +302,7 @@ def detalle_relevamiento_coordinador(request, orden_id):
     )
     
     # Datos geográficos
-    datos_geo = _datos_geograficos_desde_orden(orden)
+    datos_geo = datos_geograficos_desde_orden(orden)
     
     # Personal asignado
     subcoordinadores = []
@@ -485,7 +486,6 @@ def subcoordinador_dashboard(request):
         'total_relevamientos': total_relevamientos,
     })
 
-
 @login_required
 @require_POST
 def subcoordinador_upload(request):
@@ -577,10 +577,9 @@ def subcoordinador_upload(request):
         'fecha_subida': archivo_obj.fecha_subida.strftime('%d/%m/%Y %H:%M')
     })
 
-
-# ─────────────────────────────────────────────
+##################################
 # DASHBOARD ENCUESTADOR
-# ─────────────────────────────────────────────
+##################################
 @login_required
 @encuestador_required
 def encuestador_dashboard(request):
@@ -668,7 +667,6 @@ def encuestador_dashboard(request):
     }
     return render(request, 'relevamiento/encuestador_dashboard.html', context)
 
-
 # ─────────────────────────────────────────────
 # MAPEO DE MODO -> TEMPLATE DEL FORMULARIO
 # ─────────────────────────────────────────────
@@ -680,8 +678,11 @@ TEMPLATE_MAP = {
     'fraccionamiento': 'includes/relevamiento/encuestador/formulario_relevamiento/formulario_fraccionamiento.html',
 }
 
+# Modos que ya tienen su propio wizard + resumen. Al migrar Servicio o
+# Fraccionamiento, se agregan acá y todo lo demás las reconoce.
+MODOS_WIZARD = ('ocupante', 'conflicto','servicio',)
 
-def _detectar_modo_relevamiento(rel):
+def detectar_modo_relevamiento(rel):
     """Infiere el modo/tipo de registro de un Relevamiento existente."""
     if rel.pretendientes.exists():
         return 'conflicto'
@@ -692,38 +693,45 @@ def _detectar_modo_relevamiento(rel):
         return 'fraccionamiento'
     return 'ocupante'
 
-
-
 # ─────────────────────────────────────────────
 # UTILIDAD INTERNA: extraer datos geográficos
 # de una OrdenTrabajo
 # ─────────────────────────────────────────────
 
-def _datos_geograficos_desde_orden(orden):
+def datos_geograficos_desde_orden(orden):
     """
-    Dado un OrdenTrabajo, devuelve un dict con {colonia, distrito, departamento}
-    extraídos de la solicitud asociada, o None para cada uno si no existen.
+    Devuelve {colonia, distrito, departamento, distritos_count} desde la
+    solicitud de la OT.
+
+    - distrito/departamento solo se completan cuando la colonia tiene
+      EXACTAMENTE un distrito. Si tiene 0 o 2+, se devuelven None: el
+      encuestador es responsable de elegir (ver RelevamientoParte1Form,
+      que muestra el select de distrito cuando distritos_count > 1).
+    - distritos_count siempre se devuelve (0 si no hay colonia), útil en
+      templates y en el form.
     """
     solicitud = orden.solicitud
     colonia = solicitud.colonia if solicitud else None
 
     distrito = None
     departamento = None
+    distritos_count = 0
+
     if colonia:
-        # Colonia tiene M2M a distritos; tomamos el primero disponible
-        primer_distrito = colonia.distritos.select_related('departamento').first()
-        if primer_distrito:
-            distrito = primer_distrito
-            departamento = primer_distrito.departamento
+        distritos = list(colonia.distritos.select_related('departamento'))
+        distritos_count = len(distritos)
+        if distritos_count == 1:
+            distrito = distritos[0]
+            departamento = distrito.departamento
 
     return {
         'colonia': colonia,
         'distrito': distrito,
         'departamento': departamento,
+        'distritos_count': distritos_count,
     }
 
-
-def _procesar_viviendas_pretendiente(request, pretendiente, index, MiembroFS):
+def procesar_viviendas_pretendiente(request, pretendiente, index, MiembroFS):
     """Guarda las viviendas y miembros anidados de un pretendiente (modo conflicto).
 
     Usa los prefijos dinámicos 'viviendas_pret_{index}' y 'miembros_pret_{index}_viv_{j}',
@@ -751,8 +759,7 @@ def _procesar_viviendas_pretendiente(request, pretendiente, index, MiembroFS):
             if miem_fs.is_valid():
                 miem_fs.save()
 
-
-def _construir_formsets_pretendiente(request, pretendiente_formset, MiembroFS):
+def construir_formsets_pretendiente(request, pretendiente_formset, MiembroFS):
     """Construye, para renderizado en el template, los formsets anidados de
     vivienda y miembros de cada pretendiente (modo conflicto).
 
@@ -782,7 +789,6 @@ def _construir_formsets_pretendiente(request, pretendiente_formset, MiembroFS):
         pretendiente_miembro_formsets[i] = miembro_fs_por_viv
 
     return pretendiente_vivienda_formsets, pretendiente_miembro_formsets
-
 
 # ─────────────────────────────────────────────
 # FORMULARIO DESDE UNA ORDEN (crear) - OBLIGATORIO
@@ -818,9 +824,12 @@ def formulario_desde_orden(request, orden_id):
     # siguen con el formulario único de siempre, sin cambios.
     if modo == 'ocupante' and request.method == 'GET':
         return redirect('relevamiento:ocupante_parte1', orden_id=orden_id)
+    if modo == 'conflicto' and request.method == 'GET':
+        return redirect('relevamiento:conflicto_datos_lote', orden_id=orden_id)
+    if modo == 'servicio' and request.method == 'GET':
+        return redirect('relevamiento:cuestionario_servicio', orden_id=orden_id)
 
-
-    datos_geo = _datos_geograficos_desde_orden(orden)
+    datos_geo = datos_geograficos_desde_orden(orden)
     initial = {
         'colonia': datos_geo['colonia'],
         'distrito': datos_geo['distrito'],
@@ -828,7 +837,6 @@ def formulario_desde_orden(request, orden_id):
         'tipo_registro': modo,
     }
     
-
     ViviendaFS = inlineformset_factory(
         Relevamiento, Vivienda, form=ViviendaForm, extra=0, can_delete=True, fk_name='relevamiento'
     )
@@ -889,8 +897,8 @@ def formulario_desde_orden(request, orden_id):
                 with transaction.atomic():
                     relevamiento = form.save(commit=False)
                     relevamiento.colonia = datos_geo['colonia']
-                    relevamiento.distrito = datos_geo['distrito']
-                    relevamiento.departamento = datos_geo['departamento']
+                    if not relevamiento.distrito_id and datos_geo['distrito']:
+                        relevamiento.distrito = datos_geo['distrito']
                     relevamiento.orden_trabajo = orden
                     relevamiento.encuestador = request.user
                     relevamiento.save()
@@ -902,7 +910,7 @@ def formulario_desde_orden(request, orden_id):
                             pretendiente.relevamiento = relevamiento
                             pretendiente.save()
                             pret_form.save_m2m()
-                            _procesar_viviendas_pretendiente(request, pretendiente, pretendiente_formset.forms.index(pret_form), MiembroFS)
+                            procesar_viviendas_pretendiente(request, pretendiente, pretendiente_formset.forms.index(pret_form), MiembroFS)
 
                 # ── Guardado de viviendas ─────────────────────────────────────────────
                 # 1ra pasada: guardamos (sin commit) y numeramos secuencialmente SOLO
@@ -979,16 +987,25 @@ def formulario_desde_orden(request, orden_id):
                     if p_form.cleaned_data and not p_form.cleaned_data.get('DELETE', False):
                         persona = p_form.save(commit=False)
                         persona.relevamiento = relevamiento
-                        if vivienda_principal and persona.parentesco in ('Ocupante', 'Cónyuge'):
+                        if vivienda_principal and persona.relacion_con_lote in ('ocupante', 'conyuge'):
                             persona.vivienda = vivienda_principal
                         persona.save()
 
                 messages.success(request, 'Registro creado correctamente.')
                 return redirect('relevamiento:resumen_relevamiento', pk=relevamiento.pk)
-            except Exception as e:
-                messages.error(request, f'Error al guardar: {str(e)}')
-        else:
-            messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
+
+            except IntegrityError:
+                form.add_error(
+                    'manzana',
+                    "Ya existe un relevamiento con esa manzana y lote en esta colonia."
+                )
+                messages.error(request, 'Ese lote ya fue registrado en esta colonia.')
+            except Exception:
+                logger.exception(
+                    "Error creando relevamiento desde formulario_desde_orden (OT %s, modo %s)",
+                    orden.pk, modo,
+                )
+                messages.error(request, 'Ocurrió un error inesperado. Contacte al administrador.')
     else:
         form = RelevamientoForm(initial=initial, modo=modo)
         vivienda_formset = ViviendaFS(prefix='viviendas')
@@ -1012,11 +1029,10 @@ def formulario_desde_orden(request, orden_id):
         else:
             vivienda_miembro_formsets[i] = MiembroFS(prefix=miem_prefix)
 
-    pretendiente_vivienda_formsets, pretendiente_miembro_formsets = _construir_formsets_pretendiente(
+    pretendiente_vivienda_formsets, pretendiente_miembro_formsets = construir_formsets_pretendiente(
         request, pretendiente_formset, MiembroFS
     )
     
-
     context = {
         'form': form,
         'vivienda_formset': vivienda_formset,
@@ -1058,24 +1074,22 @@ def ocupante_parte1(request, orden_id):
         )
         return redirect('relevamiento:encuestador_dashboard')
 
-    datos_geo = _datos_geograficos_desde_orden(orden)
-    initial = {
-        'colonia': datos_geo['colonia'],
-        'distrito': datos_geo['distrito'],
-        'departamento': datos_geo['departamento'],
-    }
-
+    datos_geo = datos_geograficos_desde_orden(orden)
+    colonia = datos_geo['colonia']
+    initial = {}
 
     if request.method == 'POST':
-        form = RelevamientoParte1Form(request.POST, initial=initial)
+        form = RelevamientoParte1Form(
+            request.POST, 
+            colonia=colonia,
+            initial=initial,
+        )
 
         if form.is_valid():
             try:
                 with transaction.atomic():
                     relevamiento = form.save(commit=False)
                     relevamiento.colonia = datos_geo['colonia']
-                    relevamiento.distrito = datos_geo['distrito']
-                    relevamiento.departamento = datos_geo['departamento']
                     relevamiento.orden_trabajo = orden
                     relevamiento.encuestador = request.user
                     relevamiento.tipo_registro = 'ocupante'
@@ -1085,12 +1099,22 @@ def ocupante_parte1(request, orden_id):
 
                 messages.success(request, 'Parte 1 guardada. Continuá con los datos del lote.')
                 return redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='lote')
-            except Exception as e:
-                messages.error(request, f'Error al guardar: {str(e)}')
+            except IntegrityError:
+                form.add_error(
+                    'manzana',
+                    "Ya existe un relevamiento con esa manzana y lote en esta colonia."
+                )
+                messages.error(request, 'Ese lote ya fue registrado en esta colonia.')
+            except Exception:
+                logger.exception("Error creando relevamiento (ocupante) para OT %s", orden.pk)
+                messages.error(request, 'Ocurrió un error inesperado. Contacte al administrador.')
         else:
             messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
     else:
-        form = RelevamientoParte1Form(initial=initial)
+        form = RelevamientoParte1Form(
+            colonia=colonia,
+            initial=initial,
+        )
 
     context = {
         'form': form,
@@ -1100,7 +1124,7 @@ def ocupante_parte1(request, orden_id):
     }
     return render(
         request,
-        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/cuestionario_ocupante_parte1.html',
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/ocupante/cuestionario_ocupante_parte1.html',
         context,
     )
 
@@ -1108,6 +1132,29 @@ def ocupante_parte1(request, orden_id):
 @encuestador_required
 def continuar_encuesta(request, pk, parte):
     relevamiento = get_object_or_404(Relevamiento, pk=pk)
+
+    # Verificamos si el tipo de relevamiento tiene permitido entrar a esta vista
+    es_ocupante = relevamiento.tipo_registro == 'ocupante'
+    es_conflicto_o_servicio_en_resumen = (
+        relevamiento.tipo_registro in ('conflicto', 'servicio') and parte == 'encuesta'
+    )
+
+    if not (es_ocupante or es_conflicto_o_servicio_en_resumen):
+        messages.error(
+            request,
+            f'Este relevamiento es de tipo "{relevamiento.get_tipo_registro_display()}", '
+            f'no del wizard de ocupante.'
+        )
+        return redirect('relevamiento:encuestador_dashboard')
+    
+    if relevamiento.encuestador_id != request.user.id and not request.user.is_superuser:
+        messages.error(request, 'No tenés permiso para editar este relevamiento.')
+        return redirect('relevamiento:encuestador_dashboard')
+
+    if parte != 'encuesta':
+        bloqueo = bloquear_si_completo(request, relevamiento)
+        if bloqueo:
+            return bloqueo
 
     if parte == 'lote':
         return continuar_parte2_lote(request, relevamiento)
@@ -1126,27 +1173,68 @@ def continuar_encuesta(request, pk, parte):
 def continuar_parte2_lote(request, relevamiento):
     """PARTE 2: condición de vivienda + uso del lote. Define la ruta
     siguiente (Vivienda o Datos Productivos) según condicion_vivienda."""
+    CAMPOS_RESIDENCIA = (
+        'residencia_manzana', 'residencia_lote',
+        'encargado_residencia', 'relacion_con_lote',
+    )
 
     if request.method == 'POST':
+        condicion_anterior = relevamiento.condicion_vivienda
+        residencia_tenia_datos = any(
+            getattr(relevamiento, f) for f in CAMPOS_RESIDENCIA
+        )
+
         form = RelevamientoParte2Form(request.POST, instance=relevamiento)
         if form.is_valid():
             rel = form.save(commit=False)
-            rel.condicion_encuestado = 'ocupante'  # fijo: este wizard es siempre Ocupante
-            rel.estado_carga = 'parte_2'
-            rel.save()
-            form.save_m2m()
+            rel.condicion_encuestado = 'ocupante'
+            condicion_nueva = rel.condicion_vivienda
 
-            messages.success(request, 'Parte 2 guardada.')
+            # ── Si reside en el lote, los datos de "otra residencia" no aplican ──
+            if condicion_nueva == 'presente':
+                for nombre in CAMPOS_RESIDENCIA:
+                    setattr(rel, nombre, form.fields[nombre].empty_value)
 
-            # Acá se define la ruta del wizard.
-            if rel.condicion_vivienda == 'sin_vivienda':
+            with transaction.atomic():
+                rel.save()
+                form.save_m2m()
+
+                # ── Cascada: si pasó a sin_vivienda, borrar todo lo de vivienda ──
+                if condicion_nueva == 'sin_vivienda':
+                    tenia_datos = relevamiento.viviendas.exists()
+                    relevamiento.viviendas.all().delete()
+                    if tenia_datos:
+                        messages.info(
+                            request,
+                            'Se eliminaron los datos de vivienda, equipamiento y población '
+                            'porque la condición cambió a "sin vivienda".'
+                        )
+                    if condicion_nueva == 'presente' and residencia_tenia_datos:
+                        messages.info(
+                            request,
+                            'Se eliminaron los datos de residencia '
+                            'porque la condición cambió a "presente".'
+                        )
+
+            messages.success(request, 'Parte 2: "Datos del lote", guardado.')
+
+            # Obtener si viene del resumen
+            origen = request.POST.get('origen') or request.GET.get('origen')
+            # Si cambió A presente desde el resumen (de cualquier valor anterior), ir a vivienda
+            if origen == 'resumen' and condicion_anterior != condicion_nueva \
+                    and condicion_nueva in ('presente', 'ausente', 'en_construccion', 'desocupada'):
+                return redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='vivienda')
+            # Si la nueva condición requiere vivienda (pero no es cambio desde sin_vivienda)
+            if condicion_nueva in ('presente', 'ausente', 'en_construccion', 'desocupada'):
                 return destino_tras_guardar(
                     request, relevamiento,
-                    redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='productivos')
+                    redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='vivienda')
                 )
+            
+            # Si es sin_vivienda, ir a productivos
             return destino_tras_guardar(
                 request, relevamiento,
-                redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='vivienda')
+                redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='productivos')
             )
         else:
             messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
@@ -1159,11 +1247,40 @@ def continuar_parte2_lote(request, relevamiento):
         'title': f'Encuesta #{relevamiento.pk} — Parte 2 de 4',
         'origen_resumen': request.GET.get('origen') == 'resumen',
     }
+    
     return render(
         request,
-        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/cuestionario_ocupante_parte2.html',
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/ocupante/cuestionario_ocupante_parte2.html',
         context,
     )
+
+class ErrorEnFormset(Exception):
+    """Corta el guardado (y revierte la transacción) mostrando qué falló."""
+    def __init__(self, detalle):
+        super().__init__(' | '.join(detalle[:6]) or 'Datos inválidos.')
+
+def resumen_errores(*items):
+    """Junta los errores de forms y formsets en una lista legible."""
+    lineas = []
+    for item in items:
+        if hasattr(item, 'forms'):  # formset
+            nombre = item.prefix or item.__class__.__name__
+            for err in item.non_form_errors():
+                lineas.append(f'{nombre}: {err}')
+            for i, f in enumerate(item.forms, 1):
+                for campo, errs in f.errors.items():
+                    lineas.append(f'{nombre} #{i} · {campo}: {" ".join(errs)}')
+        else:
+            for campo, errs in item.errors.items():
+                lineas.append(f'{campo}: {" ".join(errs)}')
+    return lineas
+
+def avisar_errores(request, *items):
+    mensaje = 'Hay errores en el formulario.'
+    detalle = resumen_errores(*items)
+    if detalle:
+        mensaje += ' ' + ' | '.join(detalle[:6])
+    messages.error(request, mensaje)
 
 def continuar_parte3_vivienda(request, relevamiento):
     """PARTE 3 (Ruta 1): Vivienda + Equipamiento + Población.
@@ -1214,14 +1331,18 @@ def continuar_parte3_vivienda(request, relevamiento):
 
                         miem_prefix = f'miembros_viv_{i}'
                         miem_fs = MiembroFS(request.POST, instance=vivienda, prefix=miem_prefix)
-                        if miem_fs.is_valid():
-                            miembros = miem_fs.save(commit=False)
-                            for miembro in miembros:
-                                miembro.relevamiento = relevamiento
-                                miembro.save()
-                            for obj in miem_fs.deleted_objects:
-                                obj.delete()
-                            miem_fs.save_m2m()
+
+                        if not miem_fs.is_valid():
+                            raise ErrorEnFormset(resumen_errores(miem_fs))
+
+                        miembros = miem_fs.save(commit=False)
+                        for miembro in miembros:
+                            miembro.relevamiento = relevamiento
+                            miembro.save()
+                        for obj in miem_fs.deleted_objects:
+                            obj.delete()
+                        miem_fs.save_m2m()
+
                     institucion_formset.save()
 
                     relevamiento.estado_carga = 'parte_3'
@@ -1235,7 +1356,7 @@ def continuar_parte3_vivienda(request, relevamiento):
             except Exception as e:
                 messages.error(request, f'Error al guardar: {str(e)}')
         else:
-            messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
+             avisar_errores(request, vivienda_formset, institucion_formset)
     else:
         vivienda_formset = ViviendaFS(instance=relevamiento, prefix='viviendas')
         institucion_formset = InstitucionFS(instance=relevamiento, prefix='instituciones')
@@ -1264,7 +1385,7 @@ def continuar_parte3_vivienda(request, relevamiento):
     }
     return render(
         request,
-        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/cuestionario_ocupante_parte3_vivienda.html',
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/ocupante/cuestionario_ocupante_parte3_vivienda.html',
         context,
     )
 
@@ -1279,19 +1400,22 @@ def continuar_parte3_productivos(request, relevamiento):
     )
 
     if request.method == 'POST':
-        form = RelevamientoMejorasForm(request.POST, instance=relevamiento)
+        mejoras_formset = RelevamientoMejorasForm(request.POST, instance=relevamiento)
         cultivo_formset = CultivoFS(request.POST, instance=relevamiento, prefix='cultivos')
         ganaderia_formset = GanaderiaFS(request.POST, instance=relevamiento, prefix='ganaderia')
 
-        if form.is_valid() and cultivo_formset.is_valid() and ganaderia_formset.is_valid():
+        form_cierre = RelevamientoCierreForm(request.POST, instance=relevamiento)
+
+        if mejoras_formset.is_valid() and cultivo_formset.is_valid() and ganaderia_formset.is_valid() and form_cierre.is_valid():
             try:
                 with transaction.atomic():
-                    rel = form.save(commit=False)
+                    rel = mejoras_formset.save(commit=False)
                     rel.estado_carga = 'parte_3'
                     rel.save()
-                    form.save_m2m()
+                    mejoras_formset.save_m2m()
                     cultivo_formset.save()
                     ganaderia_formset.save()
+                    form_cierre.save()
 
                 messages.success(request, 'Datos productivos y mejoras guardados.')
                 return destino_tras_guardar(
@@ -1301,23 +1425,25 @@ def continuar_parte3_productivos(request, relevamiento):
             except Exception as e:
                 messages.error(request, f'Error al guardar: {str(e)}')
         else:
-            messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
+            avisar_errores(request, mejoras_formset, cultivo_formset, ganaderia_formset, form_cierre)
     else:
-        form = RelevamientoMejorasForm(instance=relevamiento)
+        mejoras_formset = RelevamientoMejorasForm(instance=relevamiento)
         cultivo_formset = CultivoFS(instance=relevamiento, prefix='cultivos')
         ganaderia_formset = GanaderiaFS(instance=relevamiento, prefix='ganaderia')
+        form_cierre = RelevamientoCierreForm(instance=relevamiento)
 
     context = {
         'relevamiento': relevamiento,
-        'form': form,
+        'mejoras_formset': mejoras_formset,
         'cultivo_formset': cultivo_formset,
         'ganaderia_formset': ganaderia_formset,
+        'form_cierre': form_cierre,
         'title': f'Encuesta #{relevamiento.pk} — Parte 3 de 4',
         'origen_resumen': request.GET.get('origen') == 'resumen',
     }
     return render(
         request,
-        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/cuestionario_ocupante_parte3_productivos.html',
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/ocupante/cuestionario_ocupante_parte3_productivos.html',
         context,
     )
 
@@ -1325,26 +1451,43 @@ def continuar_parte1_editar(request, relevamiento):
     """Edición de los datos de la Parte 1 (identificación/ocupante) para
     un Relevamiento YA creado. Se usa desde el lápiz 'Editar' del resumen."""
     orden = relevamiento.orden_trabajo
-    datos_geo = _datos_geograficos_desde_orden(orden)
+    datos_geo = datos_geograficos_desde_orden(orden)
+    colonia = datos_geo['colonia']
 
     if request.method == 'POST':
-        form = RelevamientoParte1Form(request.POST, instance=relevamiento)
+        form = RelevamientoParte1Form(
+            request.POST, 
+            colonia=colonia,
+            instance=relevamiento
+        )
+
         if form.is_valid():
-            rel = form.save(commit=False)
-            rel.colonia = datos_geo['colonia']
-            rel.distrito = datos_geo['distrito']
-            rel.departamento = datos_geo['departamento']
-            rel.save()
-            form.save_m2m()
-            messages.success(request, 'Datos actualizados.')
-            return destino_tras_guardar(
-                request, relevamiento,
-                redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='lote')
-            )
+            try:
+                with transaction.atomic():
+                    rel = form.save(commit=False)
+                    rel.save()
+                    form.save_m2m()
+
+                messages.success(request, 'Datos actualizados.')
+                return destino_tras_guardar(
+                    request, relevamiento,
+                    redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='lote')
+                )
+            except IntegrityError:
+                form.add_error(
+                    'manzana',
+                    "Ya existe otro relevamiento con esa manzana y lote en esta colonia."
+                )
+                messages.error(request, 'Ese lote ya está registrado en esta colonia.')
+            except Exception:
+                logger.exception("Error editando parte1 del relevamiento %s", relevamiento.pk)
+                messages.error(request, 'Ocurrió un error inesperado. Contacte al administrador.')
         else:
             messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
     else:
-        form = RelevamientoParte1Form(instance=relevamiento)
+        form = RelevamientoParte1Form(
+            colonia=colonia,
+            instance=relevamiento)
 
     context = {
         'form': form,
@@ -1355,7 +1498,7 @@ def continuar_parte1_editar(request, relevamiento):
     }
     return render(
         request,
-        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/cuestionario_ocupante_parte1.html',
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/ocupante/cuestionario_ocupante_parte1.html',
         context,
     )
 
@@ -1368,13 +1511,12 @@ def _items(*pares):
     """Devuelve solo los pares (etiqueta, valor) que tienen algo cargado."""
     return [(etiqueta, valor) for etiqueta, valor in pares if valor not in (None, '', [], ())]
 
-
 def _etiquetas(claves, choices):
     """['galpon', 'pozo'] -> 'Galpón, Pozo' usando las choices del modelo."""
     mapa = dict(choices)
     return ', '.join(mapa.get(c, c) for c in (claves or []))
 
-def _meta_seccion(titulo):
+def meta_seccion(titulo):
     """Devuelve (icono_fa, tono) para una sección según su título."""
     t = titulo.lower()
     if t.startswith('lote'):                    return ('fa-map-marker-alt', 'blue')
@@ -1384,13 +1526,19 @@ def _meta_seccion(titulo):
     if t.startswith('vivienda'):                return ('fa-house-chimney', 'green')
     if t.startswith('instituciones'):           return ('fa-building-columns', 'purple')
     if t.startswith('producción'):              return ('fa-seedling', 'orange')
+    if t.startswith('pretendiente'):            return ('fa-scale-balanced', 'amber')
+    if t.startswith('responsable'):             return ('fa-user-tie', 'teal')
+    if t.startswith('uso del lote'):            return ('fa-layer-group', 'amber')
+    if t.startswith('mejoras'):                 return ('fa-screwdriver-wrench', 'orange')
+    if t.startswith('cierre'):                  return ('fa-flag-checkered', 'green')
+
     return ('fa-circle-dot', 'slate')
 
 secciones = []
 
 def agregar(titulo, editar, items):
     if items:
-        icon, tone = _meta_seccion(titulo)
+        icon, tone = meta_seccion(titulo)
         secciones.append({
             'titulo': titulo,
             'editar': editar,
@@ -1399,20 +1547,123 @@ def agregar(titulo, editar, items):
             'tone':   tone,
         })
 
+def _describir_vivienda(v):
+    partes = [
+        v.get_paredes_display() if v.paredes else '',
+        v.get_piso_display() if v.piso else '',
+        v.get_techo_display() if v.techo else '',
+        f'{v.piezas} piezas' if v.piezas else '',
+    ]
+    return ', '.join(p for p in partes if p)
+
+def secciones_conflicto(r):
+    """Secciones del resumen para el modo Conflicto. Cada una trae su propia
+    URL de edición (el lápiz del template)."""
+
+    def url(parte):
+        return reverse('relevamiento:continuar_conflicto', kwargs={'pk': r.pk, 'parte': parte})
+
+    secciones = []
+
+    def agregar(titulo, destino, items):
+        if items:
+            icon, tone = meta_seccion(titulo)
+            secciones.append({'titulo': titulo, 'url': destino, 'items': items, 'icon': icon, 'tone': tone})
+
+    agregar('Lote', url('lote'), _items(
+        ('Manzana', r.manzana), ('Lote', r.lote_indert), ('Dimensión', r.dimensiones),
+        ('Superficie (ha)', r.superficie_ha),
+        ('Tipo', r.get_tipo_lote_display() if r.tipo_lote else ''),
+    ))
+
+    for n, p in enumerate(r.pretendientes.all().order_by('pk'), start=1):
+        agregar(f'Pretendiente {n} · {p.nombre_pretendiente}', url('pretendientes'), _items(
+            ('CI', p.ci_pretendiente),
+            ('Estado civil', p.get_estado_civil_pretendiente_display() if p.estado_civil_pretendiente else ''),
+            ('Relación con el ocupante', p.relacion_con_lote),
+            ('Condición de vivienda', p.get_condicion_vivienda_display() if p.condicion_vivienda else ''),
+            ('Vivienda', '; '.join(_describir_vivienda(v) for v in p.viviendas.all())),
+            ('Población', '; '.join(
+                f'{m.nombre_miembro} ({m.relacion_con_lote})' if m.relacion_con_lote else m.nombre_miembro
+                for m in p.miembros.all()
+            )),
+            ('Cultivos', '; '.join(f'{c.get_tipo_cultivo_display()} · {c.hectareas} ha' for c in p.cultivos.all())),
+            ('Ganadería', '; '.join(f'{g.get_tipo_ganaderia_display()} × {g.cantidad}' for g in p.producciones_ganaderas.all())),
+            ('Mejoras', _etiquetas(p.mejoras, MEJORAS_CHOICES)),
+            ('Observaciones', p.observaciones),
+        ))
+
+    agregar('Instituciones', url('instituciones'), _items(
+        ('Instituciones', ', '.join(i.nombre_servicio for i in r.instituciones.all())),
+    ))
+    agregar('Cierre de la encuesta', 'cierre', _items(
+        ('Estado de la entrevista', r.get_estado_entrevista_display() if r.estado_entrevista else ''),
+        ('Firmó solicitud', 'Sí' if r.firmo_solicitud else 'No'),
+        ('Observaciones', r.observacion_encuesta),
+    ))
+
+    return secciones
+
+def secciones_servicio(r):
+    """Secciones del resumen para el modo Servicio."""
+
+    def url(parte):
+        return reverse('relevamiento:continuar_servicio', kwargs={'pk': r.pk, 'parte': parte})
+
+    secciones = []
+
+    def agregar(titulo, destino, items):
+        if items:
+            icon, tone = meta_seccion(titulo)
+            secciones.append({'titulo': titulo, 'url': destino, 'items': items, 'icon': icon, 'tone': tone})
+
+    agregar('Lote', url('lote'), _items(
+        ('Manzana', r.manzana), ('Lote', r.lote_indert), ('Dimensión', r.dimensiones),
+        ('Superficie (ha)', r.superficie_ha),
+        ('Tipo', r.get_tipo_lote_display() if r.tipo_lote else ''),
+    ))
+    agregar('Responsable', url('lote'), _items(
+        ('Nombre', r.quien_es_el_ocupante), ('CI', r.cedula_ocupante),
+        ('Sexo', r.get_sexo_ocupante_display() if r.sexo_ocupante else ''),
+        ('Estado civil', r.get_estado_civil_ocupante_display() if r.estado_civil_ocupante else ''),
+    ))
+    agregar('Uso del lote', url('lote'), _items(
+        ('Uso', _etiquetas(r.uso_lote_servicio, USO_LOTE_SERVICIO_CHOICES)),
+    ))
+    agregar('Instituciones / servicios', url('instituciones'), _items(
+        ('Registradas', ', '.join(i.nombre_servicio for i in r.instituciones.all())),
+    ))
+    agregar('Mejoras e infraestructura', url('mejoras'), _items(
+        ('Mejoras', _etiquetas(r.mejoras, MEJORAS_CHOICES)),
+    ))
+    agregar('Cierre de la encuesta', url('cierre'), _items(
+        ('Estado de la entrevista', r.get_estado_entrevista_display() if r.estado_entrevista else ''),
+        ('Firmó solicitud', 'Sí' if r.firmo_solicitud else 'No'),
+        ('Observaciones', r.observacion_encuesta),
+    ))
+
+    return secciones
+
 def continuar_parte4_resumen(request, relevamiento):
     """PARTE 4: resumen final. Antes de confirmar muestra el botón de cierre;
     después de confirmar es la pantalla definitiva (Nueva encuesta / Fotos)."""
-    from .models import USO_LOTE_OCUPANTE_CHOICES, MEJORAS_CHOICES, EQUIPAMIENTOS_CHOICES
-
+    
     r = relevamiento
     orden = r.orden_trabajo
-
+    # ── POST: confirmar y finalizar ─────────────────────────────────
     if request.method == 'POST' and r.estado_carga != 'completo':
         r.estado_carga = 'completo'
         r.fecha_de_encuesta = timezone.now()
         r.save(update_fields=['estado_carga', 'fecha_de_encuesta'])
-        messages.success(request, f'Relevamiento #{r.pk} confirmado y finalizado correctamente.')
-        return redirect('relevamiento:continuar_encuesta', pk=r.pk, parte='encuesta')
+
+        messages.success(
+            request,
+            f'Relevamiento #{r.pk} confirmado y finalizado correctamente.'
+        )
+        return redirect(
+            'relevamiento:continuar_encuesta',
+            pk=r.pk, parte='encuesta'
+        )
 
     # ── Equipo ──────────────────────────────────────────────────────────
     equipo = (
@@ -1429,7 +1680,7 @@ def continuar_parte4_resumen(request, relevamiento):
 
     def agregar(titulo, editar, items):
         if items:
-            icon, tone = _meta_seccion(titulo)
+            icon, tone = meta_seccion(titulo)
             secciones.append({
                 'titulo': titulo, 
                 'editar': editar, 
@@ -1457,13 +1708,14 @@ def continuar_parte4_resumen(request, relevamiento):
     agregar('Condición del lote', 'lote', _items(
         ('Condición de vivienda', r.get_condicion_vivienda_display()),
         ('Residencia · manzana', r.residencia_manzana), ('Residencia · lote', r.residencia_lote),
-        ('Encargado', r.encargado_residencia), ('Parentesco', r.parentesco),
+        ('Encargado', r.encargado_residencia), ('Parentesco', r.relacion_con_lote),
         ('Uso del lote', _etiquetas(r.uso_lote_ocupante, USO_LOTE_OCUPANTE_CHOICES)),
     ))
 
     for v in r.viviendas.all().order_by('numero'):
+        mapa_relacion = dict(RELACION_CON_LOTE_CHOICES)
         poblacion = '; '.join(
-            f'{m.nombre_miembro} ({m.relacion_con_lote})' if m.relacion_con_lote else m.nombre_miembro
+            f'{m.nombre_miembro} ({mapa_relacion.get(m.relacion_con_lote, m.relacion_con_lote)})' if m.relacion_con_lote else m.nombre_miembro
             for m in v.miembros.all()
         )
         agregar(
@@ -1488,7 +1740,17 @@ def continuar_parte4_resumen(request, relevamiento):
         ('Ganadería', '; '.join(f'{g.get_tipo_ganaderia_display()} × {g.cantidad}' for g in r.producciones_ganaderas.all())),
         ('Mejoras', _etiquetas(r.mejoras, MEJORAS_CHOICES)),
     ))
+    agregar('Cierre de la encuesta', 'cierre', _items(
+        ('Estado de la entrevista', r.get_estado_entrevista_display() if r.estado_entrevista else ''),
+        ('Firmó solicitud', 'Sí' if r.firmo_solicitud else 'No'),
+        ('Observaciones', r.observacion_encuesta),
+    ))
 
+    if r.tipo_registro == 'conflicto':
+        secciones = secciones_conflicto(r)
+    if r.tipo_registro == 'servicio':
+            secciones = secciones_servicio(r)
+        
     context = {
         'relevamiento': r,
         'orden': orden,
@@ -1501,7 +1763,7 @@ def continuar_parte4_resumen(request, relevamiento):
     }
     return render(
         request,
-        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/cuestionario_ocupante_parte4_resumen.html',
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/ocupante/cuestionario_ocupante_parte4_resumen.html',
         context,
     )
 
@@ -1509,16 +1771,713 @@ def destino_tras_guardar(request, relevamiento, destino_normal):
     """Si esta parte se abrió desde el resumen final (vía el lápiz de
     'Editar', que agrega ?origen=resumen) y el usuario la completa, lo
     mandamos de vuelta al resumen en vez de seguir avanzando por el wizard.
-    Si no, sigue el flujo normal (Parte 1 → 2 → 3 → 4)."""
+    Si no, sigue el flujo normal (Parte 1 → 2 → 3 → 4).
+    Si forzar_vivienda=True, va a vivienda aunque sea del resumen."""
     origen = request.POST.get('origen') or request.GET.get('origen')
     if origen == 'resumen':
         return redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='encuesta')
     return destino_normal
 
 # ─────────────────────────────────────────────
-# EDITAR RELEVAMIENTO (siempre con orden asociada)
+# MODO CONFLICTO
+# ─────────────────────────────────────────────
+@login_required
+@encuestador_required
+def conflicto_datos_lote(request, orden_id):
+    """CONFLICTO – Parte 1: datos del lote. Crea el Relevamiento (borrador)
+    y sigue a la pantalla de pretendientes."""
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+
+    if not orden.formulario_habilitado:
+        messages.warning(
+            request,
+            'El formulario de relevamiento no está habilitado. '
+            'Contacte al coordinador de campo para habilitarlo.'
+        )
+        return redirect('relevamiento:encuestador_dashboard')
+
+    datos_geo = datos_geograficos_desde_orden(orden)
+    colonia = datos_geo['colonia']
+
+    initial = {
+        'distrito': datos_geo['distrito'],
+    }
+
+    if request.method == 'POST':
+        form = RelevamientoConflictoParte1Form(
+            request.POST,
+            colonia=colonia,
+            initial=initial,
+        )
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    rel = form.save(commit=False)
+                    rel.colonia = datos_geo['colonia']
+                    rel.orden_trabajo = orden
+                    rel.encuestador = request.user
+                    rel.tipo_registro = 'conflicto'
+                    rel.estado_carga = 'parte_1'
+                    rel.save()
+                    form.save_m2m()
+                messages.success(request, 'Datos del lote guardados. Continuá con los pretendientes.')
+                return redirect('relevamiento:continuar_conflicto', pk=rel.pk, parte='pretendientes')
+            except IntegrityError:
+                form.add_error(
+                    'manzana',
+                    "Ya existe un relevamiento con esa manzana y lote en esta colonia."
+                )
+                messages.error(request, 'Ese lote ya fue registrado en esta colonia.')
+            except Exception:
+                logger.exception("Error creando relevamiento (conflicto) para OT %s", orden.pk)
+                messages.error(request, 'Ocurrió un error inesperado. Contacte al administrador.')
+        else:
+            messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
+    else:
+        form = RelevamientoConflictoParte1Form(
+            colonia=colonia,
+            initial=initial,
+        )
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/cuestionario_conflicto_datos_lote.html',
+        {
+            'form': form,
+            'orden': orden,
+            'datos_geo': datos_geo,
+            'title': f'Nueva Encuesta (Conflicto) — {orden}',
+        },
+    )
+
+@login_required
+@encuestador_required
+def continuar_conflicto(request, pk, parte):
+    relevamiento, bloqueo = conflicto_editable(request, pk)
+    if bloqueo:
+        return bloqueo
+
+    if parte == 'pretendientes':
+        return conflicto_pretendientes_e_instituciones(request, relevamiento)
+    if parte == 'lote':
+        return conflicto_editar_lote(request, relevamiento)
+    if parte == 'instituciones':
+        # Compatibilidad con el lápiz del resumen
+        url = reverse('relevamiento:continuar_conflicto', kwargs={'pk': pk, 'parte': 'pretendientes'})
+        return redirect(f'{url}?abrir_modal=1')
+
+    messages.error(request, f'Parte "{parte}" no reconocida.')
+    return redirect('relevamiento:encuestador_dashboard')
+
+def conflicto_pretendientes_e_instituciones(request, rel):
+    InstitucionFS = inlineformset_factory(
+        Relevamiento, InstitucionEnLote, form=InstitucionEnLoteForm,
+        extra=0, can_delete=True, fk_name='relevamiento'
+    )
+
+    if request.method == 'POST':
+        form = RelevamientoCierreForm(request.POST, instance=rel)
+        institucion_formset = InstitucionFS(request.POST, instance=rel, prefix='instituciones')
+
+        if form.is_valid() and institucion_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    obj = form.save(commit=False)
+                    obj.estado_carga = 'parte_4'
+                    obj.save()
+                    institucion_formset.save()
+                messages.success(request, 'Datos guardados. Revisá el resumen y confirmá.')
+                return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
+            except Exception as e:
+                messages.error(request, f'Error al guardar: {str(e)}')
+        else:
+            avisar_errores(request, form, institucion_formset)
+    else:
+        form = RelevamientoCierreForm(instance=rel)
+        institucion_formset = InstitucionFS(instance=rel, prefix='instituciones')
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/cuestionario_conflicto.html',
+        {
+            'relevamiento': rel,
+            'orden': rel.orden_trabajo,
+            'pretendientes': rel.pretendientes.all().order_by('pk'),
+            'form': form,
+            'institucion_formset': institucion_formset,
+            'puede_volver_al_resumen': rel.estado_carga == 'parte_4',
+            'abrir_modal': request.GET.get('abrir_modal') == '1',
+            'title': f'Encuesta #{rel.pk} (Conflicto) — Pretendientes',
+        },
+    )
+
+@login_required
+@encuestador_required
+def pretendiente_vivienda(request, pk, pret_id):
+    """CONFLICTO vivienda + equipamiento + población de UN pretendiente."""
+    rel, bloqueo = conflicto_editable(request, pk)
+    if bloqueo:
+        return bloqueo
+    pret = get_object_or_404(Pretendiente, pk=pret_id, relevamiento=rel)
+
+    if pret.condicion_vivienda == 'sin_vivienda':
+        messages.info(request, 'Este pretendiente no tiene vivienda: pasamos directo a producción.')
+        return redirect('relevamiento:pretendiente_produccion', pk=rel.pk, pret_id=pret.pk)
+
+    ViviendaFS = inlineformset_factory(
+        Pretendiente, Vivienda, form=ViviendaForm, extra=0, can_delete=True, fk_name='pretendiente'
+    )
+    MiembroFS = inlineformset_factory(
+        Vivienda, Miembro, form=MiembroForm, extra=0, can_delete=True, fk_name='vivienda'
+    )
+
+    if request.method == 'POST':
+        vivienda_formset = ViviendaFS(request.POST, instance=pret, prefix='viviendas')
+
+        if vivienda_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    viviendas_guardadas = []
+                    numero_actual = 1
+                    for i, viv_form in enumerate(vivienda_formset):
+                        if viv_form.cleaned_data.get('DELETE', False):
+                            if viv_form.instance.pk:
+                                viv_form.instance.delete()
+                            continue
+                        if viv_form.cleaned_data:
+                            vivienda = viv_form.save(commit=False)
+                            vivienda.pretendiente = pret
+                            vivienda.numero = numero_actual
+                            numero_actual += 1
+                            viviendas_guardadas.append((i, vivienda, viv_form))
+
+                    principales = [v for _, v, _ in viviendas_guardadas if v.es_principal]
+                    if not principales and viviendas_guardadas:
+                        viviendas_guardadas[0][1].es_principal = True
+                    elif len(principales) > 1:
+                        for vivienda in principales[1:]:
+                            vivienda.es_principal = False
+
+                    for i, vivienda, viv_form in viviendas_guardadas:
+                        vivienda.save()
+                        viv_form.save_m2m()
+
+                        miem_fs = MiembroFS(request.POST, instance=vivienda, prefix=f'miembros_viv_{i}')
+                        if not miem_fs.is_valid():
+                            raise ErrorEnFormset(resumen_errores(miem_fs))
+
+                        for miembro in miem_fs.save(commit=False):
+                            miembro.pretendiente = pret
+                            miembro.relevamiento = rel
+                            miembro.save()
+                        for obj in miem_fs.deleted_objects:
+                            obj.delete()
+                        miem_fs.save_m2m()
+
+                messages.success(request, 'Vivienda y población guardadas.')
+                return redirect('relevamiento:pretendiente_produccion', pk=rel.pk, pret_id=pret.pk)
+            except Exception as e:
+                messages.error(request, f'Error al guardar: {str(e)}')
+        else:
+            avisar_errores(request, vivienda_formset)
+    else:
+        vivienda_formset = ViviendaFS(instance=pret, prefix='viviendas')
+
+    vivienda_miembro_formsets = {}
+    for i, viv_form in enumerate(vivienda_formset.forms):
+        miem_prefix = f'miembros_viv_{i}'
+        if request.method == 'POST' and f'{miem_prefix}-TOTAL_FORMS' in request.POST:
+            vivienda_miembro_formsets[i] = MiembroFS(request.POST, prefix=miem_prefix)
+        elif viv_form.instance.pk:
+            vivienda_miembro_formsets[i] = MiembroFS(instance=viv_form.instance, prefix=miem_prefix)
+        else:
+            vivienda_miembro_formsets[i] = MiembroFS(prefix=miem_prefix)
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/cuestionario_conflicto_pretendiente_vivienda.html',
+        {
+            'relevamiento': rel,
+            'pretendiente': pret,
+            'vivienda_formset': vivienda_formset,
+            'vivienda_miembro_formsets': vivienda_miembro_formsets,
+            'miembro_template_formset': MiembroFS(prefix='miembros_viv_0'),
+            'mostrar_poblacion': pret.condicion_vivienda in ('presente', 'ausente'),
+            'etiqueta_titular': 'pretendiente',
+            'title': f'Encuesta #{rel.pk} (Conflicto) — Vivienda de {pret.nombre_pretendiente}',
+        },
+    )
+
+@login_required
+@encuestador_required
+def pretendiente_produccion(request, pk, pret_id):
+    """CONFLICTO cultivos, ganadería y mejoras de UN pretendiente."""
+    rel, bloqueo = conflicto_editable(request, pk)
+    if bloqueo:
+        return bloqueo
+    pret = get_object_or_404(Pretendiente, pk=pret_id, relevamiento=rel)
+
+    CultivoFS = inlineformset_factory(
+        Pretendiente, Cultivo, form=CultivoForm, extra=0, can_delete=True, fk_name='pretendiente'
+    )
+    GanaderiaFS = inlineformset_factory(
+        Pretendiente, ProduccionGanadera, form=ProduccionGanaderaForm, extra=0, can_delete=True, fk_name='pretendiente'
+    )
+
+    if request.method == 'POST':
+        form = PretendienteMejorasForm(request.POST, instance=pret)
+        cultivo_formset = CultivoFS(request.POST, instance=pret, prefix='cultivos')
+        ganaderia_formset = GanaderiaFS(request.POST, instance=pret, prefix='ganaderia')
+
+        if form.is_valid() and cultivo_formset.is_valid() and ganaderia_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+                    cultivo_formset.save()
+                    ganaderia_formset.save()
+                messages.success(request, f'Producción de {pret.nombre_pretendiente} guardada.')
+                return redirect('relevamiento:continuar_conflicto', pk=rel.pk, parte='pretendientes')
+            except Exception as e:
+                messages.error(request, f'Error al guardar: {str(e)}')
+        else:
+             avisar_errores(request, form, cultivo_formset, ganaderia_formset)
+    else:
+        form = PretendienteMejorasForm(instance=pret)
+        cultivo_formset = CultivoFS(instance=pret, prefix='cultivos')
+        ganaderia_formset = GanaderiaFS(instance=pret, prefix='ganaderia')
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/cuestionario_conflicto_pretendiente_produccion.html',
+        {
+            'relevamiento': rel,
+            'pretendiente': pret,
+            'form': form,
+            'cultivo_formset': cultivo_formset,
+            'ganaderia_formset': ganaderia_formset,
+            'title': f'Encuesta #{rel.pk} (Conflicto) — Producción de {pret.nombre_pretendiente}',
+        },
+    )
+
+@login_required
+@encuestador_required
+def pretendiente_editar(request, pk, pret_id=None):
+    """Alta (pret_id=None) o edición de la identificación de un pretendiente."""
+    rel, bloqueo = conflicto_editable(request, pk)
+    if bloqueo:
+        return bloqueo
+    pret = get_object_or_404(Pretendiente, pk=pret_id, relevamiento=rel) if pret_id else None
+
+    if request.method == 'POST':
+        form = PretendienteIdentificacionForm(request.POST, instance=pret)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.relevamiento = rel
+            obj.save()
+            if rel.estado_carga == 'parte_1':
+                rel.estado_carga = 'parte_2'
+                rel.save(update_fields=['estado_carga'])
+            messages.success(request, f'Pretendiente {obj.nombre_pretendiente} guardado.')
+            # pretendiente_editar, caso exitoso:
+            if obj.condicion_vivienda == 'sin_vivienda':
+                return redirect('relevamiento:pretendiente_produccion', pk=rel.pk, pret_id=obj.pk)
+            return redirect('relevamiento:pretendiente_vivienda', pk=rel.pk, pret_id=obj.pk)
+        messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
+    else:
+        form = PretendienteIdentificacionForm(instance=pret)
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/cuestionario_conflicto_pretendiente.html',
+        {
+            'form': form,
+            'relevamiento': rel,
+            'pretendiente': pret,
+            'title': f'Encuesta #{rel.pk} (Conflicto) — Pretendiente',
+        },
+    )
+
+@login_required
+@encuestador_required
+@require_POST
+def pretendiente_eliminar(request, pk, pret_id):
+    rel, bloqueo = conflicto_editable(request, pk)
+    if bloqueo:
+        return bloqueo
+    pret = get_object_or_404(Pretendiente, pk=pret_id, relevamiento=rel)
+    nombre = pret.nombre_pretendiente
+    pret.delete()  # CASCADE borra su vivienda, miembros, cultivos, etc.
+    messages.success(request, f'Pretendiente {nombre} eliminado.')
+    return redirect('relevamiento:continuar_conflicto', pk=rel.pk, parte='pretendientes')
+
+def relevamiento_editable(request, pk, tipo):
+    """(rel, None) si se puede editar; (None, redirect) si ya fue confirmado."""
+    rel = get_object_or_404(Relevamiento, pk=pk, tipo_registro=tipo)
+    bloqueo = bloquear_si_completo(request, rel)
+    return (None, bloqueo) if bloqueo else (rel, None)
+
+def conflicto_editable(request, pk):
+    rel = get_object_or_404(Relevamiento, pk=pk, tipo_registro='conflicto')
+
+    # Ownership
+    if rel.encuestador_id != request.user.id and not request.user.is_superuser:
+        messages.error(request, 'No tenés permiso para editar este relevamiento.')
+        return (None, redirect('relevamiento:encuestador_dashboard'))
+
+    bloqueo = bloquear_si_completo(request, rel)
+    return (None, bloqueo) if bloqueo else (rel, None)
+
+def conflicto_editar_lote(request, rel):
+    """Edita los datos del lote de un conflicto ya creado (lápiz del resumen)."""
+    orden = rel.orden_trabajo
+    datos_geo = datos_geograficos_desde_orden(orden)
+    colonia = datos_geo['colonia']
+
+    if request.method == 'POST':
+        form = RelevamientoConflictoParte1Form(
+            request.POST,
+            instance=rel,
+            colonia=colonia,
+        )
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+                messages.success(request, 'Datos del lote actualizados.')
+                if rel.estado_carga == 'parte_4':
+                    return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
+                return redirect('relevamiento:continuar_conflicto', pk=rel.pk, parte='pretendientes')
+            except IntegrityError:
+                form.add_error(
+                    'manzana',
+                    "Ya existe otro relevamiento con esa manzana y lote en esta colonia."
+                )
+                messages.error(request, 'Ese lote ya está registrado en esta colonia.')
+            except Exception:
+                logger.exception("Error editando lote del conflicto %s", rel.pk)
+                messages.error(request, 'Ocurrió un error inesperado. Contacte al administrador.')
+        else:
+            messages.error(request, 'Hay errores en el formulario. Revise los campos marcados.')
+    else:
+        form = RelevamientoConflictoParte1Form(
+            instance=rel,
+            colonia=colonia,
+        )
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/conflicto/cuestionario_conflicto_datos_lote.html',
+        {
+            'form': form,
+            'orden': orden,
+            'datos_geo': datos_geo,
+            'editando': True,
+            'title': f'Encuesta #{rel.pk} (Conflicto) — Editar lote',
+        },
+    )
+
+def bloquear_si_completo(request, relevamiento):
+    """None si se puede editar; un redirect al resumen si ya fue confirmado."""
+    if relevamiento.estado_carga == 'completo':
+        messages.warning(request, 'Este relevamiento ya fue confirmado y no se puede editar.')
+        return redirect('relevamiento:continuar_encuesta', pk=relevamiento.pk, parte='encuesta')
+    return None
+
+def volver_al_resumen(rel):
+    if rel.tipo_registro in MODOS_WIZARD:
+        return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
+    return redirect('relevamiento:resumen_relevamiento', pk=rel.pk)
+
+# ─────────────────────────────────────────────
+# MODO SERVICIO
 # ─────────────────────────────────────────────
 
+@login_required
+@encuestador_required
+def cuestionario_servicio(request, orden_id):
+    """SERVICIO – Parte Única: lote + instituciones + responsable + uso + mejoras + cierre."""
+    orden = get_object_or_404(OrdenTrabajo, pk=orden_id)
+
+    if not orden.formulario_habilitado:
+        messages.warning(request, 'El formulario de relevamiento no está habilitado.')
+        return redirect('relevamiento:encuestador_dashboard')
+
+    datos_geo = datos_geograficos_desde_orden(orden)
+
+    InstitucionFS = inlineformset_factory(
+        Relevamiento, InstitucionEnLote, form=InstitucionEnLoteForm, 
+        extra=1, can_delete=True, fk_name='relevamiento'
+    )
+
+    if request.method == 'POST':
+        servicio_cuestionario = RelevamientoServicioParte1Form(request.POST)
+        form_cierre = RelevamientoCierreForm(request.POST)
+        institucion_formset = InstitucionFS(request.POST)
+
+        if servicio_cuestionario.is_valid() and form_cierre.is_valid():
+            try:
+                with transaction.atomic():
+                    rel = servicio_cuestionario.save(commit=False)
+                    rel.colonia = datos_geo['colonia']
+                    rel.distrito = datos_geo['distrito']
+                    rel.departamento = datos_geo['departamento']
+                    rel.orden_trabajo = orden
+                    rel.encuestador = request.user
+                    rel.tipo_registro = 'servicio'
+                    rel.condicion_vivienda = 'servicio'
+                    rel.vive_en_lote = False
+                    rel.estado_carga = 'parte_4'
+                    rel.save()
+                    servicio_cuestionario.save_m2m()
+
+                    # Guardamos el cierre (que incluye las mejoras)
+                    form_cierre.instance = rel
+                    form_cierre.save()
+
+                    # Guardamos instituciones
+                    institucion_formset = InstitucionFS(request.POST, instance=rel)
+                    if institucion_formset.is_valid():
+                        institucion_formset.save()
+                        messages.success(request, 'Datos y cierre guardados correctamente.')
+                        return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
+                    else:
+                        transaction.set_rollback(True)
+                        avisar_errores(request, servicio_cuestionario, institucion_formset, form_cierre)
+            except Exception as e:
+                messages.error(request, f'Error al guardar: {str(e)}')
+        else:
+            avisar_errores(request, servicio_cuestionario, institucion_formset, form_cierre)
+    else:
+        servicio_cuestionario = RelevamientoServicioParte1Form()
+        form_cierre = RelevamientoCierreForm()
+        institucion_formset = InstitucionFS()
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/servicio/cuestionario_servicio_parte1.html',
+        {
+            'form': servicio_cuestionario,
+            'servicio_cuestionario': servicio_cuestionario,
+            'form_cierre': form_cierre,
+            'institucion_formset': institucion_formset,
+            'orden': orden,
+            'datos_geo': datos_geo,
+            'title': f'Nueva Encuesta (Servicio) — {orden}',
+        },
+    )
+
+@login_required
+@encuestador_required
+def continuar_servicio(request, pk, parte):
+    rel, bloqueo = relevamiento_editable(request, pk, 'servicio')
+    if bloqueo:
+        return bloqueo
+
+    if parte == 'lote':
+        return servicio_editar_lote(request, rel)
+    if parte == 'cierre':
+        return redirect('relevamiento:continuar_servicio', pk=rel.pk, parte='lote')
+
+    messages.error(request, f'Parte "{parte}" no reconocida.')
+    return redirect('relevamiento:encuestador_dashboard')
+
+def servicio_editar_lote(request, rel):
+    """Edita lote, responsable y uso del lote de un Servicio ya creado."""
+    orden = rel.orden_trabajo
+    datos_geo = datos_geograficos_desde_orden(orden)
+
+    if request.method == 'POST':
+        form = RelevamientoServicioParte1Form(request.POST, instance=rel)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Datos actualizados.')
+            if rel.estado_carga == 'parte_4':
+                return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
+            return redirect('relevamiento:continuar_servicio', pk=rel.pk, parte='cierre')
+        avisar_errores(request, form)
+    else:
+        form = RelevamientoServicioParte1Form(instance=rel)
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/servicio/cuestionario_servicio_parte1.html',
+        {
+            'form': form,
+            'orden': orden,
+            'datos_geo': datos_geo,
+            'editando': True,
+            'title': f'Encuesta #{rel.pk} (Servicio) — Editar lote',
+        },
+    )
+
+def servicio_cierre(request, rel):
+    """SERVICIO – Parte 2: instituciones + mejoras + información de la encuesta."""
+    InstitucionFS = inlineformset_factory(
+        Relevamiento, InstitucionEnLote, form=InstitucionEnLoteForm,
+        extra=0, can_delete=True, fk_name='relevamiento'
+    )
+
+    if request.method == 'POST':
+        form = RelevamientoServicioParte1Form(request.POST, instance=rel)
+        institucion_formset = InstitucionFS(request.POST, instance=rel, prefix='instituciones')
+
+        if form.is_valid() and institucion_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    obj = form.save(commit=False)
+                    obj.estado_carga = 'parte_4'
+                    obj.save()
+                    form.save_m2m()
+                    institucion_formset.save()
+                messages.success(request, 'Datos guardados. Revisá el resumen y confirmá.')
+                return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
+            except Exception as e:
+                messages.error(request, f'Error al guardar: {str(e)}')
+        else:
+            avisar_errores(request, form, institucion_formset)
+    else:
+        form = RelevamientoServicioParte1Form(instance=rel)
+        institucion_formset = InstitucionFS(instance=rel, prefix='instituciones')
+
+    return render(
+        request,
+        'includes/relevamiento/encuestador/formulario_relevamiento/cuestionarios/servicio/cuestionario_servicio_cierre.html',
+        {
+            'relevamiento': rel,
+            'form': form,
+            'institucion_formset': institucion_formset,
+            'title': f'Encuesta #{rel.pk} (Servicio) — Cierre',
+        },
+    )
+# ─────────────────────────────────────────────
+# FRACCIONAMIENTO: CREAR SUB-LOTE
+# ─────────────────────────────────────────────
+
+@login_required
+@encuestador_required
+def crear_sublote_fraccionamiento(request, pk):
+    """
+    Crea un nuevo sub-lote a partir de un Relevamiento en modo Fraccionamiento.
+    Genera la nomenclatura secuencial automática (1A, 1B, 1C...) y redirige
+    a su edición para completar los datos del sub-lote.
+    """
+    parent = get_object_or_404(Relevamiento, pk=pk)
+
+    if request.method != 'POST':
+        return redirect('relevamiento:resumen_relevamiento', pk=parent.pk)
+
+    es_encuestador_asignado = parent.encuestador == request.user
+    esta_en_equipo = parent.orden_trabajo.equipos_asignados.filter(encuestadores=request.user).exists()
+    if not (es_encuestador_asignado or esta_en_equipo or request.user.is_superuser):
+        messages.error(request, 'No tiene permisos para fraccionar este relevamiento.')
+        return redirect('relevamiento:resumen_relevamiento', pk=parent.pk)
+
+    try:
+        sufijo = parent.siguiente_sufijo_sublote()
+        sublote = Relevamiento.objects.create(
+            orden_trabajo=parent.orden_trabajo,
+            encuestador=request.user,
+            departamento=parent.departamento,
+            distrito=parent.distrito,
+            colonia=parent.colonia,
+            manzana=parent.manzana,
+            lote_indert=f"{parent.lote_indert}{sufijo}",
+            lote_sirt=f"{parent.lote_sirt}{sufijo}",
+            tipo_registro='fraccionamiento',
+            parent_lote=parent,
+        )
+        messages.success(request, f'Sub-lote {sublote.lote_indert} creado correctamente.')
+        return redirect('relevamiento:edit', pk=sublote.pk)
+    except Exception as e:
+        messages.error(request, f'Error al crear el sub-lote: {str(e)}')
+        return redirect('relevamiento:resumen_relevamiento', pk=parent.pk)
+
+@login_required
+@encuestador_required
+def mis_encuestas(request):
+    """Vista para gestionar y filtrar encuestas/relevamientos del encuestador."""
+   
+    # Filtrado opcional por query param 'colonia'
+    colonia_q = request.GET.get('colonia')
+
+    # Base queryset: relevamientos del usuario actual
+    relevamientos_qs = Relevamiento.objects.filter(encuestador=request.user)
+
+    if colonia_q:
+        # Intentar interpretar como ID; si falla, filtrar por nombre (icontains)
+        try:
+            colonia_id = int(colonia_q)
+            relevamientos_qs = relevamientos_qs.filter(colonia__id=colonia_id)
+        except (ValueError, TypeError):
+            relevamientos_qs = relevamientos_qs.filter(colonia__nombre__icontains=colonia_q)
+
+    relevamientos = relevamientos_qs.select_related(
+        'colonia',
+        'distrito',
+        'departamento',
+        'orden_trabajo'
+    ).order_by('-creado_en')
+    
+    # Serializar relevamientos a JSON
+    relevamientos_data = []
+    for rel in relevamientos:
+        relevamientos_data.append({
+            'id': rel.id,
+            'fechaRegistro': rel.creado_en.strftime('%Y-%m-%d'),
+            'departamento': rel.departamento.nombre if rel.departamento else '',
+            'distrito': rel.distrito.nombre if rel.distrito else '',
+            'colonia': rel.colonia.nombre if rel.colonia else '',
+            'colonia_id': rel.colonia.id if rel.colonia else '',
+            'manzana': rel.manzana or 'Sin datos',
+            'loteIndert': rel.lote_indert or 'Sin datos',
+            'loteSirt': rel.lote_sirt or 'Sin datos',
+            'condicionVivienda': rel.get_condicion_vivienda_display() if rel.condicion_vivienda else 'Sin datos',
+            'condicionEncuestado': rel.get_condicion_encuestado_display() if rel.condicion_encuestado else 'Sin datos',
+            'quien_es_el_ocupante': rel.quien_es_el_ocupante or 'Sin información',
+            'cedula_ocupante': rel.cedula_ocupante or 'Sin información',
+            'sexo_ocupante': rel.get_sexo_ocupante_display() if rel.sexo_ocupante else 'Sin información',   
+            'observaciones': rel.observacion_encuesta or 'Sin observaciones',
+            'formularioHabilitado': rel.orden_trabajo.formulario_habilitado if rel.orden_trabajo else False,
+            'firmo_solicitud': bool(rel.firmo_solicitud),
+            'firmoSolicitud': bool(rel.firmo_solicitud),
+        })
+    
+    context = {
+        'relevamientos': relevamientos,
+        'relevamientos_json': json.dumps(relevamientos_data, ensure_ascii=False),
+    }
+    return render(request, 'includes/relevamiento/encuestador/mis_encuestas.html', context)
+
+@login_required
+def agregar_fotos(request, pk):
+    """Sube fotos a un relevamiento, agrupadas en las 4 categorías del formulario."""
+    rel = get_object_or_404(Relevamiento, pk=pk)
+
+    if request.method == 'POST':
+        form = FotosRelevamientoForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    total = form.guardar(rel, request.user)
+                if total:
+                    messages.success(request, f'Se subieron {total} foto(s).')
+                else:
+                    messages.warning(request, 'No se seleccionó ninguna foto.')
+                return volver_al_resumen(rel)
+            except Exception as e:
+                messages.error(request, f'Error al subir fotos: {str(e)}')
+    else:
+        form = FotosRelevamientoForm()
+
+    return render(request, 'relevamiento/agregar_fotos.html', {
+        'form': form,
+        'relevamiento': rel,
+    })
+
+# ─────────────────────────────────────────────
+# EDITAR RELEVAMIENTO (siempre con orden asociada) ver para eliminar
+# ─────────────────────────────────────────────
 @login_required
 @encuestador_required
 def editar_encuesta_relevamiento(request, pk):
@@ -1534,7 +2493,7 @@ def editar_encuesta_relevamiento(request, pk):
         return redirect('relevamiento:encuestador_dashboard')
 
     orden = rel.orden_trabajo
-    datos_geo = _datos_geograficos_desde_orden(orden)
+    datos_geo = datos_geograficos_desde_orden(orden)
 
     es_encuestador_asignado = rel.encuestador == request.user
     esta_en_equipo = orden.equipos_asignados.filter(encuestadores=request.user).exists()
@@ -1608,7 +2567,7 @@ def editar_encuesta_relevamiento(request, pk):
                         if not pret_form.cleaned_data or pret_form.cleaned_data.get('DELETE', False):
                             continue
                         if pret_form.instance.pk:
-                            _procesar_viviendas_pretendiente(request, pret_form.instance, i, MiembroFS)
+                            procesar_viviendas_pretendiente(request, pret_form.instance, i, MiembroFS)
 
                     # Miembros anidados por vivienda con prefijo dinámico
                     for i, viv_form in enumerate(vivienda_formset):
@@ -1665,7 +2624,7 @@ def editar_encuesta_relevamiento(request, pk):
         else:
             vivienda_miembro_formsets[i] = MiembroFS(prefix=miem_prefix)
 
-    pretendiente_vivienda_formsets, pretendiente_miembro_formsets = _construir_formsets_pretendiente(
+    pretendiente_vivienda_formsets, pretendiente_miembro_formsets = construir_formsets_pretendiente(
         request, pretendiente_formset, MiembroFS
     )
 
@@ -1687,56 +2646,11 @@ def editar_encuesta_relevamiento(request, pk):
         'datos_geo': datos_geo,
         'title': f'Editar Relevamiento #{rel.pk}',
     }
-    modo = _detectar_modo_relevamiento(rel)
+    modo = detectar_modo_relevamiento(rel)
     return render(request, TEMPLATE_MAP[modo], context)
 
-
 # ─────────────────────────────────────────────
-# FRACCIONAMIENTO: CREAR SUB-LOTE
-# ─────────────────────────────────────────────
-
-@login_required
-@encuestador_required
-def crear_sublote_fraccionamiento(request, pk):
-    """
-    Crea un nuevo sub-lote a partir de un Relevamiento en modo Fraccionamiento.
-    Genera la nomenclatura secuencial automática (1A, 1B, 1C...) y redirige
-    a su edición para completar los datos del sub-lote.
-    """
-    parent = get_object_or_404(Relevamiento, pk=pk)
-
-    if request.method != 'POST':
-        return redirect('relevamiento:resumen_relevamiento', pk=parent.pk)
-
-    es_encuestador_asignado = parent.encuestador == request.user
-    esta_en_equipo = parent.orden_trabajo.equipos_asignados.filter(encuestadores=request.user).exists()
-    if not (es_encuestador_asignado or esta_en_equipo or request.user.is_superuser):
-        messages.error(request, 'No tiene permisos para fraccionar este relevamiento.')
-        return redirect('relevamiento:resumen_relevamiento', pk=parent.pk)
-
-    try:
-        sufijo = parent.siguiente_sufijo_sublote()
-        sublote = Relevamiento.objects.create(
-            orden_trabajo=parent.orden_trabajo,
-            encuestador=request.user,
-            departamento=parent.departamento,
-            distrito=parent.distrito,
-            colonia=parent.colonia,
-            manzana=parent.manzana,
-            lote_indert=f"{parent.lote_indert}{sufijo}",
-            lote_sirt=f"{parent.lote_sirt}{sufijo}",
-            tipo_registro='fraccionamiento',
-            parent_lote=parent,
-        )
-        messages.success(request, f'Sub-lote {sublote.lote_indert} creado correctamente.')
-        return redirect('relevamiento:edit', pk=sublote.pk)
-    except Exception as e:
-        messages.error(request, f'Error al crear el sub-lote: {str(e)}')
-        return redirect('relevamiento:resumen_relevamiento', pk=parent.pk)
-
-
-# ─────────────────────────────────────────────
-# RESUMEN / DETALLE
+# RESUMEN / DETALLE ver para eliminar
 # ─────────────────────────────────────────────
 
 @login_required
@@ -1745,94 +2659,3 @@ def resumen_relevamiento(request, pk):
     rel = get_object_or_404(Relevamiento, pk=pk)
     # La plantilla de resumen está en la carpeta de encuestador dentro de includes
     return render(request, 'includes/relevamiento/encuestador/resumen_relevamiento.html', {'relevamiento': rel})
-
-
-@login_required
-@encuestador_required
-def mis_encuestas(request):
-    """Vista para gestionar y filtrar encuestas/relevamientos del encuestador."""
-   
-    # Filtrado opcional por query param 'colonia'
-    colonia_q = request.GET.get('colonia')
-
-    # Base queryset: relevamientos del usuario actual
-    relevamientos_qs = Relevamiento.objects.filter(encuestador=request.user)
-
-    if colonia_q:
-        # Intentar interpretar como ID; si falla, filtrar por nombre (icontains)
-        try:
-            colonia_id = int(colonia_q)
-            relevamientos_qs = relevamientos_qs.filter(colonia__id=colonia_id)
-        except (ValueError, TypeError):
-            relevamientos_qs = relevamientos_qs.filter(colonia__nombre__icontains=colonia_q)
-
-    relevamientos = relevamientos_qs.select_related(
-        'colonia',
-        'distrito',
-        'departamento',
-        'orden_trabajo'
-    ).order_by('-creado_en')
-    
-    # Serializar relevamientos a JSON
-    relevamientos_data = []
-    for rel in relevamientos:
-        relevamientos_data.append({
-            'id': rel.id,
-            'fechaRegistro': rel.creado_en.strftime('%Y-%m-%d'),
-            'departamento': rel.departamento.nombre if rel.departamento else '',
-            'distrito': rel.distrito.nombre if rel.distrito else '',
-            'colonia': rel.colonia.nombre if rel.colonia else '',
-            'colonia_id': rel.colonia.id if rel.colonia else '',
-            'manzana': rel.manzana or 'Sin datos',
-            'loteIndert': rel.lote_indert or 'Sin datos',
-            'loteSirt': rel.lote_sirt or 'Sin datos',
-            'condicionVivienda': rel.get_condicion_vivienda_display() if rel.condicion_vivienda else 'Sin datos',
-            'condicionEncuestado': rel.get_condicion_encuestado_display() if rel.condicion_encuestado else 'Sin datos',
-            'quien_es_el_ocupante': rel.quien_es_el_ocupante or 'Sin información',
-            'cedula_ocupante': rel.cedula_ocupante or 'Sin información',
-            'sexo_ocupante': rel.get_sexo_ocupante_display() if rel.sexo_ocupante else 'Sin información',   
-            'observaciones': rel.observacion_encuesta or 'Sin observaciones',
-            'formularioHabilitado': rel.orden_trabajo.formulario_habilitado if rel.orden_trabajo else False,
-            'firmo_solicitud': bool(rel.firmo_solicitud),
-            'firmoSolicitud': bool(rel.firmo_solicitud),
-        })
-    
-    context = {
-        'relevamientos': relevamientos,
-        'relevamientos_json': json.dumps(relevamientos_data, ensure_ascii=False),
-    }
-    return render(request, 'includes/relevamiento/encuestador/mis_encuestas.html', context)
-
-@login_required
-def agregar_fotos(request, pk):
-    """Sube fotos a un relevamiento, agrupadas en las 4 categorías del formulario."""
-    rel = get_object_or_404(Relevamiento, pk=pk)
-
-    if request.method == 'POST':
-        form = FotosRelevamientoForm(request.POST, request.FILES)
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    total = form.guardar(rel, request.user)
-                if total:
-                    messages.success(request, f'Se subieron {total} foto(s).')
-                else:
-                    messages.warning(request, 'No se seleccionó ninguna foto.')
-                return _volver_al_resumen(rel)
-            except Exception as e:
-                messages.error(request, f'Error al subir fotos: {str(e)}')
-    else:
-        form = FotosRelevamientoForm()
-
-    return render(request, 'relevamiento/agregar_fotos.html', {
-        'form': form,
-        'relevamiento': rel,
-    })
-
-def _volver_al_resumen(rel):
-    """El flujo Ocupante usa el resumen nuevo; los demás modos siguen con el viejo."""
-    if rel.tipo_registro == 'ocupante':
-        return redirect('relevamiento:continuar_encuesta', pk=rel.pk, parte='encuesta')
-    return redirect('relevamiento:resumen_relevamiento', pk=rel.pk)
-
-

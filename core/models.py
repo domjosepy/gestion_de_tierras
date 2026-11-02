@@ -8,8 +8,6 @@ User = settings.AUTH_USER_MODEL
 # ===============================
 # MODELO: DEPARTAMENTO
 # ===============================
-
-
 class Departamento(models.Model):
     nombre = models.CharField(max_length=200, unique=True, db_index=True)
     codigo = models.PositiveIntegerField(blank=True, null=True, unique=True)

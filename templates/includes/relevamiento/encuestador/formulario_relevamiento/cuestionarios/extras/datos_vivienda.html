@@ -86,33 +86,11 @@
                     <td>{{ miem_form.edad_miembro }}</td>
                     <td>{{ miem_form.sexo_miembro }}</td>
                     <td>{{ miem_form.estado_civil_miembro }}</td>
-                    <td>
-                      <select
-                        name="{{ miem_form.relacion_con_lote.name }}"
-                        id="{{ miem_form.relacion_con_lote.id_for_label }}"
-                        class="form-select form-select-sm">
-                        {% for value, label in miem_form.relacion_con_lote.field.choices %}
-                          <option value="{{ value }}" {% if miem_form.relacion_con_lote.value == value %}selected{% endif %}>
-                            {{ label }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                    </td>
-                    <td>
-                      <select
-                        name="{{ miem_form.escolaridad.name }}"
-                        id="{{ miem_form.escolaridad.id_for_label }}"
-                        class="form-select form-select-sm">
-                        {% for value, label in miem_form.escolaridad.field.choices %}
-                          <option value="{{ value }}" {% if miem_form.escolaridad.value == value %}selected{% endif %}>
-                            {{ label }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                    </td>
+                    <td>{{ miem_form.relacion_con_lote }}</td>
+                    <td>{{ miem_form.escolaridad }}</td>
                     <td>{{ miem_form.grado_ano }}</td>
                     <td class="text-center">
-                      {{ miem_form.vivienda }}{{ miem_form.pretendiente }}{{ miem_form.relevamiento }}{{ miem_form.parentesco }}{{ miem_form.id }}
+                      {{ miem_form.vivienda }}{{ miem_form.pretendiente }}{{ miem_form.relevamiento }}{{ miem_form.id }}
                       <div class="miembro-delete-wrapper d-none">{{ miem_form.DELETE }}</div>
                       <button type="button" class="btn btn-sm btn-outline-danger remove-miembro-btn"><i class="fas fa-trash"></i></button>
                     </td>
