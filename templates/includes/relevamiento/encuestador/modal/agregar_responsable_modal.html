@@ -13,22 +13,25 @@
             </div>
             <div class="row g-3">
               <div class="col-12">
-                <label class="form-label fw-semibold">{{ form.quien_es_el_ocupante.label }} <span class="text-danger">*</span></label>
+                <label class="form-label fw-semibold">Responsable / Encargado <span class="text-danger">*</span></label>
                 {{ form.quien_es_el_ocupante }}
-                <small class="text-muted d-block mt-1">Solo letras, espacios y Ñ</small>
                 {% if form.quien_es_el_ocupante.errors %}<div class="text-danger small mt-1">{{ form.quien_es_el_ocupante.errors }}</div>{% endif %}
               </div>
               <div class="col-12">
                 <label class="form-label fw-semibold">{{ form.cedula_ocupante.label }}</label>
                 {{ form.cedula_ocupante }}
-                <small class="text-muted d-block mt-1">Solo números, máximo 8 dígitos</small>
                 {% if form.cedula_ocupante.errors %}<div class="text-danger small mt-1">{{ form.cedula_ocupante.errors }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">{{ form.telefono_ocupante.label }}</label>
+                {{ form.telefono_ocupante }}
+                {% if form.telefono_ocupante.erros %} <div class "text-danger small mt-1"> {{form.telefono_ocupante.erros}}</div> {% endif %}
               </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="guardar-responsable-btn" data-bs-dismiss="modal">Aceptar</button>
+          <div class="modal-footer justify-content-between">
+            <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-outline-primary" id="guardar-responsable-btn" data-bs-dismiss="modal">Aceptar</button>
           </div>
         </div>
       </div>
@@ -39,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalResponsable = document.getElementById('modalResponsable');
     const inputNombre = document.getElementById('id_quien_es_el_ocupante');
     const inputCi = document.getElementById('id_cedula_ocupante');
+    const inputTel = document.getElementById('telefono_ocupante')
     const errorDiv = document.getElementById('responsable-modal-error');
     const errorText = document.getElementById('responsable-modal-error-text');
 
@@ -59,11 +63,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    if (inputTel) {
+        inputTel.addEventListener('input', function() {
+            this.value = this.value.replace(/[^\d]/g, '');
+            if (this.value.length > 8) {
+                this.value = this.value.slice(0, 10);
+            }
+        });
+    }
 
     // Validar al guardar
     document.getElementById('guardar-responsable-btn')?.addEventListener('click', function(e) {
         const nombre = inputNombre?.value.trim() || '';
         const ci = inputCi?.value.trim() || '';
+        const tel = inputTel?.value.trim() || '';
         let errores = [];
 
         // Validar nombre obligatorio
@@ -85,6 +98,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ci && ci.length > 8) {
             errores.push('La cédula no debe tener más de 8 dígitos.');
         }
+        // validar telefono
+        if (tel && tel.length > 10) {
+            errores.push('El teléfono no debe tener más de 10 dígitos.');
+        }
 
         if (errores.length > 0) {
             e.preventDefault();
@@ -95,7 +112,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 inputNombre.focus();
             } else if (inputCi && ci && ci.length > 8) {
                 inputCi.focus();
+            } else if (inputTel && tel && ci.length > 10 ) {
+                inputTel.focus();
             }
+
         } else {
             errorDiv.classList.add('d-none');
         }

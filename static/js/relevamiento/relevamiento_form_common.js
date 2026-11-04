@@ -431,7 +431,7 @@ document.addEventListener('click', function (e) {
   updateMiembrosBadgePret(pretIdx, vivIdx);
 });
 
-// ── Agregar vivienda adicional (modo ocupante / fraccionamiento) ─────────────
+// ── Agregar vivienda adicional (modo ocupante) ─────────────
 
 document.getElementById('add-vivienda-btn')?.addEventListener('click', function () {
   const vivPrefix = 'viviendas';

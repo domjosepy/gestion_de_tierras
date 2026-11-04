@@ -7,12 +7,11 @@ from relevamiento.views import (
     # Subcoordinador
     subcoordinador_dashboard, subcoordinador_upload, 
     #Encuestador
-    encuestador_dashboard, formulario_desde_orden, ocupante_parte1, continuar_encuesta,
-    conflicto_datos_lote, continuar_conflicto, pretendiente_vivienda, pretendiente_produccion, 
-    pretendiente_editar, pretendiente_eliminar,
-    cuestionario_servicio, continuar_servicio, servicio_editar_lote, servicio_cierre,
-    editar_encuesta_relevamiento, resumen_relevamiento, agregar_fotos,
-    mis_encuestas, crear_sublote_fraccionamiento,
+    encuestador_dashboard, ocupante_parte1, conflicto_datos_lote, cuestionario_servicio, continuar_encuesta,
+    continuar_conflicto, pretendiente_vivienda, pretendiente_produccion, 
+    pretendiente_editar, pretendiente_eliminar, continuar_servicio, servicio_editar_lote,
+    editar_encuesta_relevamiento, agregar_fotos,
+    mis_encuestas,
 )
 
 app_name = "relevamiento"
@@ -37,10 +36,13 @@ urlpatterns = [
     path("subcoordinador/upload/", subcoordinador_upload, name="subcoordinador_upload"),
 
     # Crear relevamiento SOLO desde una orden de trabajo (OBLIGATORIO)
-    path("orden/<int:orden_id>/nueva-encuesta/", formulario_desde_orden, name="formulario_desde_orden"),
+        # Crear relevamiento — 3 wizards (puntos de entrada)
     path("orden/<int:orden_id>/nueva-encuesta/ocupante/parte1/", ocupante_parte1, name="ocupante_parte1"),
-    path("encuesta/<int:pk>/continuar/<str:parte>/", continuar_encuesta, name="continuar_encuesta"),
     path('orden/<int:orden_id>/nueva-encuesta/conflicto/parte1/', conflicto_datos_lote, name='conflicto_datos_lote'),
+    path('orden/<int:orden_id>/nueva-encuesta/servicio/parte1/', cuestionario_servicio, name='cuestionario_servicio'),
+
+    # Resto del wizard (una vez creado el Relevamiento)
+    path("encuesta/<int:pk>/continuar/<str:parte>/", continuar_encuesta, name="continuar_encuesta"),
     path('conflicto/<int:pk>/<str:parte>/', continuar_conflicto, name='continuar_conflicto'),
     path('conflicto/<int:pk>/pretendiente/nuevo/', pretendiente_editar, name='pretendiente_nuevo'),
     path('conflicto/<int:pk>/pretendiente/<int:pret_id>/vivienda/', pretendiente_vivienda, name='pretendiente_vivienda'),
@@ -49,16 +51,12 @@ urlpatterns = [
     path('conflicto/<int:pk>/pretendiente/<int:pret_id>/eliminar/', pretendiente_eliminar, name='pretendiente_eliminar'),
 
     # Servicios
-    path('orden/<int:orden_id>/nueva-encuesta/servicio/parte1/', cuestionario_servicio, name='cuestionario_servicio'),
     path('servicio/<int:pk>/<str:parte>/', continuar_servicio, name='continuar_servicio'),
-
+    path('servicio/<int:pk>/editar-lote/', servicio_editar_lote, name='servicio_editar_lote'),
+     
     # Editar relevamiento existente
     path("<int:pk>/editar/", editar_encuesta_relevamiento, name="edit"),
 
-    # Fraccionamiento: crear sub-lote a partir de un relevamiento existente
-    path("<int:pk>/fraccionamiento/nuevo-sublote/", crear_sublote_fraccionamiento, name="crear_sublote"),
-
     # Resumen / detalle
-    path("<int:pk>/", resumen_relevamiento, name="resumen_relevamiento"),
     path("<int:pk>/fotos/agregar/", agregar_fotos, name="agregar_fotos"),
 ]

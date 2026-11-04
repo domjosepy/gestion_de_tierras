@@ -13,9 +13,9 @@ from django.forms import inlineformset_factory
 from .models import (
     EQUIPAMIENTOS_CHOICES, TIPO_CULTIVO_CHOICES, TIPO_GANADERIA_CHOICES,
     TIPO_GANADERIA_CHOICES, USO_LOTE_OCUPANTE_CHOICES,
-    MEJORAS_CHOICES,USO_LOTE_SERVICIO_CHOICES, MODIFICACIONES_POSTADJUDICACION_CHOICES,
+    MEJORAS_CHOICES,USO_LOTE_SERVICIO_CHOICES,
     Relevamiento, Pretendiente, Vivienda, Miembro,
-    Cultivo, ProduccionGanadera, InstitucionEnLote, Documento, FotoRelevamiento,
+    Cultivo, ProduccionGanadera, InstitucionEnLote, FotoRelevamiento,
 )
 
 
@@ -162,7 +162,6 @@ class RelevamientoParte1Form(forms.ModelForm):
                 raise forms.ValidationError("La cédula del cónyuge no debe tener más de 8 dígitos.")
         return data
 
-
     def clean(self):
         cleaned_data = super().clean()
         frente = cleaned_data.get("frente_aprox")
@@ -247,15 +246,16 @@ class PretendienteIdentificacionForm(forms.ModelForm):
         fields = [
             "nombre_pretendiente", "ci_pretendiente",
             "sexo_pretendiente", "estado_civil_pretendiente", "telefono_pretendiente",
-            "encargado_residencia",            "condicion_vivienda", "vive_en_lote", 
-            "residencia_manzana", "residencia_lote",
+            "encargado_residencia", "condicion_vivienda", "vive_en_lote", 
+            "residencia_manzana", "residencia_lote", "relacion_con_lote",
             "observaciones",
         ]
         labels = {
             "nombre_pretendiente": "Nombre y Apellido",
             "ci_pretendiente": "Cédula",
             "telefono_pretendiente": "Teléfono",
-            "encargado_residencia": "Encargado del lote",
+            "encargado_residencia": "Encargado del lote", 
+            "relacion_con_lote": "Relación con el lote",
         }
         widgets = {"observaciones": forms.Textarea(attrs={"rows": 3})}
 
@@ -317,15 +317,18 @@ class PretendienteIdentificacionForm(forms.ModelForm):
         if cleaned.get("vive_en_lote"):
             cleaned["residencia_manzana"] = ""
             cleaned["residencia_lote"] = ""
+            cleaned["encargado_residencia"] = ""
+            cleaned["relacion_con_lote"] = ""
         return cleaned
 
+        
 class RelevamientoCierreForm(forms.ModelForm):
     """Formulario unificado para el cierre de CUALQUIER tipo de relevamiento.
     Maneja el estado, la firma y las observaciones finales."""
     
     class Meta:
         model = Relevamiento
-        fields = ["estado_entrevista", "firmo_solicitud", "observacion_encuesta"]
+        fields = ["estado_entrevista", "firmo_solicitud", "observacion_encuesta", "firmo_solicitud"]
         widgets = {"observacion_encuesta": forms.Textarea(attrs={"rows": 3})}
 
     def __init__(self, *args, **kwargs):
@@ -347,8 +350,7 @@ class RelevamientoCierreForm(forms.ModelForm):
                  self.initial["estado_entrevista"] = "en_conflicto"
 
 class RelevamientoServicioParte1Form(RelevamientoParte1Form):
-    """Servicio, Parte 1: lote + responsable + uso del lote.
-    El responsable reutiliza las columnas del ocupante (quien_es_el_ocupante...)."""
+    """Servicio, Parte 1: lote + responsable + uso del lote."""
 
     uso_lote_servicio = forms.MultipleChoiceField(
         choices=USO_LOTE_SERVICIO_CHOICES, required=False, widget=forms.CheckboxSelectMultiple
@@ -366,7 +368,7 @@ class RelevamientoServicioParte1Form(RelevamientoParte1Form):
             "manzana", "lote_indert",
             "frente_aprox", "fondo_aprox",
             "superficie_ha", "dimensiones", "tipo_lote",
-            "quien_es_el_ocupante", "cedula_ocupante",
+            "quien_es_el_ocupante", "cedula_ocupante", "telefono_ocupante",
             "uso_lote_servicio", "mejoras"
         ]
         
@@ -382,12 +384,22 @@ class RelevamientoServicioParte1Form(RelevamientoParte1Form):
                 else:
                     widget.attrs["class"] = (existing + " form-control").strip()
 
+    def _validar_nombre_letras_enie(self, nombre, campo_nombre):
+            if nombre:
+                nombre = nombre.strip()
+                if not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', nombre):
+                    raise forms.ValidationError(f"El {campo_nombre} debe contener solo letras y Ñ.")
+            return nombre.upper() if nombre else nombre
+    
+    def clean_quien_es_el_ocupante(self):
+            data = self.cleaned_data.get('nombre_servicio')
+            return self._validar_nombre_letras_enie(data, "nombre del servicio")
+    
     def clean_uso_lote_servicio(self):
         return list(self.cleaned_data.get("uso_lote_servicio", []))
 
     def clean_mejoras(self):
         return list(self.cleaned_data.get("mejoras", []))
-
 
 ##################################
 # MANEJO DE VIVIENDA
@@ -465,7 +477,6 @@ class MiembroForm(forms.ModelForm):
             return data.strip().upper()
         return data
 
-
 class InstitucionEnLoteForm(forms.ModelForm):
     class Meta:
         model = InstitucionEnLote
@@ -477,6 +488,34 @@ class InstitucionEnLoteForm(forms.ModelForm):
             widget = field.widget
             existing = widget.attrs.get("class", "")
             widget.attrs["class"] = (existing + " form-control").strip()
+            # Hacer que nombre_servicio sea opcional en formsets para permitir filas vacías
+            if name == 'nombre_servicio':
+                field.required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        nombre = cleaned_data.get('nombre_servicio')
+        ruc = cleaned_data.get('ruc_servicio')
+        descripcion = cleaned_data.get('descripcion_servicio')
+
+        # Si todos los campos están vacíos, marcar como permitido estar vacío
+        if not nombre and not ruc and not descripcion:
+            self.empty_permitted = True
+
+        return cleaned_data
+
+    def full_clean(self):
+        # Validar solo los campos del formulario, sin validar las restricciones del modelo
+        # El relevamiento_id se asignará después en la vista
+        super().full_clean()
+        # Limpiar errores relacionados con relevamiento_id/pretendiente_id si están vacíos
+        if '__all__' in self.errors:
+            self.errors['__all__'] = [
+                e for e in self.errors['__all__']
+                if 'asociada' not in str(e).lower()
+            ]
+            if not self.errors['__all__']:
+                del self.errors['__all__']
 
 class RelevamientoMejorasForm(forms.ModelForm):
     """Parte 3 del wizard: mejoras/infraestructura observadas en el lote.
@@ -574,152 +613,6 @@ class PretendienteMejorasForm(forms.ModelForm):
 
     def clean_mejoras(self):
         return list(self.cleaned_data.get("mejoras", []))
-##################################
-# VER PARA ELIMINAR
-##################################
-class RelevamientoForm(forms.ModelForm):
-    """Form for creating/editing a `Relevamiento`.
-
-    Maps ArrayFields to MultipleChoiceFields for user-friendly input.
-    """
-
-    uso_lote_ocupante = forms.MultipleChoiceField(
-        choices=USO_LOTE_OCUPANTE_CHOICES, required=False, widget=forms.CheckboxSelectMultiple
-    )
-    uso_lote_servicio = forms.MultipleChoiceField(
-            choices=USO_LOTE_SERVICIO_CHOICES, required=False, widget=forms.CheckboxSelectMultiple
-    )
-    mejoras = forms.MultipleChoiceField(
-        choices=MEJORAS_CHOICES, required=False, widget=forms.CheckboxSelectMultiple
-    )
-    modificaciones_post = forms.MultipleChoiceField(
-        choices=MODIFICACIONES_POSTADJUDICACION_CHOICES, required=False, widget=forms.CheckboxSelectMultiple
-    )
-
-    class Meta:
-        model = Relevamiento
-        fields = [
-            "departamento", "distrito", "colonia",
-            "manzana", "lote_indert", "lote_sirt", "formulario",
-            "frente_aprox", "fondo_aprox", "superficie_ha", "dimensiones", "tipo_lote",
-            "observacion_encuesta",
-            "tipo_registro",
-            "quien_es_el_ocupante", "cedula_ocupante", "sexo_ocupante", "estado_civil_ocupante",
-            "quien_es_el_conyuge", "cedula_conyuge", "sexo_conyuge", "estado_civil_conyuge",
-            "condicion_vivienda", "condicion_encuestado",
-            "vive_en_lote", "uso_lote_ocupante", "uso_lote_servicio", "parent_lote",
-            "residencia_manzana", "residencia_lote", "encargado_residencia",            "produccion_agricola_ha","produccion_ganadera_ha",
-            "reforestado_ha", "bosque_natural_ha", "barbecho_ha", "mejoras",
-            "estado_entrevista",
-            "firmo_solicitud",
-            "modificaciones_post",
-        ]
-        widgets = {
-            "dimensiones": forms.HiddenInput(),
-            "superficie_ha": forms.HiddenInput(),
-            "tipo_lote": forms.HiddenInput(),
-        }
-
-    def _validar_nombre_letras_enie(self, nombre, campo_nombre):
-        if nombre:
-            nombre = nombre.strip()
-            if not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]+$', nombre):
-                raise forms.ValidationError(f"El {campo_nombre} debe contener solo letras y Ñ.")
-        return nombre.upper() if nombre else nombre
-
-    def clean_manzana(self):
-        data = self.cleaned_data.get('manzana')
-        if not data or (isinstance(data, str) and not data.strip()):
-            raise forms.ValidationError("El campo manzana no puede estar vacío.")
-        return data
-
-    def clean_lote_indert(self):
-        data = self.cleaned_data.get('lote_indert')
-        if not data or (isinstance(data, str) and not data.strip()):
-            raise forms.ValidationError("El campo lote no puede estar vacío.")
-        return data
-
-    def clean_quien_es_el_ocupante(self):
-        data = self.cleaned_data.get('quien_es_el_ocupante')
-        # Limpiar espacios en blanco al inicio y al final del nombre del ocupante.
-        if data:
-            data = data.strip()
-        return self._validar_nombre_letras_enie(data, "nombre del ocupante")
-
-    def clean_cedula_ocupante(self):
-        data = self.cleaned_data.get('cedula_ocupante')
-        if data:
-            data = data.strip()
-            if not data.isdigit():
-                raise forms.ValidationError("La cédula debe contener solo números.")
-            if len(data) > 8:
-                raise forms.ValidationError("La cédula no debe tener más de 8 dígitos.")
-        return data
-
-    def clean_quien_es_el_conyuge(self):
-        data = self.cleaned_data.get('quien_es_el_conyuge')
-        # Limpiar espacios en blanco al inicio y al final del nombre del cónyuge.
-        if data:
-            data = data.strip()
-        return self._validar_nombre_letras_enie(data, "nombre del cónyuge")
-
-    def clean_cedula_conyuge(self):
-        data = self.cleaned_data.get('cedula_conyuge')
-        if data:
-            data = data.strip()
-            if not data.isdigit():
-                raise forms.ValidationError("La cédula del cónyuge debe contener solo números.")
-            if len(data) > 8:
-                raise forms.ValidationError("La cédula del cónyuge no debe tener más de 8 dígitos.")
-        return data
-
-    def clean_uso_lote_ocupante(self):
-        # si condicion_encuestado == "ocupante" y tipo_registro == "servicio", uso_lote debe estar vacío
-        # entonces uso de lote solo muestra opciones relevantes 
-        condicion_encuestado = self.cleaned_data.get("condicion_encuestado")
-        tipo_registro = self.cleaned_data.get("tipo_registro")
-        if condicion_encuestado == "ocupante":
-            return []
-        return list(self.cleaned_data.get("uso_lote_ocupante", []))
-
-    def clean_mejoras(self):
-        return list(self.cleaned_data.get("mejoras", []))
-
-    def clean_modificaciones_post(self):
-        return list(self.cleaned_data.get("modificaciones_post", []))
-
-    def clean(self):
-        cleaned_data = super().clean()
-        # Regla existente: condicion_vivienda == presente -> vive_en_lote = True
-        if cleaned_data.get("condicion_vivienda") == "presente":
-            cleaned_data["vive_en_lote"] = True
-
-        if cleaned_data.get("condicion_vivienda") == "sin vivienda":
-            cleaned_data["vive_en_lote"] = False
-
-        # --- NUEVA REGLA: tipo_registro == servicio -> condicion_vivienda = servicio ---
-        if cleaned_data.get("tipo_registro") == "servicio":
-            cleaned_data["condicion_vivienda"] = "servicio"
-
-        # ── Dimensión del lote (frente x fondo) ──────────────────────────────
-        # Se recalcula siempre acá, ignorando lo que haya en los campos ocultos
-        # dimensiones/superficie_ha/tipo_lote del POST — esos son solo para la
-        # vista previa instantánea en el navegador (ver JS). La fuente de verdad
-        # es frente_aprox/fondo_aprox.
-        frente = cleaned_data.get("frente_aprox")
-        fondo = cleaned_data.get("fondo_aprox")
-        if frente and fondo:
-            superficie_ha = round((frente * fondo) / 10000, 4)
-            cleaned_data["dimensiones"] = f"{frente}x{fondo}"
-            cleaned_data["superficie_ha"] = superficie_ha
-            if superficie_ha <= 0.25:
-                cleaned_data["tipo_lote"] = "urbano"
-            elif superficie_ha <= 2.0:
-                cleaned_data["tipo_lote"] = "quinta"
-            else:
-                cleaned_data["tipo_lote"] = "agricola"
-
-        return cleaned_data
 
 class FotosRelevamientoForm(forms.Form):
     """Sube fotos de un relevamiento, agrupadas en 4 categorías.
@@ -819,126 +712,4 @@ class FotosRelevamientoForm(forms.Form):
                 pass  
         archivo.seek(0)
         return ContentFile(archivo.read()), f"{nombre_base}{ext}"
-    
-# ─────────────────────────────────────────────
-# NUEVOS FORMULARIOS (modelos implementados 26-08)
-# ─────────────────────────────────────────────
 
-class PretendienteForm(forms.ModelForm):
-    mejoras = forms.MultipleChoiceField(
-        choices=MEJORAS_CHOICES, required=False, widget=forms.CheckboxSelectMultiple
-    )
-
-    class Meta:
-        model = Pretendiente
-        fields = [
-            "nombre_pretendiente", "ci_pretendiente", "sexo_pretendiente", "estado_civil_pretendiente",
-            "condicion_vivienda", "vive_en_lote",
-            "residencia_manzana", "residencia_lote",
-            "quien_es_el_ocupante",            "produccion_agricola_ha", "produccion_ganadera_ha",
-            "reforestado_ha", "bosque_natural_ha", "barbecho_ha",
-            "mejoras", "observaciones",
-        ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            widget = field.widget
-            existing = widget.attrs.get("class", "")
-            if isinstance(widget, (forms.CheckboxInput, forms.CheckboxSelectMultiple)):
-                widget.attrs["class"] = (existing + " form-check-input").strip()
-            elif isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                widget.attrs["class"] = (existing + " form-select").strip()
-            else:
-                widget.attrs["class"] = (existing + " form-control").strip()
-
-    def clean_mejoras(self):
-        return list(self.cleaned_data.get("mejoras", []))
-
-    def clean(self):
-        cleaned_data = super().clean()
-        # Regla automática: condicion_vivienda == presente fuerza vive_en_lote = True
-        if cleaned_data.get("condicion_vivienda") == "presente":
-            cleaned_data["vive_en_lote"] = True
-        # Regla automática: condicion_vivienda == sin_vivienda o ausente fuerza vive_en_lote = false
-        if cleaned_data.get("condicion_vivienda") in ["sin_vivienda", "ausente", "servicio", "en_construccion"]:
-            cleaned_data["vive_en_lote"] = False
-       
-        return cleaned_data
-
-class DocumentoForm(forms.ModelForm):
-    class Meta:
-        model = Documento
-        fields = ["relevamiento", "tipo", "archivo", "nombre_archivo", "pretendiente"]
-        widgets = {
-            "relevamiento": forms.HiddenInput(),
-            "pretendiente": forms.HiddenInput(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            widget = field.widget
-            if isinstance(widget, forms.HiddenInput):
-                continue
-            existing = widget.attrs.get("class", "")
-            if isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                widget.attrs["class"] = (existing + " form-select").strip()
-            elif isinstance(widget, forms.FileInput):
-                widget.attrs["class"] = (existing + " form-control").strip()
-            else:
-                widget.attrs["class"] = (existing + " form-control").strip()
-
-# ─────────────────────────────────────────────
-# FORMSETS
-# ─────────────────────────────────────────────
-
-PretendienteFormSet = inlineformset_factory(
-    Relevamiento, Pretendiente, form=PretendienteForm, extra=0, can_delete=True
-)
-
-# Viviendas asociadas a un Relevamiento (modo ocupante/fraccionamiento)
-ViviendaFormSet = inlineformset_factory(
-    Relevamiento, Vivienda, form=ViviendaForm, extra=0, can_delete=True,
-    fk_name='relevamiento'
-)
-
-# Viviendas asociadas a un Pretendiente (modo conflicto)
-ViviendaPretendienteFormSet = inlineformset_factory(
-    Pretendiente, Vivienda, form=ViviendaForm, extra=0, can_delete=True,
-    fk_name='pretendiente'
-)
-
-MiembroFormSet = inlineformset_factory(
-    Vivienda, Miembro, form=MiembroForm, extra=0, can_delete=True,
-    fk_name='vivienda'
-)
-PrincipalesFormSet = inlineformset_factory(
-    Relevamiento, Miembro, form=MiembroForm, extra=0, can_delete=True, 
-    fk_name='relevamiento'
-)
-
-CultivoFormSet = inlineformset_factory(
-    Relevamiento, Cultivo, form=CultivoForm, can_delete=True,
-    fk_name='relevamiento'
-)
-
-CultivoPretendienteFormSet = inlineformset_factory(
-    Pretendiente, Cultivo, form=CultivoForm, extra=0, can_delete=True,
-    fk_name='pretendiente'
-)
-
-ProduccionGanaderaFormSet = inlineformset_factory(
-    Relevamiento, ProduccionGanadera, form=ProduccionGanaderaForm, extra=0, can_delete=True,
-    fk_name='relevamiento'
-)
-
-ProduccionGanaderaPretendienteFormSet = inlineformset_factory(
-    Pretendiente, ProduccionGanadera, form=ProduccionGanaderaForm, extra=0, can_delete=True,
-    fk_name='pretendiente'
-)
-
-InstitucionEnLoteFormSet = inlineformset_factory(
-    Relevamiento, InstitucionEnLote, form=InstitucionEnLoteForm, extra=0, can_delete=True,
-    fk_name='relevamiento'
-)

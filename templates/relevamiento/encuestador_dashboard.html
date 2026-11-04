@@ -207,9 +207,9 @@
             </div>
 
             <!-- Botón de acción -->
-            <div class="card-body pt-0 d-flex gap-2">
+            <div class="card-body pt-0 d-flex gap-2 justify-content-end">
               {% if item.allow_new %}
-                <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}"
+                <a href="{% url 'relevamiento:ocupante_parte1' orden.pk %}"
                    class="btn btn-primary btn-sm flex-fill">
                   <i class="fas fa-plus me-1"></i>Nueva Encuesta
                 </a>

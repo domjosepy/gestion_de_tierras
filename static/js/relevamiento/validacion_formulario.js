@@ -52,6 +52,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 return { valido: true };
             }
         },
+        telefono_ocupante: {
+            validar: (valor) => {
+                if (valor && valor.trim() === '') {
+                    return { valido: true };
+                }
+                if (valor && !/^\d*$/.test(valor)) {
+                    return { valido: false, mensaje: 'El teléfono debe contener solo números.' };
+                }
+                if (valor && valor.length > 10) {
+                    return { valido: false, mensaje: 'El teléfono no debe tener más de 10 dígitos.' };
+                }
+                return { valido: true };
+            }
+        },
         quien_es_el_conyuge: {
             validar: (valor) => {
                 if (!valor || valor.trim() === '') {
@@ -74,6 +88,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (valor && valor.length > 8) {
                     return { valido: false, mensaje: 'La cédula del cónyuge no debe tener más de 8 dígitos.' };
+                }
+                return { valido: true };
+            }
+        },
+        nombre_pretendiente: {
+            validar: (valor) => {
+                if (!valor || valor.trim() === '') {
+                    return { valido: false, mensaje: 'El nombre del ocupante no puede estar vacío.' };
+                }
+                const soloLetrasYEnie = /^[a-zA-ZáéíóúñÁÉÍÓÚÑ\s]*$/;
+                if (!soloLetrasYEnie.test(valor)) {
+                    return { valido: false, mensaje: 'El nombre del ocupante debe contener solo letras y Ñ.' };
+                }
+                return { valido: true };
+            }
+        },
+        ci_pretendiente: {
+            validar: (valor) => {
+                if (valor && valor.trim() === '') {
+                    return { valido: true };
+                }
+                if (valor && !/^\d*$/.test(valor)) {
+                    return { valido: false, mensaje: 'La cédula debe contener solo números.' };
+                }
+                if (valor && valor.length > 8) {
+                    return { valido: false, mensaje: 'La cédula no debe tener más de 8 dígitos.' };
+                }
+                return { valido: true };
+            }
+        },
+        telefono_pretendiente: {
+            validar: (valor) => {
+                if (valor && valor.trim() === '') {
+                    return { valido: true };
+                }
+                if (valor && !/^\d*$/.test(valor)) {
+                    return { valido: false, mensaje: 'El teléfono debe contener solo números.' };
+                }
+                if (valor && valor.length > 10) {
+                    return { valido: false, mensaje: 'El teléfono no debe tener más de 10 dígitos.' };
                 }
                 return { valido: true };
             }
@@ -201,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // VALIDACIÓN EN TIEMPO REAL PARA CEDULAS (números únicamente)
     // ─────────────────────────────────────────────────────────────
 
-    ['cedula_ocupante', 'cedula_conyuge'].forEach(nombreCampo => {
+    ['cedula_ocupante', 'cedula_conyuge', 'ci_pretendiente'].forEach(nombreCampo => {
         const campo = obtenerCampo(nombreCampo);
         if (campo) {
             campo.addEventListener('input', function() {
@@ -220,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // VALIDACIÓN EN TIEMPO REAL PARA NOMBRES (sin números ni símbolos)
     // ─────────────────────────────────────────────────────────────
 
-    ['quien_es_el_ocupante', 'quien_es_el_conyuge'].forEach(nombreCampo => {
+    ['quien_es_el_ocupante', 'quien_es_el_conyuge', 'nombre_pretendiente'].forEach(nombreCampo => {
         const campo = obtenerCampo(nombreCampo);
         if (campo) {
             campo.addEventListener('input', function() {

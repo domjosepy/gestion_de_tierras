@@ -6,7 +6,6 @@ from .models import (
     ProduccionGanadera,
     Vivienda,
     Miembro,
-    ProblemaSalud,
     OcupanteAnterior,
     FotoRelevamiento,
     ArchivoSubcoordinador
@@ -82,5 +81,4 @@ class ViviendaAdmin(admin.ModelAdmin):
 admin.site.register(Cultivo)
 admin.site.register(ProduccionGanadera)
 admin.site.register(Miembro)
-admin.site.register(ProblemaSalud)
 admin.site.register(OcupanteAnterior)

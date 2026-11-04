@@ -212,7 +212,6 @@ TIPO_REGISTRO_CHOICES = [
     ("ocupante", "Ocupante"),
     ("conflicto", "Conflicto"),
     ("servicio", "Servicio"),
-    ("fraccionamiento", "Fraccionamiento"),
 ]
 
 TIPO_CULTIVO_CHOICES = [
@@ -272,7 +271,7 @@ class Relevamiento(UpperCaseMixin, models.Model):
 
     #id compuesto por id del departamento, distrito, colonia, manzana y lote_indert
     id_relevamiento = models.CharField(max_length=255, editable=False, blank=True, null=True)
-    # Tipo de registro: define el flujo (Ocupante/Conflicto/Servicio/Fraccionamiento)
+    # Tipo de registro: define el flujo (Ocupante/Conflicto/Servicio)
     tipo_registro = models.CharField(
         max_length=20, choices=TIPO_REGISTRO_CHOICES, default="ocupante",
         verbose_name="Tipo de Registro")
@@ -327,7 +326,7 @@ class Relevamiento(UpperCaseMixin, models.Model):
     )
 
     # ── Datos del ocupante ───────────────────────────────────────────────
-    quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
+    quien_es_el_ocupante = models.CharField(max_length=200, blank=True, null=True)
     cedula_ocupante = models.CharField(
         max_length=8,
         blank=True, null=True
@@ -358,15 +357,6 @@ class Relevamiento(UpperCaseMixin, models.Model):
     reforestado_ha = models.FloatField(default=0, blank=True)
     bosque_natural_ha = models.FloatField(default=0, blank=True)
     barbecho_ha = models.FloatField(default=0, blank=True)
-
-    parent_lote = models.ForeignKey(
-        'self',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='sub_lotes',
-        verbose_name="Lote padre (si es sub-lote)"
-    )
 
     mejoras = ArrayField(
         base_field=models.CharField(max_length=50, choices=MEJORAS_CHOICES),
@@ -534,16 +524,6 @@ class Relevamiento(UpperCaseMixin, models.Model):
 
             super().save(*args, **kwargs)
 
-    def siguiente_sufijo_sublote(self):
-        existentes = self.sub_lotes.count()
-        if existentes < 26:
-            return chr(ord('A') + existentes)
-        # AA, AB, ... AZ, BA, ...
-        primero  = chr(ord('A') + (existentes // 26) - 1)
-        segundo  = chr(ord('A') + (existentes % 26))
-        return f"{primero}{segundo}"
-
-
 class Pretendiente(models.Model):
     """Representa a cada reclamante en un lote en conflicto."""
     relevamiento = models.ForeignKey(
@@ -560,7 +540,7 @@ class Pretendiente(models.Model):
     vive_en_lote = models.BooleanField(default=False)
     residencia_manzana = models.CharField(max_length=50, blank=True)
     residencia_lote = models.CharField(max_length=50, blank=True)
-    quien_es_el_ocupante = models.CharField(max_length=200, blank=True)
+    quien_es_el_ocupante = models.CharField(max_length=200, blank=True, null=True)
     encargado_residencia = models.CharField(max_length=200, blank=True)
     relacion_con_lote = models.CharField(
         max_length=200,
@@ -669,7 +649,7 @@ class Vivienda(models.Model):
                ("adobe", "Adobe"), ("mixto", "Mixto"), ("otro", "Otro")]
     PISOS = [("ceramica", "Cerámica"), ("cemento", "Cemento"),
              ("tierra", "Tierra"), ("madera", "Madera"), ("otro", "Otro")]
-    TECHOS = [("chapa", "Chapa de Zinc"), ("teja", "Teja"),
+    TECHOS = [("chapa", "Chapa de Zinc"), ("teja", "Teja"), ("eternit", "Eternit"),
               ("paja", "Paja"), ("losa", "Losa"), ("otro", "Otro")]
     AGUA = [("pozo", "Pozo"), ("red_publica", "Red Pública"),
             ("arroyo", "Arroyo/Río"), ("aljibe", "Aljibe"), ("otro", "Otro")]
@@ -707,17 +687,6 @@ class Vivienda(models.Model):
         default=list,
         help_text="Lista de equipamientos: energia, agua, cocina, baño, telefono, internet",
     )
-
-    
-    def normalizar_lote(self):
-        """Normaliza manzana/lote para que 'a1' y 'A1' no se tomen como distintos."""
-        if self.manzana:
-            self.manzana = self.manzana.strip().upper()
-        if self.lote_indert:
-            self.lote_indert = self.lote_indert.strip().upper()
-
-    def clean(self):
-        pass
 
     def save(self, *args, **kwargs):
         if not self.relevamiento_id and not self.pretendiente_id:
@@ -783,17 +752,6 @@ class Miembro(models.Model):
     def save(self, *args, **kwargs):
         self.nombre_miembro = self.nombre_miembro.upper() if self.nombre_miembro else self.nombre_miembro
         super().save(*args, **kwargs)
-
-
-class ProblemaSalud(models.Model):
-    miembro = models.ForeignKey(
-        Miembro, on_delete=models.CASCADE, related_name="problemas_salud")
-    nombre = models.CharField(max_length=200)
-    lugar_atencion = models.CharField(max_length=200, blank=True)
-
-    def __str__(self):
-        return f"{self.nombre_miembro} - {self.miembro.nombre_miembro}"
-
 
 class OcupanteAnterior(models.Model):
     relevamiento = models.ForeignKey(

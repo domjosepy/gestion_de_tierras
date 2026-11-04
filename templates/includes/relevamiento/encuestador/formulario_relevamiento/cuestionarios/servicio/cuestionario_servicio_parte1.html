@@ -33,10 +33,9 @@
     </div>
 
     <div class="d-flex gap-2 mb-4 justify-content-center">
-      <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}?modo=ocupante" class="btn btn-sm btn-outline-primary"><i class="fas fa-user me-1"></i>Ocupante</a>
-      <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}?modo=conflicto" class="btn btn-sm btn-outline-primary"><i class="fas fa-users me-1"></i>Conflicto</a>
-      <span class="btn btn-sm btn-primary disabled"><i class="fas fa-building me-1"></i>Servicio</span>
-      <a href="{% url 'relevamiento:formulario_desde_orden' orden.pk %}?modo=fraccionamiento" class="btn btn-sm btn-outline-primary"><i class="fas fa-cut me-1"></i>Fraccionamiento</a>
+      <a href="{% url 'relevamiento:ocupante_parte1' orden.pk %}?modo=ocupante" class="btn btn-sm btn-outline-primary"><i class="fas fa-user me-1"></i>Ocupante</a>
+      <a href="{% url 'relevamiento:conflicto_datos_lote' orden.pk %}?modo=conflicto" class="btn btn-sm btn-outline-warning"><i class="fas fa-users me-1"></i>Conflicto</a>
+      <span class="btn btn-sm btn-gray disabled"><i class="fas fa-building me-1"></i>Servicio</span>
     </div>
 
     <!-- 1. DATOS GEOGRÁFICOS -->
@@ -133,7 +132,7 @@
                   {% if inst_form.nombre_servicio.errors %}<div class="text-danger small">{{ inst_form.nombre_servicio.errors }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label small fw-semibold mb-1">{{ inst_form.ruc_servicio.label }}</label>
+                  <label class="form-label small fw-semibold mb-1">RUC</label>
                   {{ inst_form.ruc_servicio }}
                 </div>
                 <div class="col-md-4">
@@ -144,26 +143,13 @@
             </div>
           {% endfor %}
         </div>
-      </div>
-    </div>
-
-    <!-- 3. RESPONSABLE CON RESUMEN Y MODAL -->
-    <div class="card mb-4">
-      <div class="card-header-brown-light">
-        <i class="fas fa-user-tie"></i>
-        <h2 class="mb-0">3. Responsable del servicio</h2>
-      </div>
-      <div class="card-body">
-        
         <!-- Botón para agregar (visible solo si no hay datos) -->
-        <div id="responsable-add-btn-wrap" class="text-center py-3 {% if form.quien_es_el_ocupante.value %}d-none{% endif %}">
-          <p class="text-muted mb-2">Haz clic para cargar los datos del responsable del servicio.</p>
-          <button type="button" class="btn btn-outline-primary" id="agregar-responsable-btn"
+        <div id="responsable-add-btn-wrap" class="py-3 {% if form.quien_es_el_ocupante.value %}d-none{% endif %}">
+          <button type="button" class="btn btn-outline-primary btn-sm" id="agregar-responsable-btn"
                   data-bs-toggle="modal" data-bs-target="#modalResponsable">
             <i class="fas fa-user-edit me-1"></i> Agregar Responsable
           </button>
         </div>
-
         <!-- Resumen de datos (visible si ya hay datos cargados) -->
         <div id="responsable-summary" class="border rounded p-3 d-flex justify-content-between align-items-center {% if not form.quien_es_el_ocupante.value %}d-none{% endif %}">
           <div>
@@ -180,7 +166,6 @@
             </button>
           </div>
         </div>
-
       </div>
     </div>
 
